@@ -1,0 +1,7 @@
+.*
+!.gitignore
+
+*.glob
+*.vo
+*.vok
+*.vos
