@@ -25,80 +25,107 @@ Inductive TProp : Type :=
   | G : TProp -> TProp
   | Until : TProp -> TProp -> TProp.
 
-Reserved Notation "⌊ A ⌋@ i" (at level 0).
-Fixpoint TDesug (present: time) (tp: TProp): Prop :=
+Reserved Notation "i ⊨ A" (at level 70).
+(* TODO: remane TEntails *)
+Fixpoint TDerives (now: time) (tp: TProp): Prop :=
   match tp with
-  | TLift p => p present 
-  | TConj tp1 tp2 => ⌊tp1⌋@present /\ ⌊tp2⌋@present
-  | TDisj tp1 tp2 => ⌊tp1⌋@present \/ ⌊tp2⌋@present
-  | TNot tp => ~ ⌊tp⌋@present
-  | TImpl tp1 tp2 => ⌊tp1⌋@present -> ⌊tp2⌋@present
-  | P tp => exists t, t < present /\ ⌊tp⌋@t
-  | F tp => exists t, present < t /\ ⌊tp⌋@t
-  | H tp => forall t, t < present -> ⌊tp⌋@t
-  | G tp => forall t, present < t -> ⌊tp⌋@t
-  | Until tp1 tp2 => exists t1, ⌊tp1⌋@t1 /\ forall t2, t2 < t1 -> ⌊tp2⌋@t2
+  | TLift A => A now 
+  | TConj A B => now ⊨ A /\ now ⊨ B
+  | TDisj A B => now ⊨ A \/ now ⊨ B
+  | TNot A => ~ now ⊨ A
+  | TImpl A B => now ⊨ A -> now ⊨ B
+  | P A => exists t, t < now /\ t ⊨ A
+  | F A => exists t, now < t /\ t ⊨ A
+  | H A => forall t, t < now -> t ⊨ A
+  | G A => forall t, now < t -> t ⊨ A
+  | Until A B => exists t1, t1 ⊨ A /\ forall t2, t2 < t1 -> t2 ⊨ B
   end
-  where "⌊ A ⌋@ i" := (TDesug i A).
+  where "i ⊨ A" := (TDerives i A).
 
 Definition GP := G ∘ P.
 Definition HF := H ∘ F.
 
-Notation "^ A" := (TLift A) (at level 50).
-Notation "A & B" := (TConj A B) (at level 80, right associativity).
-Notation "A | B" := (TDisj A B) (at level 85, right associativity).
-Notation "A --> B" := (TImpl A B) (at level 99,  right associativity).
-Notation "A <--> B" := ((A --> B) & (B --> A)) (at level 95,  right associativity).
-Notation "! A" := (TNot A) (at level 75).
+Notation "^ A" := (TLift A) (at level 35).
+Notation "A & B" := (TConj A B) (at level 45, right associativity).
+Notation "A | B" := (TDisj A B) (at level 55, right associativity).
+Notation "A --> B" := (TImpl A B) (at level 68,  right associativity).
+Notation "A <--> B" := ((A --> B) & (B --> A)) (at level 65,  right associativity).
+Notation "! A" := (TNot A) (at level 40).
 
-Notation "⌊ A ⌋" := (forall t, ⌊A⌋@t) (at level 0).
+Notation "⊨ A" := (forall t, t ⊨ A) (at level 69).
 
-(* TE_not has negative occurence *)
-(* Inductive TEval (present: time): TProp -> Prop :=
-  | TE_lift : forall (p: time -> Prop),
-      p present ->
-      TEval present (TLift p)
-  | TE_conj : forall tp1 tp2: TProp,
-       TEval present tp1 /\ TEval present tp2 ->
-       TEval present (TConj tp1 tp2)
-  | TE_disj : forall tp1 tp2: TProp,
-       TEval present tp1 \/ TEval present tp2 ->
-       TEval present (TDisj tp1 tp2)
-  | TE_not : forall tp: TProp,
-       (* not (TEval present tp) -> *)
-       (TEval present tp -> False) ->
-       TEval present (TNot tp)
-  | TE_H : forall tp: TProp,
-       (forall t: time, t < present -> TEval t tp) ->
-       TEval present (H tp)
-  | TE_G : forall tp: TProp,
-       (forall t: time, present < t -> TEval t tp) ->
-       TEval present (H tp). *)
-
+(* Todo: support tModus_ponens2 *)
 Ltac tapply H :=
   let H' := fresh in
   pose proof H as H';
   (* TODO: limit expansion to TImpls *)
-  expand_in TDesug H';
+  expand_in TDerives H';
   apply H';
   clear H'.
 
-Theorem TModus_ponens: forall i A B, 
-  ⌊A --> B⌋@i -> ⌊A⌋@i -> ⌊B⌋@i.
+Theorem tGeneralize: forall i A, ⊨ A -> i ⊨ A.
 Proof.
-  (* intros i A B Hab Ha.
-  tapply Hab.
-  assumption. *)
   auto.
 Qed.
 
+Ltac tgeneralize := apply tGeneralize.
+
+Theorem tModus_ponens: forall i A B, i⊨ A --> B -> i⊨ A -> i⊨ B.
+Proof.
+  auto.
+Qed.
+
+Theorem tModus_ponens_backwards: forall i A B, i⊨ A -> i⊨ A --> B -> i⊨ B.
+Proof.
+  auto.
+Qed.
+
+Theorem tModus_ponens2: forall A B, ⊨ A --> B -> ⊨ A -> ⊨ B.
+Proof.
+  intros A B Hab Ha.
+  intro i.
+  tapply Hab.
+  tapply Ha.
+Qed.
+
+Theorem tModus_ponens2_backwards: forall A B, ⊨ A -> ⊨ A --> B -> ⊨ B.
+Proof.
+  intros.
+  eapply tModus_ponens2; eauto.
+Qed.
+
+(* This tactic was leading to an error at Qed: "No such section variable or assumption" *)
+(* Ltac overwrite H a := clear H; pose proof a as H. *)
+
+(* Specialization cases: *)
+(* 1. "⊨ A" with "i : time" to "i ⊨ A" (can be done with regular specialize) *)
+(* 2. "i ⊨ A --> B" with "i ⊨ A" to "i ⊨ B" *)
+(* 3. "⊨ A --> B" with "i ⊨ A" to "i ⊨ B" *)
+(* 4. "⊨ A --> B" with "⊨ A" to "⊨ B" *)
+Ltac tspecialize H a :=
+  match type of a with
+  | time =>
+      match type of H with
+      | ⊨ _ => specialize (H a)
+      end
+  | ?i ⊨ ?A =>
+      match type of H with 
+      | i ⊨ A --> _ => apply (tModus_ponens_backwards _ _ _ a) in H
+      | ⊨ A --> _ => tspecialize H i; apply (tModus_ponens_backwards _ _ _ a) in H
+      end
+  | ⊨ ?A => 
+      match type of H with 
+      | ⊨ A --> _ => apply (tModus_ponens2_backwards _ _ a) in H
+      end
+  end.
+
 Theorem TModus_tollens: forall (i: time) (A B: TProp),
-  ⌊A --> B⌋@i -> ⌊!B⌋@i -> ⌊!A⌋@i.
+  i⊨ A --> B -> i⊨ !B -> i⊨ !A.
 Proof.
   simpl. auto.
 Qed.
 
-Theorem TImpl_trans: forall A B C, ⌊(A --> B) --> (B --> C) --> A --> C⌋.
+Theorem TImpl_trans: forall A B C, ⊨ (A --> B) --> (B --> C) --> A --> C.
 Proof.
   intros A B C.
   intros i.
@@ -108,7 +135,7 @@ Proof.
   assumption.
 Qed.
 
-Theorem G_distributes: forall A B, ⌊G (A --> B) --> G A --> G B⌋.
+Theorem G_distributes: forall A B, ⊨ G (A --> B) --> G A --> G B.
 Proof.
   intros A B.
   simpl.
@@ -119,14 +146,7 @@ Proof.
     assumption.
 Qed.
 
-(* Theorem G_distributes: forall i A B, ⌊G (A --> B)⌋@i -> ⌊G A --> G B⌋@i.
-Proof.
-  intros i A B.
-  simpl.
-  apply G_distributesT.
-Qed. *)
-
-Theorem H_distributes: forall A B, ⌊H (A --> B) --> H A --> H B⌋.
+Theorem H_distributes: forall A B, ⊨ H (A --> B) --> H A --> H B.
 Proof.
   intros A B.
   simpl.
@@ -137,44 +157,37 @@ Proof.
     assumption.
 Qed.
 
-(* Theorem H_distributes: forall i A B, ⌊H (A --> B)⌋@i -> ⌊H A --> H B⌋@i.
-Proof.
-  intros i A B.
-  simpl.
-  apply H_distributesT.
-Qed. *)
-
-Theorem GP_intro: forall A, ⌊A --> GP A⌋.
+Theorem GP_intro: forall A, ⊨ A --> GP A.
 Proof.
   simpl.
   eauto.
 Qed.
 
-Theorem HF_intro: forall A, ⌊A --> HF A⌋.
+Theorem HF_intro: forall A, ⊨ A --> HF A.
 Proof.
   simpl.
   eauto.
 Qed.
 
-Theorem alwaysH: forall A, ⌊A⌋ -> ⌊H A⌋.
+Theorem alwaysH: forall A, ⊨ A -> ⊨ H A.
 Proof.
   simpl.
   auto.
 Qed.
 
-Theorem alwaysG: forall A, ⌊A⌋ -> ⌊G A⌋.
+Theorem alwaysG: forall A, ⊨ A -> ⊨ G A.
 Proof.
   simpl.
   auto.
 Qed.
 
-Theorem always: forall A, ⌊A⌋ -> ⌊H A & A & G A⌋.
+Theorem always: forall A, ⊨ A -> ⊨ H A & A & G A.
 Proof.
   simpl.
   auto.
 Qed.
 
-Theorem sometime: forall A, (exists i, ⌊A⌋@i) -> ⌊P A | A | F A⌋.
+Theorem sometime: forall A, (exists i, i ⊨ A) -> ⊨ P A | A | F A.
 Proof.
   intros A Hyp.
   destruct Hyp as [i Hyp].
@@ -182,7 +195,7 @@ Proof.
   reflect_destruct_N_compare i j; simpl; eauto.
 Qed.
 
-Theorem P_origin: forall A, ⌊! P A⌋@0.
+Theorem P_origin: forall A, 0 ⊨ ! P A.
 Proof.
   intro A.
   simpl.
@@ -191,7 +204,7 @@ Proof.
   destruct t; inversion H1.
 Qed.
 
-Theorem H_origin: forall A, ⌊H A⌋@0.
+Theorem H_origin: forall A, 0 ⊨ H A.
 Proof.
   intro A.
   simpl.
@@ -199,24 +212,38 @@ Proof.
   destruct t; inversion H.
 Qed.
 
-Theorem BeckersP: forall A B, ⌊A --> B⌋ -> ⌊P A --> P B⌋.
+Theorem BeckersP: forall A B, ⊨ A --> B -> ⊨ P A --> P B.
 Proof.
-  intros A B HImpl.
-  intro i.
-  simpl.
-  intros [t [HLt HA]].
-  specialize (HImpl t).
-  eauto.
+  intros A B Hab.
+  intros i [t [HLt Ha]].
+  tspecialize Hab Ha.
+  simpl; eauto.
 Qed.
 
-Theorem BeckersH: forall A B, ⌊A --> B⌋ -> ⌊H A --> H B⌋.
+Theorem BeckersF: forall A B, ⊨ A --> B -> ⊨ F A --> F B.
 Proof.
-  intros A B HImpl.
-  intro i.
-  simpl.
-  intros Hyp.
+  intros A B Hab.
+  intros i [t [HLt Ha]].
+  tspecialize Hab Ha.
+  simpl; eauto.
+Qed.
+
+Theorem BeckersH: forall A B, ⊨ A --> B -> ⊨ H A --> H B.
+Proof.
+  intros A B Hab.
+  intros i Ha.
   intros t HLt.
-  specialize (HImpl t).
-  eapply TModus_ponens; eauto.
+  tapply Hab.
+  apply Ha.
+  assumption.
 Qed.
 
+Theorem BeckersG: forall A B, ⊨ A --> B -> ⊨ G A --> G B.
+Proof.
+  intros A B Hab.
+  intros i Ha.
+  intros t HLt.
+  tapply Hab.
+  apply Ha.
+  assumption.
+Qed.
