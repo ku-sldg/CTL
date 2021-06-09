@@ -1,4 +1,5 @@
 -R . Attarch
+extra.v
 my_tactics.v
-temporal_logic.v
+ftl_star/definition.v
 test.v

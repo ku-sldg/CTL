@@ -1,49 +1,104 @@
-(* Require Import Psatz. *)
 Require Import Coq.Program.Basics.
 Open Scope program_scope.
 
+Require Import extra.
 Require Import my_tactics.
 
-Notation time := nat (only parsing).
-(* Definition present : time := 0. *)
+Definition path (state: Set) := neList state.
 
-(* Based on Prior's Tense Logic. *)
-(* TODO: parameterize over time and present? *)
-Inductive TProp : Type :=
-  | TLift : (time -> Prop) -> TProp
-  | TConj : TProp -> TProp -> TProp
-  | TDisj : TProp -> TProp -> TProp
-  | TNot  : TProp -> TProp
-  | TImpl : TProp -> TProp -> TProp
-  (* "It has at some time been the case that ..." *)
-  | P : TProp -> TProp
-  (* "It will at some time be the case that ..." *)
-  | F : TProp -> TProp
-  (* "It has always been the case that ..." *)
-  | H : TProp -> TProp 
-  (* "It will always be the case that ..." *)
-  | G : TProp -> TProp
-  | Until : TProp -> TProp -> TProp.
+Definition currentState {state} (p : path state) := neHd p.
 
-Reserved Notation "i ⊨ A" (at level 70).
-(* TODO: remane TEntails *)
-Fixpoint TDerives (now: time) (tp: TProp): Prop :=
-  match tp with
-  | TLift A => A now 
-  | TConj A B => now ⊨ A /\ now ⊨ B
-  | TDisj A B => now ⊨ A \/ now ⊨ B
-  | TNot A => ~ now ⊨ A
-  | TImpl A B => now ⊨ A -> now ⊨ B
-  | P A => exists t, t < now /\ t ⊨ A
-  | F A => exists t, now < t /\ t ⊨ A
-  | H A => forall t, t < now -> t ⊨ A
-  | G A => forall t, now < t -> t ⊨ A
-  | Until A B => exists t1, t1 ⊨ A /\ forall t2, t2 < t1 -> t2 ⊨ B
+Definition extendsPath {state} (p1 p2: path state) := extendsNe p1 p2.
+
+(* Should the path prop be decidable? *)
+(* Alternate spec: validPaths given by state-step relation `state -> state -> Prop` *)
+Inductive model : Set -> Type :=
+  | Model : forall state: Set, (path state -> Prop) -> model state.
+
+Definition getStateType {state} (M: model state) := state.
+Definition validPaths {state} (M: model state) :=
+  match M with
+  | Model _ paths => paths
+  end.
+
+Inductive TProp (state: Set) : Type :=
+  | TNot   : TProp state -> TProp state
+  | TConj  : TProp state -> TProp state -> TProp state
+  | TDisj  : TProp state -> TProp state -> TProp state
+  | TImpl  : TProp state -> TProp state -> TProp state
+  (* State formulae *)
+  | TTop   : TProp state
+  | TBot   : TProp state
+  | TLift  : (state -> Prop) -> TProp state
+  | A      : TProp state -> TProp state
+  | E      : TProp state -> TProp state
+  (* Path formulae *)
+  | X      : TProp state -> TProp state
+  | F      : TProp state -> TProp state
+  | G      : TProp state -> TProp state
+  | TUntil : TProp state -> TProp state -> TProp state.
+
+(* Make state argument implicit *)
+Arguments TNot   {state}%type_scope.
+Arguments TConj  {state}%type_scope.
+Arguments TDisj  {state}%type_scope.
+Arguments TImpl  {state}%type_scope.
+Arguments TTop   {state}%type_scope.
+Arguments TBot   {state}%type_scope.
+Arguments TLift  {state}%type_scope.
+Arguments A      {state}%type_scope.
+Arguments E      {state}%type_scope.
+Arguments X      {state}%type_scope.
+Arguments F      {state}%type_scope.
+Arguments G      {state}%type_scope.
+Arguments TUntil {state}%type_scope.
+
+Definition futurePath M p s := validPaths M p /\ extendsPath p (neSome s)
+
+Reserved Notation "M ; s ⊨ₛ P" (at level 70).
+Reserved Notation "M ; x ⊨ₚ P" (at level 70).
+Reserved Notation "M ; a ⊨ P" (at level 70).
+Fixpoint TEntails {state: Set} (M: model state) (a: state + path state) (tp: TProp state): Prop :=
+  match a with 
+  | inl s => 
+      match tp with
+      | TNot P => ~ M;s ⊨ₛ P
+      | TConj P Q => M;s ⊨ₛ P /\ M;s ⊨ₛ Q
+      | TDisj P Q => M;s ⊨ₛ P \/ M;s ⊨ₛ Q
+      | TImpl P Q => M;s ⊨ₛ P -> M;s ⊨ₛ Q
+      | TTop => True
+      | TBot => False
+      | TLift P => P s
+      | A P => forall (x: path state), futurePath M x s -> M;x ⊨ₚ P
+      | E P => exists (x: path state), futurePath M x s /\ M;x ⊨ₚ P
+      | _ => False
+      end
+  | inr x => 
+      match tp with
+      | TNot P => ~ M;x ⊨ₚ P
+      | TConj P Q => M;x ⊨ₚ P /\ M;x ⊨ₚ Q
+      | TDisj P Q => M;x ⊨ₚ P \/ M;x ⊨ₚ Q
+      | TImpl P Q => M;x ⊨ₚ P -> M;x ⊨ₚ Q
+
+      | _ => M; currentState x ⊨ₛ tp
+      end
   end
-  where "i ⊨ A" := (TDerives i A).
+  where "M ; s ⊨ₛ P" := (TEntails M (inl s) P)
+    and "M ; x ⊨ₚ P" := (TEntails M (inr x) P)
+    and "M ; a ⊨ P" := (TEntails M a P).
 
-Definition GP := G ∘ P.
-Definition HF := H ∘ F.
+  match c with
+  | TNot P => ~ M;x ⊨ P
+  | TConj P Q => M;x ⊨ P /\ M;x ⊨ Q
+  | TDisj P Q => M;x ⊨ P \/ M;x ⊨ Q
+  | TImpl P Q => M;x ⊨ P -> M;x ⊨ Q
+  | TLift P => P (currentState x)
+  | A P => forall (y: path state), validPaths M y -> extendsPath y x -> M;y ⊨ P
+  | E P => exists (y: path state), validPaths M y /\ extendsPath y x /\ M;y ⊨ P
+  (* | F A => exists s, now < t /\ M;s ⊨ A *)
+  (* | G A => forall s, now < t -> t ⊨ A *)
+  (* | Until A B => exists t1, t1 ⊨ A /\ forall t2, t2 < t1 -> t2 ⊨ B *)
+
 
 Notation "^ A" := (TLift A) (at level 35).
 Notation "A & B" := (TConj A B) (at level 45, right associativity).
@@ -59,7 +114,7 @@ Ltac tapply H :=
   let H' := fresh in
   pose proof H as H';
   (* TODO: limit expansion to TImpls *)
-  expand_in TDerives H';
+  expand_in TEntails H';
   apply H';
   clear H'.
 
