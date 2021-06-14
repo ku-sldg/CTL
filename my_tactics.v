@@ -2,6 +2,8 @@ Require Import Coq.Init.Nat.
 Require Import Coq.Arith.Compare_dec.
 Require Import Psatz.
 
+Ltac inv H := inversion H; subst.
+
 Lemma reflect_N_compare: forall n m,
   match n ?= m with
   | Eq => n = m

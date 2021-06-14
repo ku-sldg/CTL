@@ -1,5 +1,5 @@
 -R . Attarch
 extra.v
 my_tactics.v
-ftl_star/definition.v
+ftl/definition.v
 test.v
