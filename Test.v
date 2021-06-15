@@ -1,5 +1,5 @@
-Require Import temporal_logic.
-Require Import my_tactics.
+Require Import MyTactics.
+Require Import Ctl.Definition.
 
 (*
 Proof goals:

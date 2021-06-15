@@ -2,7 +2,10 @@ Require Import Coq.Init.Nat.
 Require Import Coq.Arith.Compare_dec.
 Require Import Psatz.
 
-Ltac inv H := inversion H; subst.
+Ltac inv H := inversion H; subst; try contradiction.
+
+(* Todo: Support usecase `consume (H a)`, by grabbing H from the head of arg *)
+Ltac consume H := apply H; clear H.
 
 Lemma reflect_N_compare: forall n m,
   match n ?= m with

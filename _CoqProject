@@ -1,5 +1,6 @@
 -R . Attarch
-extra.v
-my_tactics.v
-ftl/definition.v
-test.v
+MyTactics.v
+Ctl/Definition.v
+Ctl/Tactics.v
+Ctl/Properties.v
+Test.v
