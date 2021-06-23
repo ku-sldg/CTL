@@ -1,6 +1,9 @@
 -R . Attarch
-MyTactics.v
+Tactics.v
 Ctl/Definition.v
 Ctl/Tactics.v
 Ctl/Properties.v
-Test.v
+BinaryRelations.v
+SepLogic.v
+TransitionSystems.v
+AttarchTrans.v

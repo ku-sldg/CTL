@@ -1,16 +1,18 @@
 Require Import Coq.Lists.List.
 Import ListNotations.
 Open Scope list_scope.
+Require Import Coq.Relations.Relation_Definitions.
 
 Require Import Ctl.Definition.
 Require Import Ctl.Tactics.
-Require Import MyTactics.
+Require Import Tactics.
 
-Theorem tModusPonens {state}: forall (M: binary_relation state) s P Q,
+
+Theorem tModusPonens {state}: forall (M: relation state) s P Q,
   M;s ⊨ P --> Q -> M;s ⊨ P -> M;s ⊨ Q.
 Proof. auto. Qed.
 
-Theorem tModusPonens_flipped {state}: forall (M: binary_relation state) s P Q,
+Theorem tModusPonens_flipped {state}: forall (M: relation state) s P Q,
   M;s ⊨ P -> M;s ⊨ P --> Q -> M;s ⊨ Q.
 Proof. auto. Qed.
 
@@ -41,23 +43,16 @@ Proof.
   split; intros H; auto.
 Qed.
 
-Theorem paths_nonempty {state}: forall M (s: state), exists p, path M s p.
+Theorem paths_nonempty {state}: forall (M: relation state) s, exists p, path M (s :: p).
 Proof.
   intros.
   eexists.
   econstructor.
 Qed.
 
-(* While the type makes this look arbitrary, it is just the trivial path *)
-Definition arbitrary_path {state} (M: binary_relation state) (s: state) : {π | path M s π} :=
-  exist (path M s) [s] (pathTrivial M s).
-
-Theorem inPathTrivial {state}: forall M (s: state) p, path M s p -> In s p.
-Proof.
-  (* intros M s p Hpath.
-  inv Hpath; constructor. *)
-  intros; find_solve_inversion.
-Qed.
+Definition arbitrary_path {state} (M: relation state) s : {π | path M (s :: π)}.
+  repeat econstructor.
+Defined.
 
 (* De Morgan's Laws *)
 Theorem AF_EG {state}: forall M (s: state) P, M;s ⊨ ¬AF P <--> EG (¬P).
@@ -65,16 +60,12 @@ Proof.
   intros M s P.
   split.
   - intros H.
-    exists [s].
+    exists nil.
     split; [constructor|].
     intros s' Hin Hp.
     inv Hin.
     tconsume H.
-    intros p Hpath.
-    exists s'.
-    split.
-    + eapply inPathTrivial; eassumption.
-    + assumption.
+    eauto.
   - intros H H2.
     destruct H as [p [Hpath H]].
     tspecialize2 H2 p Hpath.

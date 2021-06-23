@@ -2,19 +2,11 @@ Require Import Coq.Lists.List.
 Import ListNotations.
 Open Scope list_scope.
 
-Definition binary_relation (A: Type) := A -> A -> Prop.
-(* Definition serial {A} (R : binary_relation A) := forall a, exists b, R a b. *)
-(* Definition serial_transition A := sig (@serial A). *)
+Require Import Coq.Relations.Relation_Definitions.
 
-Inductive path {state} (R: binary_relation state) : state -> list state -> Prop :=
-  | pathTrivial : forall s, path R s [s]
-  | pathStep    : forall s1 s2 p, R s1 s2 -> path R s2 p -> path R s1 (s1 :: p).
-  
-(* Transition relation assumed to be serial (i.e. every state has at least one successor) *)
-(* Note, this is a sigma type, but with the first element indexed into the type. *)
-(* Inductive model : Set -> Type :=
-  | Model : forall state: Set, binary_relation state -> model state.
-*)
+Inductive path {state} (R: relation state) : list state -> Prop :=
+  | pathRefl  : forall s, path R [s]
+  | pathTrans : forall s1 s2 p, R s1 s2 -> path R (s2 :: p) -> path R (s1 :: s2 :: p).
 
 (* Inductive TProp (state: Set) : Type := *)
 Inductive TProp state : Type :=
@@ -54,7 +46,7 @@ Arguments EU    {state}%type_scope.
 Reserved Notation "M ; s ⊨ P" (at level 70).
 Reserved Notation "M ; s ⊭ P" (at level 70).
 (* Replace binary_relation with serial_transition if needed *)
-Fixpoint TEntails {state} (M: binary_relation state) (s: state) (tp: TProp state): Prop :=
+Fixpoint tEntails {state} (M: relation state) (s: state) (tp: TProp state): Prop :=
   match tp with
   | TTop => True
   | TBot => False
@@ -65,15 +57,15 @@ Fixpoint TEntails {state} (M: binary_relation state) (s: state) (tp: TProp state
   | TImpl P Q => M;s ⊨ P -> M;s ⊨ Q
   | AX P => forall s', M s s' -> M;s' ⊨ P
   | EX P => exists s', M s s' -> M;s' ⊨ P
-  | AG P => forall p, path M s p -> forall s', In s' p -> M;s' ⊨ P
-  | EG P => exists p, path M s p /\ forall s', In s' p -> M;s' ⊨ P
-  | AF P => forall p, path M s p -> exists s', In s' p /\ M;s' ⊨ P
-  | EF P => exists p, path M s p /\ exists s', In s' p /\ M;s' ⊨ P
+  | AG P => forall p, path M (s :: p) -> forall s', In s' (s :: p) -> M;s' ⊨ P
+  | EG P => exists p, path M (s :: p) /\ forall s', In s' (s :: p) -> M;s' ⊨ P
+  | AF P => forall p, path M (s :: p) -> exists s', In s' (s :: p) /\ M;s' ⊨ P
+  | EF P => exists p, path M (s :: p) /\ exists s', In s' (s :: p) /\ M;s' ⊨ P
   (* Needs index. Maybe replace neList with vec, and zip with index *)
   (* | AU P Q => forall p, path m s p -> exists s', inPath s' p /\ M;s' ⊨ P /\ forall s'', inPath s'' (pathBefore s' p) ->  *)
   | _ => False
   end
-  where "M ; s ⊨ P" := (TEntails M s P)
+  where "M ; s ⊨ P" := (tEntails M s P)
     and "M ; s ⊭ P" := (~ M;s ⊨ P).
 
 Notation "⊤" := (TTop).
