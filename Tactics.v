@@ -3,6 +3,7 @@ Require Import Coq.Arith.Compare_dec.
 Require Import Psatz.
 
 Ltac inv H := inversion H; subst; try contradiction.
+Ltac invc H := inversion H; clear H; subst; try contradiction.
 
 (* Todo: Support usecase `consume (H a)`, by grabbing H from the head of arg *)
 Ltac consume H := apply H; clear H.

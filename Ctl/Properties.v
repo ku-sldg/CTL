@@ -74,6 +74,9 @@ Proof.
     consume H; assumption.
 Qed.
 
+Theorem AF_EG' {state}: forall M (s: state) P, M;s ⊨ AF (¬P) <--> ¬EG P.
+Admitted.
+
 Theorem EF_AG {state}: forall M (s: state) P, M;s ⊨ ¬EF P <--> AG (¬ P).
 Proof.
   intros M s P.

@@ -43,6 +43,28 @@ Arguments EG    {state}%type_scope.
 Arguments AU    {state}%type_scope.
 Arguments EU    {state}%type_scope.
 
+(* s ⊨ AG P := forall s', s ~>* s' => P s'
+
+EF
+ | P holds for s
+ | exists s', s ~>* s' /\ P s'
+
+EG := forall s', EG_aux s' -> exists s'' EG_aux s'' ?
+EG_aux
+ | P holds for s
+ | exists
+
+(EG) exists_forall_path P s := P s /\
+  (forall s', forall_path_seg R P s s' -> forall_path_seg R P s s'')
+forall_path_seg R P s : state -> Prop :=
+ | P s -> forall_path_seg s s
+ | forall_path P s s' -> R s s'' -> P s'' -> forall_path_seg P s s''
+
+exists_forall_path_seg R P s : state -> Prop := 
+  | P s -> exists_forall_path_seg R P s s
+  | exists_forall_path P s s' -> R s s'' -> P s'' -> exists_forall_path_seg P s s''
+exists_forall_path R P s := P s /\ (forall s', exists_forall_path_seg R P s -> ) *)
+
 Reserved Notation "M ; s ⊨ P" (at level 70).
 Reserved Notation "M ; s ⊭ P" (at level 70).
 (* Replace binary_relation with serial_transition if needed *)

@@ -7,3 +7,4 @@ BinaryRelations.v
 SepLogic.v
 TransitionSystems.v
 AttarchTrans.v
+AttarchProperties.v
