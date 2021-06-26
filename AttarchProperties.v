@@ -8,7 +8,7 @@ Require Import AttarchTrans.
 
 Require Import Coq.Program.Equality.
 Require Import Coq.Relations.Relation_Definitions.
-Require Import Tactics.
+Require Import GeneralTactics.
 
 Definition gassert {comp loc L} (s: sprop comp loc) : TProp (sprop comp loc * L) :=
     ^ fun st => fst st ⊢ s.
@@ -24,11 +24,16 @@ Proof.
   intros p Hpath s HIn.
 
   (* Likely needs to be generalized *)
+  (* Print path. *)
   dependent induction Hpath.
   - destruct HIn; [|find_solve_inversion].
     subst.
     simpl.
     intro H; inversion H.
+  - eapply IHHpath.
+    + assumption.
+    + 
+
   - inv H.
     (* sEntails_pre *)
     + (* inv H2 *)
@@ -37,6 +42,9 @@ Proof.
     + 
       (* Do I need to go back and induct on H? It seems like I am left with an 
       equivalently shaped hypothesis H4. *)
+      invc HIn.
+      * find_solve_inversion.
+      * 
 
 Admitted.
   

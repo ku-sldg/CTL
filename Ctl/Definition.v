@@ -1,14 +1,7 @@
-Require Import Coq.Lists.List.
-Import ListNotations.
-Open Scope list_scope.
+Require Import Ctl.Paths.
 
 Require Import Coq.Relations.Relation_Definitions.
 
-Inductive path {state} (R: relation state) : list state -> Prop :=
-  | pathRefl  : forall s, path R [s]
-  | pathTrans : forall s1 s2 p, R s1 s2 -> path R (s2 :: p) -> path R (s1 :: s2 :: p).
-
-(* Inductive TProp (state: Set) : Type := *)
 Inductive TProp state : Type :=
   | TTop  : TProp state
   | TBot  : TProp state
@@ -43,53 +36,6 @@ Arguments EG    {state}%type_scope.
 Arguments AU    {state}%type_scope.
 Arguments EU    {state}%type_scope.
 
-(* s ⊨ AG P := forall s', s ~>* s' => P s'
-
-EF
- | P holds for s
- | exists s', s ~>* s' /\ P s'
-
-EG := forall s', EG_aux s' -> exists s'' EG_aux s'' ?
-EG_aux
- | P holds for s
- | exists
-
-(EG) exists_forall_path P s := P s /\
-  (forall s', forall_path_seg R P s s' -> forall_path_seg R P s s'')
-forall_path_seg R P s : state -> Prop :=
- | P s -> forall_path_seg s s
- | forall_path P s s' -> R s s'' -> P s'' -> forall_path_seg P s s''
-
-exists_forall_path_seg R P s : state -> Prop := 
-  | P s -> exists_forall_path_seg R P s s
-  | exists_forall_path P s s' -> R s s'' -> P s'' -> exists_forall_path_seg P s s''
-exists_forall_path R P s := P s /\ (forall s', exists_forall_path_seg R P s -> ) *)
-
-Reserved Notation "M ; s ⊨ P" (at level 70).
-Reserved Notation "M ; s ⊭ P" (at level 70).
-(* Replace binary_relation with serial_transition if needed *)
-Fixpoint tEntails {state} (M: relation state) (s: state) (tp: TProp state): Prop :=
-  match tp with
-  | TTop => True
-  | TBot => False
-  | TLift P => P s
-  | TNot P => M;s ⊭ P
-  | TConj P Q => M;s ⊨ P /\ M;s ⊨ Q
-  | TDisj P Q => M;s ⊨ P \/ M;s ⊨ Q
-  | TImpl P Q => M;s ⊨ P -> M;s ⊨ Q
-  | AX P => forall s', M s s' -> M;s' ⊨ P
-  | EX P => exists s', M s s' -> M;s' ⊨ P
-  | AG P => forall p, path M (s :: p) -> forall s', In s' (s :: p) -> M;s' ⊨ P
-  | EG P => exists p, path M (s :: p) /\ forall s', In s' (s :: p) -> M;s' ⊨ P
-  | AF P => forall p, path M (s :: p) -> exists s', In s' (s :: p) /\ M;s' ⊨ P
-  | EF P => exists p, path M (s :: p) /\ exists s', In s' (s :: p) /\ M;s' ⊨ P
-  (* Needs index. Maybe replace neList with vec, and zip with index *)
-  (* | AU P Q => forall p, path m s p -> exists s', inPath s' p /\ M;s' ⊨ P /\ forall s'', inPath s'' (pathBefore s' p) ->  *)
-  | _ => False
-  end
-  where "M ; s ⊨ P" := (tEntails M s P)
-    and "M ; s ⊭ P" := (~ M;s ⊨ P).
-
 Notation "⊤" := (TTop).
 Notation "⊥" := (TBot).
 Notation "^ P" := (TLift P) (at level 35).
@@ -100,3 +46,32 @@ Notation "P <--> Q" := ((P --> Q) ∧ (Q --> P)) (at level 65,  right associativ
 Notation "¬ P" := (TNot P) (at level 40).
 Notation "'A' [ P 'U' Q ]" := (AU P Q) (at level 40).
 Notation "'E' [ P 'U' Q ]" := (EU P Q) (at level 40).
+
+Reserved Notation "M ; s ⊨ P" (at level 70).
+Reserved Notation "M ; s ⊭ P" (at level 70).
+(* Replace binary_relation with serial_transition if needed *)
+Fixpoint tEntails {state} (R: relation state) (s: state) (tp: TProp state) : Prop :=
+  match tp with
+  | ⊤ => True
+  | ⊥ => False
+  | ^ P => P s
+  | ¬P => R;s ⊭ P
+  | P ∧ Q => R;s ⊨ P /\ R;s ⊨ Q
+  | P ∨ Q => R;s ⊨ P \/ R;s ⊨ Q
+  | P --> Q => R;s ⊨ P -> R;s ⊨ Q
+  | AX P => forall s', R s s' -> R;s' ⊨ P
+  | EX P => exists s', R s s' -> R;s' ⊨ P
+  (* Definitions using direct coinductive predicates *)
+  (* | AG P => forall (p: path R s), forall_in_path (fun s' => R;s' ⊨ P) p *)
+  (* | EG P => exists (p: path R s), forall_in_path (fun s' => R;s' ⊨ P) p  *)
+  (* | AF P => forall (p: path R s), exists_in_path (fun s' => R;s' ⊨ P) p  *)
+  (* | EF P => exists (p: path R s), exists_in_path (fun s' => R;s' ⊨ P) p  *)
+  | AG P => forall (p: path R s), forall s', in_path s' p -> R;s' ⊨ P
+  | EG P => exists (p: path R s), forall s', in_path s' p -> R;s' ⊨ P
+  | AF P => forall (p: path R s), exists s', in_path s' p /\ R;s' ⊨ P
+  | EF P => exists (p: path R s), exists s', in_path s' p /\ R;s' ⊨ P
+  (* TODO: AU and EU *)
+  | _ => False
+  end
+  where "M ; s ⊨ P" := (tEntails M s P)
+    and "M ; s ⊭ P" := (~ M;s ⊨ P).

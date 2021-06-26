@@ -11,7 +11,7 @@ Ltac tapply H :=
   apply H';
   clear H'.
 
-Ltac tconsume H := tapply H; clear H.
+Ltac tapplyc H := tapply H; clear H.
 
 Ltac etapply H :=
   let H' := fresh in 

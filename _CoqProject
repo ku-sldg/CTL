@@ -1,9 +1,10 @@
 -R . Attarch
-Tactics.v
+GeneralTactics.v
+BinaryRelations.v
+Ctl/Paths.v
 Ctl/Definition.v
 Ctl/Tactics.v
 Ctl/Properties.v
-BinaryRelations.v
 SepLogic.v
 TransitionSystems.v
 AttarchTrans.v

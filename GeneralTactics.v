@@ -5,8 +5,11 @@ Require Import Psatz.
 Ltac inv H := inversion H; subst; try contradiction.
 Ltac invc H := inversion H; clear H; subst; try contradiction.
 
-(* Todo: Support usecase `consume (H a)`, by grabbing H from the head of arg *)
-Ltac consume H := apply H; clear H.
+Ltac destructExists H id := destruct H as [id H].
+
+(* Todo: Support usecase `applyc (H a)`, by grabbing H from the head of arg *)
+Ltac applyc H := apply H; clear H.
+Ltac eapplyc H := eapply H; clear H.
 
 Lemma reflect_N_compare: forall n m,
   match n ?= m with
