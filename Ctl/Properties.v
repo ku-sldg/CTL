@@ -17,33 +17,88 @@ Proof.
   intros R s P H.
   intros p s' Hin.
   apply H.
-  apply in_path_refl_finite in Hin.
-  destruct Hin as [n Hin].
-  (* destruct p as [s'' r p]. *)
-  dependent induction Hin.
+  induction Hin.
   - apply rt_refl.
-  - 
-    (* simpl in x. *)
-    (* Set Keep Proof Equalities. *)
-    (* injection x. *)
-    eapply rt_trans.
+  - eapply rt_trans.
     + eapply rt_step. eassumption.
-    + 
-      eapply IHHin.
-      * intros s'' HR.
-        apply H.
-        eapply rt_trans.
-        -- eapply rt_step. eassumption.
-        -- assumption.
-      * destruct p as [s'' r' p'].
-        simpl in x.
-        (* assert (finite_path_UIP: forall (x y: finite_path R s (S n)) (p1 p2: x = y), p1 = p2). *)
-        (* assert (finite_path_UIP_refl: forall (x: finite_path R s (S n)) (p: x = x), p = eq_refl x). *)
-        (* { admit. } *)
-        (* apply finite_path_UIP in x. *)
-        admit.
-(* Qed. *)
-Admitted.
+    + applyc IHHin.
+      intros s'' H2.
+      apply H.
+      eapply rt_trans.
+      * eapply rt_step. eassumption.
+      * assumption.
+Qed. 
+
+CoFixpoint generate_path {state}
+  (R: relation state) (genNext: nat -> forall s, {s' | R s s'}) n s : path R s :=
+  match genNext n s with
+  | exist _ s' r => step s s' r (generate_path R genNext (S n) s')
+  end.
+
+(* CoFixpoint refl_existential_finite_path {state} (R: relation state) s P
+(* CoFixpoint refl_existential_finite_path {state} (R: relation state) s P (n: nat) *)
+  (H: forall n, {fp: finite_path R s n | forall s', in_finite_path s' n fp -> R;s' ⊨ P})
+  : path R s.
+pose proof (H 1) as Hone.
+destructExists Hone fp.
+inv fp.
+(* clear fp Hone X. *)
+econstructor; [eassumption|].
+(* clear fp Hone X. *)
+eapply refl_existential_finite_path.
+intros n.
+(* eexists. (* ?fp : finite_path R s' n *) *)
+specialize (H (S n)).
+destructExists H fp'.
+inv fp'.
+(* need to show s'0 = s' (both from a finite_path inversion) *)
+exists X0.
+ *)
+
+Ltac genExPath R s := 
+  refine (ex_intro _ (generate_path R _ 0 s) _).
+
+(* Ltac genExPath R s := 
+  refine (ex_intro _ (generate_path R _ 0 s) _);
+  Unshelve;
+  all: cycle 1.
+ *)
+Theorem EG_refl_finite {state}: forall (R: relation state) s P,
+  (forall n, {fp: finite_path R s n | forall s', in_finite_path s' n fp -> R;s' ⊨ P}) ->
+  R;s ⊨ EG P.
+Proof.
+  intros R s P H.
+  simpl.
+  (* Check generate_path. *)
+  (* refine (ex_intro _ (generate_path R _ 0 s) _). *)
+  genExPath R s.
+  Unshelve. all: cycle 1.
+
+  intros R s P H.
+  simpl.
+  Locate "{ _ }".
+  refine (ex_intro _ (
+      (* (cofix coIH s' (Hin: exists n (fp: finite_path R s n), in_finite_path s' n fp) : path R s' := _) s _ *)
+      (cofix coIH
+        s'
+        (* (Hin: {n & {fp: finite_path R s n | in_finite_path s' n fp}}) *)
+        n
+        : path R s'
+        := _
+      ) s 1
+    ) _).
+  Unshelve.
+  all: cycle 1.
+  - 
+    (* destruct Hin as [n [fp Hin]]. *)
+    (* destructExists Hin n. *)
+    (* destructExists Hin fp. *)
+    specialize (H n).
+    destructExists H fp.
+    
+  - exists 1. eexists. constructor.
+  - 
+  
 
   | AG P => forall (p: path R s), forall s', in_path s' p -> R;s' ⊨ P
   | EG P => exists (p: path R s), forall s', in_path s' p -> R;s' ⊨ P

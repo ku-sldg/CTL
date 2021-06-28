@@ -11,6 +11,20 @@ Ltac destructExists H id := destruct H as [id H].
 Ltac applyc H := apply H; clear H.
 Ltac eapplyc H := eapply H; clear H.
 
+Ltac generalize_max := 
+  repeat match goal with 
+  | [H: _ |- _] => generalize dependent H
+  end.
+
+Ltac generalize_max_except x :=
+  move x at top;
+  generalize_max;
+  intro x.
+
+Ltac max_induction x :=
+  generalize_max_except x;
+  induction x.
+
 Lemma reflect_N_compare: forall n m,
   match n ?= m with
   | Eq => n = m
