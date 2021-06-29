@@ -1,87 +1,35 @@
 Require Import GeneralTactics.
+Require Import BinaryRelations.
 
 Require Import Coq.Relations.Relation_Definitions.
+Require Import Coq.Relations.Relation_Operators.
 
-CoInductive path {state} (R: relation state) (s: state) := 
-  | step : forall s', R s s' -> path R s' -> path R s.
-Arguments step {state R}%type_scope.
-
-(* Definition path_coind {state: Set} {R: relation state}
-  (P: forall s, path R s -> Prop)
-  (coind_step: forall s s' (r : R s s') p, P s' p -> P s (step s s' r p))
-  : forall {s} (p: path R s), (P s p).
-refine (cofix F {s} p := _).
-
-Definition path_coind {state: Set} {R: relation state}
-  (P: forall s, path R s -> Prop)
-  (coind_step: forall s s' (r : R s s') p, P s' p -> P s (step s s' r p)) :=
-  cofix F {s} (p: path R s) : (P s p) :=
-    (* match p as pname return (P s pname) with  *)
-    match p with 
-    | step _ s' r p' => coind_step s s' r p' (F p')
-    end. *)
-
-CoInductive forall_in_path {state R s} (P: state -> Prop) : path R s -> Prop :=
-  | forall_in_step : forall s' r (p: path R s'),
-      P s ->
-      (* Coq infers the wrong value for `s` *)
-      (* forall_path P p -> *)
-      @forall_in_path state R s' P p ->
-      forall_in_path P (step s s' r p).
-
-Inductive in_path {state} {R: relation state} {s} : state -> path R s -> Prop :=
-  | in_head : forall s' r p,
-      in_path s (step s s' r p)
-  | in_tail : forall s' x r p,
-      @in_path state R s' x p ->
-      in_path x (step s s' r p).
-
-Definition forall_in_path' {state} {R: relation state} {s: state}
-  (P: state -> Prop) (p: path R s) :=
-  forall s', in_path s' p -> P s'.
-
-CoInductive exists_in_path {state R s} (P: state -> Prop) : path R s -> Prop :=
-  | exists_in_step : forall s' r (p: path R s'),
-      P s \/ @exists_in_path state R s' P p ->
-      exists_in_path P (step s s' r p).
-
-CoInductive exists_path {state R} (P: state -> Prop) (s: state) : Prop :=
-  | exists_step :
-      P s ->
-      (exists s', R s s' /\ exists_path P s') ->
-      exists_path P s.
-
-(* Require Import Coq.Vectors.VectorDef. *)
-Inductive finite_path {state} (R: relation state) : state -> nat -> Type := 
-  | finite_trivial : forall s, finite_path R s 0
-  | finite_step : forall s s' n,
+Inductive path {state} (R: relation state) : state -> nat -> Type := 
+  | path_trivial : forall s, path R s 0
+  | path_step : forall s s' n,
       R s s' ->
-      finite_path R s' n ->
-      finite_path R s (S n).
-Arguments finite_trivial {state R}%type_scope.
-Arguments finite_step    {state R}%type_scope.
+      path R s' n ->
+      path R s (S n).
+Arguments path_trivial {state R}%type_scope.
+Arguments path_step    {state R}%type_scope.
 
-Inductive in_finite_path {state} {R: relation state} {s}
-  : state -> forall n: nat, finite_path R s n -> Prop :=
-  | in_finite_head : forall s' n r p,
-      in_finite_path s (S n) (finite_step s s' n r p)
-  | in_finite_tail : forall s' x n r p,
-      @in_finite_path state R s' x n p ->
-      in_finite_path x (S n) (finite_step s s' n r p).
+Inductive in_path {state} {R: relation state} {s}
+  : state -> forall {n}, path R s n -> Prop :=
+  | in_path_head_trivial :
+      in_path s (path_trivial s)
+  | in_path_head_step : forall s' n r p,
+      in_path s (path_step s s' n r p)
+  | in_path_tail : forall s' x n r p,
+      @in_path state R s' x n p ->
+      in_path x (path_step s s' n r p).
 
-Fixpoint path_to_finite {state} {R: relation state} {s} 
-  (p: path R s) (n: nat) : finite_path R s n :=
-  match n with
-  | 0 => finite_trivial s
-  | S n' =>
-      match p with
-      | step _ s' r p => finite_step s s' n' r (path_to_finite p n')
-      end
-  end.
+(* A single-step path *)
+Definition path_singleton {state} {R: relation state} {x y} (r: R x y) : path R x 1 :=
+  path_step x y 0 r (path_trivial y).
 
 Require Import Psatz.
-Definition finite_path_pop n {state} {R: relation state} {m s} (fp: finite_path R s m) 
-  : {s' & finite_path R s' (m-n)}.
+Definition path_pop n {state} {R: relation state} {m s} (p: path R s m) 
+  : {s' & path R s' (m-n)}.
   induction n.
   - exists s.
     replace (m - 0) with m by lia.
@@ -97,27 +45,29 @@ Definition finite_path_pop n {state} {R: relation state} {m s} (fp: finite_path 
       assumption.
 Qed.
 
-Definition finite_path_tail {state} {R: relation state} {s n}
-  (fp: finite_path R s (S n)) : {s' & finite_path R s' n}.
-inv fp.
+Definition path_tail {state} {R: relation state} {s n}
+  (p: path R s (S n)) : {s' & path R s' n}.
+inv p.
 eexists.
 eassumption.
 Defined.
 
-Lemma finite_path_tail_correct {state} {R: relation state}:
-  forall s s' n r (fp: finite_path R s' n),
-  (* finite_path_tail (finite_step s s' n r fp) = existT _ s' fp. *)
-  projT2 (finite_path_tail (finite_step s s' n r fp)) = fp.
+Lemma path_tail_correct {state} {R: relation state}:
+  forall s s' n r (p: path R s' n),
+  (* path_tail (path_step s s' n r p) = existT _ s' p. *)
+  projT2 (path_tail (path_step s s' n r p)) = p.
 Proof. reflexivity. Qed.
 
-Definition finite_path_get_step {state} {R: relation state} {m s}
-  n (HinBounds: n < m) (fp: finite_path R s m) : {x & {y | R x y}}.
-max_induction n; intros.
-- inv fp.
+Definition path_get_step {state} {R: relation state} {m s}
+  n (HinBounds: n < m) (p: path R s m) : {x & {y | R x y}}.
+move n at top.
+generalize_max.
+induction n; intros.
+- inv p.
   + lia.
   + repeat eexists. eassumption.
 - destruct m as [|m']; [lia|].
-  inv fp.
+  inv p.
   clear H1.
   assert (HLt: n < m') by lia.
   specialize (IHn state R m' s' HLt X).
@@ -127,71 +77,35 @@ max_induction n; intros.
   eapply IHn.
 Defined.
 
-Theorem in_path_refl_finite {state} {R: relation state} {s} :
-  forall (p: path R s) s',
-  in_path s' p ->
-  exists n, in_finite_path s' n (path_to_finite p n).
-Proof.
-  intros p s' Hin.
-  induction Hin.
-  - exists 1.
-    constructor.
-  - destructExists IHHin n.
-    exists (S n).
-    constructor; assumption.
-Qed.
+Definition arbitrary_path {state} {R: relation state} 
+  (sw: serial_witness R) s n: path R s n.
+induction n.
+- constructor.
+- induction IHn.
+  + specialize (sw s).
+    destructExists sw s'.
+    econstructor.
+    * eassumption.
+    * constructor.
+  + econstructor; eassumption.
+Defined.
 
-Theorem in_path_refl_infinite {state} {R: relation state} {s} :
-  forall (p: path R s) s',
-  (exists n, in_finite_path s' n (path_to_finite p n)) ->
-  in_path s' p.
-Proof.
-  (* intros p. *)
-
-  intros p s' H.
-  destructExists H n.
-  induction H.
-  - destruct p; constructor.
-  - 
-  
-Admitted.
-
-Theorem in_path_refl {state} {R: relation state} {s} :
-  forall (p: path R s) s',
-  in_path s' p <->
-  exists n, in_finite_path s' n (path_to_finite p n).
-Proof.
-Admitted.
-
-Theorem forall_in_path_refl_finite {state} {R: relation state} {s}:
-  forall (P: state -> Prop) (p: path R s),
-    (forall n s', in_finite_path s' n (path_to_finite p n) -> P s') ->
-    (forall s', in_path s' p -> P s').
-Proof.
-  intros P p H s' Hin.
-  induction Hin.
-  - apply (H 1).
-    constructor.
-  - apply IHHin.
-    intros n x' H'.
-    apply (H (S n)).
-    constructor; assumption.
-Qed.
-
-Require Import Coq.Program.Equality.
-Theorem exists_in_path_refl_finite {state} {R: relation state} {s}:
-  forall P (p: path R s),
-    (exists n s', in_finite_path s' n (path_to_finite p n) /\ P s') ->
-    (exists s', in_path s' p /\ P s').
-Proof.
-  intros P p H.
-  destruct H as [n [s' [Hin HP]]].
-  exists s'.
-  split; [|assumption].
-  dependent induction Hin.
-  - destruct p as [x' r' p].
-    simpl in x.
-    assert (s' = x'). { admit. }
-    constructor.
-  - try apply IHHin.
-Admitted.
+Definition gen_path {state} {R: relation state} {s}
+  (sfw: serial_from_witness R s) n: path R s n.
+induction n.
+- constructor.
+- induction IHn.
+  + specialize (sfw s (rt_refl _ R s)).
+    destructExists sfw s'.
+    econstructor.
+    * eassumption.
+    * constructor.
+  + econstructor.
+    * eassumption.
+    * apply IHIHn.
+      intros s'' Hsteps.
+      apply sfw.
+      eapply rt_trans.
+      -- eapply rt_step. eassumption.
+      -- assumption.
+Defined.

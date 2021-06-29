@@ -8,16 +8,15 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Program.Equality.
 
-(* Require Import Coq.Logic.Eqdep_dec. *)
-
-Theorem AG_refl_finite {state}: forall (R: relation state) s P, 
+Theorem rtc_AG {state}: forall (R: relation state) s P, 
   (forall s', R^* s s' -> R;s' ⊨ P) ->
   R;s ⊨ AG P.
 Proof.
   intros R s P H.
-  intros p s' Hin.
+  intros n p s' Hin.
   apply H.
   induction Hin.
+  - apply rt_refl.
   - apply rt_refl.
   - eapply rt_trans.
     + eapply rt_step. eassumption.
@@ -29,82 +28,47 @@ Proof.
       * assumption.
 Qed. 
 
-CoFixpoint generate_path {state}
-  (R: relation state) (genNext: nat -> forall s, {s' | R s s'}) n s : path R s :=
-  match genNext n s with
-  | exist _ s' r => step s s' r (generate_path R genNext (S n) s')
-  end.
+(* TODO: move to Paths *)
+(* Is this really a transitivity property? *)
+(* Is this really true? *)
+Theorem path_trans {state} {R: relation state}: 
+  forall s x x' n n' (p: path R s n) (p': path R x n'),
+  in_path x' p' -> in_path x p -> in_path x' p.
+Proof.
+  intros s x x' n n' p p' Hx' Hx.
 
-(* CoFixpoint refl_existential_finite_path {state} (R: relation state) s P
-(* CoFixpoint refl_existential_finite_path {state} (R: relation state) s P (n: nat) *)
-  (H: forall n, {fp: finite_path R s n | forall s', in_finite_path s' n fp -> R;s' ⊨ P})
-  : path R s.
-pose proof (H 1) as Hone.
-destructExists Hone fp.
-inv fp.
-(* clear fp Hone X. *)
-econstructor; [eassumption|].
-(* clear fp Hone X. *)
-eapply refl_existential_finite_path.
-intros n.
-(* eexists. (* ?fp : finite_path R s' n *) *)
-specialize (H (S n)).
-destructExists H fp'.
-inv fp'.
-(* need to show s'0 = s' (both from a finite_path inversion) *)
-exists X0.
- *)
+Admitted.
 
-Ltac genExPath R s := 
-  refine (ex_intro _ (generate_path R _ 0 s) _).
-
-(* Ltac genExPath R s := 
-  refine (ex_intro _ (generate_path R _ 0 s) _);
-  Unshelve;
-  all: cycle 1.
- *)
-Theorem EG_refl_finite {state}: forall (R: relation state) s P,
-  (forall n, {fp: finite_path R s n | forall s', in_finite_path s' n fp -> R;s' ⊨ P}) ->
-  R;s ⊨ EG P.
+Lemma AG_idempotent {state}:
+  forall (R: relation state) s P, R;s ⊨ AG P -> R;s ⊨ AG (AG P).
 Proof.
   intros R s P H.
-  simpl.
-  (* Check generate_path. *)
-  (* refine (ex_intro _ (generate_path R _ 0 s) _). *)
-  genExPath R s.
-  Unshelve. all: cycle 1.
+  intros n p x Hin.
+  intros n' p' x' Hin'.
+  eapply H.
+  eapply path_trans; eassumption.
+Qed.
 
-  intros R s P H.
-  simpl.
-  Locate "{ _ }".
-  refine (ex_intro _ (
-      (* (cofix coIH s' (Hin: exists n (fp: finite_path R s n), in_finite_path s' n fp) : path R s' := _) s _ *)
-      (cofix coIH
-        s'
-        (* (Hin: {n & {fp: finite_path R s n | in_finite_path s' n fp}}) *)
-        n
-        : path R s'
-        := _
-      ) s 1
-    ) _).
-  Unshelve.
-  all: cycle 1.
-  - 
-    (* destruct Hin as [n [fp Hin]]. *)
-    (* destructExists Hin n. *)
-    (* destructExists Hin fp. *)
-    specialize (H n).
-    destructExists H fp.
-    
-  - exists 1. eexists. constructor.
-  - 
-  
-
-  | AG P => forall (p: path R s), forall s', in_path s' p -> R;s' ⊨ P
-  | EG P => exists (p: path R s), forall s', in_path s' p -> R;s' ⊨ P
-  | AF P => forall (p: path R s), exists s', in_path s' p /\ R;s' ⊨ P
-  | EF P => exists (p: path R s), exists s', in_path s' p /\ R;s' ⊨ P
-
+Theorem AG_rtc {state}: forall (R: relation state) s P, 
+  R;s ⊨ AG P ->
+  forall s', R^* s s' -> R;s' ⊨ P.
+Proof.
+  intros R s P H s' Hsteps.
+  generalize dependent P.
+  induction Hsteps; intros.
+  - remember (path_singleton H) as p.
+    apply H0 with (p:=p).
+    subst.
+    (* subst. *)
+    constructor.
+    constructor.
+  - apply (H 0 (path_trivial x)).
+    constructor.
+  - apply IHHsteps2.
+    apply IHHsteps1.
+    apply AG_idempotent.
+    assumption.
+Qed.
 
 Theorem tModusPonens {state}: forall (M: relation state) s P Q,
   M;s ⊨ P --> Q -> M;s ⊨ P -> M;s ⊨ Q.
@@ -113,6 +77,24 @@ Proof. auto. Qed.
 Theorem tModusPonens_flipped {state}: forall (M: relation state) s P Q,
   M;s ⊨ P -> M;s ⊨ P --> Q -> M;s ⊨ Q.
 Proof. auto. Qed.
+
+Theorem tModusTollens {state}: forall (R: relation state) s P Q,
+  R;s ⊨ (P --> Q) --> ¬Q --> ¬P.
+Proof.
+  intros R s P Q.
+  intros Hpq Hnq Hp.
+  tapply Hnq.
+  tapply Hpq.
+  assumption.
+Qed.
+
+Theorem tbimpl_neg {state}: forall (R: relation state) s P Q,
+  R;s ⊨ (P <--> Q) --> (¬P <--> ¬Q).
+Proof.
+  intros R s P Q.
+  split; intro;
+  (etapply (tModusTollens R); [apply H | assumption]).
+Qed.
 
 (* Good test for tactics *)
 Theorem TImpl_trans {state}: forall M (s: state) P Q R,
@@ -142,72 +124,174 @@ Proof.
   split; intros H; auto.
 Qed.
 
-Theorem path_from_serial {state}: forall (M: serialT state) s, path (projT1 M) s.
+Lemma AG_steps_strong {state}: forall (R: relation state) s s' P,
+  R^* s s' -> R;s ⊨ AG P -> R;s' ⊨ AG P.
 Proof.
-  intros M.
-  destruct M as [M Hserial]; simpl.
-  cofix coIH.
-  intros s.
-  specialize (Hserial s).
-  destruct Hserial as [s' Hserial].
-  econstructor.
-  - eassumption.
-  - auto.
+  intros R s s' P Hsteps H.
+  pose proof (AG_rtc _ _ _ H) as H0; clear H; rename H0 into H.
+  apply rtc_AG.
+  intros s'' Hsteps2.
+  apply H.
+  eapply rt_trans; eassumption.
 Qed.
 
-Theorem path_from_serial' {state}:
-  forall (M: relation state), is_serialT M -> forall s, path M s.
-Proof. 
-  intros M Hserial.
-  cofix coIH.
-  intros s.
-  specialize (Hserial s).
-  destruct Hserial as [s' Hserial].
-  econstructor.
-  - eassumption.
-  - auto.
+Lemma AG_steps_weak {state}: forall (R: relation state) s s' P,
+  R^* s s' -> R;s ⊨ AG P -> R;s' ⊨ P.
+Proof.
+  intros R s s' P Hsteps H.
+  pose proof (AG_steps_strong _ _ _ _ Hsteps H) as Hstrong.
+  apply Hstrong with (p:= path_trivial s').
+  constructor.
+Qed.
+
+(* Expansion Laws *)
+Theorem expand_AG {state}: forall (R: relation state) s P, R;s ⊨ AG P <--> P ∧ AX (AG P).
+Proof.
+  intros R s P.
+  split; intro H.
+  - split.
+    + eapply H.
+      econstructor.
+    + intros s' Hstep.
+      eapply AG_steps_strong.
+      * eapply rt_step. eassumption.
+      * assumption.
+  - destruct H as [H1 H2].
+    intros n p s' Hin.
+    move Hin at top.
+    generalize dependent P.
+    induction Hin; intros; try assumption.
+    clear H1.
+    applyc IHHin.
+    + eapply H2.
+      * eassumption.
+      * econstructor.
+    + intros s'' r' n' p' y Hin'.
+      apply H2 with (p:= path_step s' s'' n' r' p').
+      * assumption.
+      * constructor. assumption.
+Qed.
+
+Theorem expand_EG {state}: forall (R: relation state) s P, R;s ⊨ EG P <--> P ∧ EX (EG P).
+Admitted.
+
+Theorem expand_AF {state}: forall (R: relation state) s P, R;s ⊨ AF P <--> P ∧ AX (AF P).
+Admitted.
+
+Theorem expand_AF' {state}: forall (R: relation state) s P, R;s ⊨ AF P --> P ∧ AX (AF P).
+Admitted.
+
+Theorem expand_EF {state}: forall (R: relation state) s P, R;s ⊨ EF P <--> P ∧ EX (EF P).
+Admitted.
+
+Lemma in_path_head {state} {R: relation state}:
+  forall s n (p: path R s n), in_path s p.
+Proof.
+  intros s n p.
+  destruct p; constructor.
 Qed.
 
 (* De Morgan's Laws *)
-Theorem AF_EG {state}: forall M (s: state) P, M;s ⊨ ¬AF P <--> EG (¬P).
+Theorem AF_EG {state}: forall R (s: state) P, R;s ⊨ AF (¬P) --> ¬EG P.
 Proof.
-  intros M s P.
-  split; intro H.
-  - (* Need to construct a path based on contradiction at each step *)
-    simpl. 
-    refine (ex_intro _ (
-      (cofix F s' : path M s' := _) s
-    ) _).
-    intros s' Hin H2.
-    tapply H.
-    intros p.
-    exists s'.
-    split.
-    + 
-    + assumption.
-  - intros H2.
-    destruct H as [p H].
-    tspecialize H2 p.
-    destruct H2 as [s' [HIn H2]].
-    tapply (H s'); assumption.
+  intros R s P H H2.
+  simpl in H, H2.
+  destructExists H n.
+  tspecialize H2 n.
+  destructExists H2 p.
+  tspecialize H p.
+  destructExists H s'.
+  tspecialize H2 s'.
+  destruct H; auto.
 Qed.
 
-Theorem AF_EG' {state}: forall M (s: state) P, M;s ⊨ AF (¬P) <--> ¬EG P.
-Admitted.
-
-Theorem EF_AG {state}: forall M (s: state) P, M;s ⊨ ¬EF P <--> AG (¬ P).
+(* Needs classical axioms *)
+Theorem AF_EG' {state}: forall R (s: state) P, R;s ⊨ ¬AF P --> EG (¬P).
 Proof.
-  (* intros M s P.
-  split.
-  - intros H p Hpath s' Hin H2.
-    tconsume H.
-    eauto.
-  - intros H H2.
-    destruct H2 as [p [Hpath [s' [Hin H2]]]].
-    tspecialize3 H p Hpath s'.
-    tconsume H; assumption.
-Qed. *)
+  intros R s P H.
+  intro n.
+  induction n.
+  - exists (path_trivial s).
+    intros s' Hin H2.
+    inv Hin.
+    tapply H.
+    exists 0.
+    intro p.
+    exists s'.
+    split.
+    + apply in_path_head.
+    + assumption.
+  - destructExists IHn p.
+    (* Could proceed from induction on p.
+       But where to deduce extra step at the end of the path?
+       Hypothetically, from H. But can that be done intuitionistically? *)
+    simpl in H.
+    (* Can't extract any information from H until I get to a "False" goal.
+       But I can't move my goal forward until I provide a path.
+       Giving an existential won't work, since the ultimate value would 
+       presumably not be in the current scope. *)
+Abort.
+
+Theorem exists_deMorg: forall X (P: X -> Prop), ~(exists x, P x) -> forall x, ~ P x.
+Proof.
+  intros X P H.
+  intros x.
+  intros H'.
+  apply H.
+  exists x.
+  assumption.
+Qed.
+
+Theorem AF_EG' {state}: forall R (s: state) P, 
+  serial_from_witness R s ->
+  R;s ⊨ ¬AF P --> EG (¬P).
+Proof.
+  intros R s P Hserial H n.
+  simpl in H.
+  pose proof (exists_deMorg _ _ H n) as H2; clear H; rename H2 into H; simpl in H.
+  exists (gen_path Hserial n).
+  intros s' Hin H2.
+  apply H.
+  intros p'.
+  exists s'.
+  split; [|assumption].
+  (* No relation between p' and the generated path *)
+Abort.
+
+Definition classical_double_neg_elim : Prop := forall (P: Prop), ~~P -> P.
+Theorem AF_EG' {state}: forall R (s: state) P, 
+  classical_double_neg_elim ->
+  R;s ⊨ ¬AF P --> EG (¬P).
+Proof.
+  (* Proof sketch:
+    ¬AF P ≡ ¬AF (¬¬P)
+          ≡ ¬¬EG (¬¬P)
+          ≡ EG P (double elimination)
+  *)
 Admitted.
 
-Theorem AX_EX {state}: forall M (s: state) P, M;s ⊨ ¬AX P <--> EX (¬ P).
+Theorem EG_AF {state}: forall R (s: state) P, R;s ⊨ EG (¬P) --> ¬AF P.
+Proof.
+  intros R s P H H2.
+  simpl in H, H2.
+  destructExists H2 n.
+  tspecialize H n.
+  destructExists H p.
+  tspecialize H2 p.
+  destructExists H2 s'.
+  tspecialize H s'.
+  destruct H2.
+  apply H; assumption.
+Qed.
+
+Theorem AG_EF {state}: forall R (s: state) P, R;s ⊨ AG (¬P) --> ¬EF P.
+Admitted.
+
+Theorem EF_AG {state}: forall R (s: state) P, R;s ⊨ EF (¬P) --> ¬AG P.
+Admitted.
+
+Theorem AX_EX {state}: forall R (s: state) P, R;s ⊨ AX (¬P) --> ¬EX P.
+Admitted.
+
+Theorem EX_AX {state}: forall R (s: state) P, R;s ⊨ EX (¬P) --> ¬AX P.
 Admitted.

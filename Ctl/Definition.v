@@ -61,15 +61,10 @@ Fixpoint tEntails {state} (R: relation state) (s: state) (tp: TProp state) : Pro
   | P --> Q => R;s ⊨ P -> R;s ⊨ Q
   | AX P => forall s', R s s' -> R;s' ⊨ P
   | EX P => exists s', R s s' -> R;s' ⊨ P
-  (* Definitions using direct coinductive predicates *)
-  (* | AG P => forall (p: path R s), forall_in_path (fun s' => R;s' ⊨ P) p *)
-  (* | EG P => exists (p: path R s), forall_in_path (fun s' => R;s' ⊨ P) p  *)
-  (* | AF P => forall (p: path R s), exists_in_path (fun s' => R;s' ⊨ P) p  *)
-  (* | EF P => exists (p: path R s), exists_in_path (fun s' => R;s' ⊨ P) p  *)
-  | AG P => forall (p: path R s), forall s', in_path s' p -> R;s' ⊨ P
-  | EG P => exists (p: path R s), forall s', in_path s' p -> R;s' ⊨ P
-  | AF P => forall (p: path R s), exists s', in_path s' p /\ R;s' ⊨ P
-  | EF P => exists (p: path R s), exists s', in_path s' p /\ R;s' ⊨ P
+  | AG P => forall n, forall (p: path R s n), forall s', in_path s' p -> R;s' ⊨ P
+  | EG P => forall n, exists (p: path R s n), forall s', in_path s' p -> R;s' ⊨ P
+  | AF P => exists n, forall (p: path R s n), exists s', in_path s' p /\ R;s' ⊨ P
+  | EF P => exists n, exists (p: path R s n), exists s', in_path s' p /\ R;s' ⊨ P
   (* TODO: AU and EU *)
   | _ => False
   end
