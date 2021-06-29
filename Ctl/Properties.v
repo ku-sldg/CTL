@@ -8,6 +8,19 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Program.Equality.
 
+Lemma AG_idempotent {state}:
+  forall (R: relation state) s P, R;s ⊨ AG P -> R;s ⊨ AG (AG P).
+Proof.
+  intros R s P H.
+  intros n p x Hin.
+  intros n' p' x' Hin'.
+  pose proof (path_combine _ _ _ _ _ p p' Hin Hin') as HIn''.
+  destructExists HIn'' n''.
+  destructExists HIn'' p''.
+  eapply H.
+  eassumption.
+Qed.
+
 Theorem rtc_AG {state}: forall (R: relation state) s P, 
   (forall s', R^* s s' -> R;s' ⊨ P) ->
   R;s ⊨ AG P.
@@ -28,27 +41,6 @@ Proof.
       * assumption.
 Qed. 
 
-(* TODO: move to Paths *)
-(* Is this really a transitivity property? *)
-(* Is this really true? *)
-Theorem path_trans {state} {R: relation state}: 
-  forall s x x' n n' (p: path R s n) (p': path R x n'),
-  in_path x' p' -> in_path x p -> in_path x' p.
-Proof.
-  intros s x x' n n' p p' Hx' Hx.
-
-Admitted.
-
-Lemma AG_idempotent {state}:
-  forall (R: relation state) s P, R;s ⊨ AG P -> R;s ⊨ AG (AG P).
-Proof.
-  intros R s P H.
-  intros n p x Hin.
-  intros n' p' x' Hin'.
-  eapply H.
-  eapply path_trans; eassumption.
-Qed.
-
 Theorem AG_rtc {state}: forall (R: relation state) s P, 
   R;s ⊨ AG P ->
   forall s', R^* s s' -> R;s' ⊨ P.
@@ -59,7 +51,6 @@ Proof.
   - remember (path_singleton H) as p.
     apply H0 with (p:=p).
     subst.
-    (* subst. *)
     constructor.
     constructor.
   - apply (H 0 (path_trivial x)).
@@ -176,9 +167,6 @@ Theorem expand_EG {state}: forall (R: relation state) s P, R;s ⊨ EG P <--> P �
 Admitted.
 
 Theorem expand_AF {state}: forall (R: relation state) s P, R;s ⊨ AF P <--> P ∧ AX (AF P).
-Admitted.
-
-Theorem expand_AF' {state}: forall (R: relation state) s P, R;s ⊨ AF P --> P ∧ AX (AF P).
 Admitted.
 
 Theorem expand_EF {state}: forall (R: relation state) s P, R;s ⊨ EF P <--> P ∧ EX (EF P).

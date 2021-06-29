@@ -109,3 +109,30 @@ induction n.
       -- eapply rt_step. eassumption.
       -- assumption.
 Defined.
+
+Definition path_combineT {state} {R: relation state}: 
+  forall s x x' n n' (p: path R s n) (p': path R x n'),
+  in_path x p -> in_path x' p' -> 
+  {n'' & {p'': path R s n'' & in_path x' p''}}.
+  (* n' <= n'' <= n+n' *)
+intros s x x' n n' p p' Hx Hx'.
+try induction Hx.
+(* Might not be definable, since it depends on value of Prop Hx *)
+Abort.
+
+Theorem path_combine {state} {R: relation state}: 
+  forall s x x' n n' (p: path R s n) (p': path R x n'),
+  in_path x p -> in_path x' p' -> 
+  exists n'' (p'': path R s n''), in_path x' p''.
+Proof.
+  intros s x x' n n' p p' Hx Hx'.
+  induction Hx; [eauto|eauto|].
+  specialize (IHHx p' Hx').
+  destructExists IHHx n''.
+  destructExists IHHx p''.
+  exists (S n'').
+  exists (path_step s s' n'' r p'').
+  constructor.
+  assumption.
+Qed.
+  
