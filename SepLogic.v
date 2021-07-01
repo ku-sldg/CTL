@@ -1,3 +1,5 @@
+Require Import GeneralTactics.
+
 Notation component := nat (only parsing).
 
 Inductive privilege : Set :=
@@ -41,6 +43,32 @@ Notation "a @ l" := (acc_at l a) (at level 50).
 Reserved Notation "X ⊢ Y" (at level 70).
 (* Reserved Notation "X ⊬ Y" (at level 70). *)
 Inductive sEntails {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
-  | sep_con_comm  : forall X Y, X ** Y ⊢ Y ** X
-  | sep_con_assoc : forall X Y Z, X ** Y ** Z ⊢ (X ** Y) ** Z
+  | sEntails_refl : forall X,
+      X ⊢ X
+  | sep_con_intro : forall X X' Y Y',
+      X ⊢ X' ->
+      Y ⊢ Y' ->
+      X ** Y ⊢ X' ** Y'
+  | sep_con_comm  : forall X Y, 
+      X ** Y ⊢ Y ** X
+  | sep_con_assoc : forall X Y Z,
+      X ** Y ** Z ⊢ (X ** Y) ** Z
+  | sEntails_trans : forall X Y Z,
+      X ⊢ Y ->
+      Y ⊢ Z ->
+      X ⊢ Z
   where "X ⊢ Y" := (sEntails X Y).
+
+(* Inductive sEntails {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
+  | sEntails_refl : forall X,
+      X ⊢ X
+  | sep_con_intro : forall X X' Y Y',
+      X ⊢ X' ->
+      Y ⊢ Y' ->
+      X ** Y ⊢ X' ** Y'
+  | sep_con_comm  : forall X Y, 
+      A ** B ⊢ C ** D ->
+      A ** B ⊢ D ** C
+  | sep_con_assoc : forall X Y Z,
+      X ** Y ** Z ⊢ (X ** Y) ** Z
+  where "X ⊢ Y" := (sEntails X Y). *)

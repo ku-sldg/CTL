@@ -136,3 +136,12 @@ Proof.
   assumption.
 Qed.
   
+Theorem path_to_rtc {state}: forall (R: relation state) s s' n (p: path R s n),
+  in_path s' p -> R^* s s'.
+Proof.
+  intros R s s' n p Hin.
+  induction Hin; [apply rt_refl| apply rt_refl|].
+  eapply rt_trans.
+  - eapply rt_step. eassumption.
+  - assumption.
+Qed.

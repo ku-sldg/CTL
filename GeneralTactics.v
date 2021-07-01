@@ -23,6 +23,8 @@ Ltac max_induction x :=
   generalize_max;
   induction x.
 
+(* nat reflection *)
+
 Lemma reflect_N_compare: forall n m,
   match n ?= m with
   | Eq => n = m
@@ -47,50 +49,37 @@ Ltac find_N_compare_destruct :=
   | [_ : _ |- context [compare ?X ?Y]] => reflect_destruct_N_compare X Y
   | [_ : context [compare ?X ?Y] |- _] => reflect_destruct_N_compare X Y
   end.
-  
-Ltac auto_specialize := 
-  repeat match goal with 
-  | [H : ?x -> _ |- _] => 
-      let H' := fresh in 
-      assert (H' : x) by (easy + lia);
-      specialize (H H');
-      clear H'
-  | [H : ?x <-> _ |- _] => 
-      destruct H as [H _];
-      let H' := fresh in 
-      assert (H' : x) by (easy + lia);
-      specialize (H H');
-      clear H'
-  | [H : _ <-> ?x |- _] => 
-      destruct H as [_ H];
-      let H' := fresh in 
-      assert (H' : x) by (easy + lia);
-      specialize (H H');
-      clear H'
-  end.
+
+(* Automatic simplificiations on the context *)
 
 Ltac my_crush := repeat constructor + easy + lia + assumption. 
 
-Ltac auto_ponens_with H tac := 
+Tactic Notation "cut" hyp(H) "by" tactic(tac) :=
   match type of H with
-  | ?x -> ?y => 
+  (* | forall (_: ?a), _ => *)
+  | ?x -> _ =>
       let H' := fresh in 
-      assert (H' : x) by tac;
+      assert (H': x) by tac;
       specialize (H H');
       clear H'
   end.
-Ltac auto_ponens H := auto_ponens_with H my_crush.
 
-Theorem modus_tollens : forall {a b: Prop}, (a -> b) -> not b -> not a.
-Proof.
-  unfold not.
-  intros a b H H0 H1.
-  apply H0.
-  apply H.
-  assumption.
-Qed.
+Tactic Notation "auto_cut" "by" tactic(tac) := 
+  repeat match goal with 
+  | [H : ?x -> _ |- _] => cut H by tac
+  | [H : ?x <-> _ |- _] => 
+      destruct H as [H _];
+      cut H by tac
+  | [H : _ <-> ?x |- _] => 
+      destruct H as [_ H];
+      cut H by tac
+  end.
+Tactic Notation "auto_cut" := auto_cut by my_crush.
 
-Ltac auto_tollens_with H tac :=
+Theorem modus_tollens : forall {a b: Prop}, (a -> b) -> ~b -> ~a.
+Proof. auto. Qed.
+
+Tactic Notation "cut_modus_tollens" hyp(H) "by" tactic(tac) :=
   match type of H with
   | ?x -> ?y => 
       let H' := fresh in 
@@ -100,10 +89,12 @@ Ltac auto_tollens_with H tac :=
       clear H; clear H';
       rename H'' into H
   end.
-Ltac auto_tollens H := auto_tollens_with H my_crush.
+Tactic Notation "cut_modus_tollens" hyp(H) := cut_modus_tollens H by my_crush.
 
-Ltac simplify_implication_with H tac := auto_ponens_with H tac + auto_tollens_with H tac.
-Ltac simplify_implication H := auto_ponens H + auto_tollens H.
+Tactic Notation "simplify_implication" hyp(H) "by" tactic(tac) :=
+  cut H by tac + cut_modus_tollens H by tac.
+Tactic Notation "simplify_implication" hyp(H) :=
+  simplify_implication H by my_crush.
 
 Ltac is_prop x := 
   match type of x with
@@ -111,18 +102,17 @@ Ltac is_prop x :=
   | _ => fail
   end.
 
-Ltac simplify_assumps_with tac :=
+Tactic Notation "simplify_context" "by" tactic(tac) :=
   repeat match goal with 
   | [H : ?x = ?x |- _] => clear H
-  (* is_prop doesn't seem necessary? *)
   | [H : ?x, H' : ?x |- _] => is_prop x; clear H'
   | [H : _ /\ _ |- _] => destruct H
-  | [H : _ -> _ |- _] => simplify_implication_with H tac
-  | [H : _ <-> _ |- _] => 
-      (destruct H as [H _]; simplify_implication_with H tac) +
-      (destruct H as [_ H]; simplify_implication_with H tac)
+  | [H : _ -> _ |- _] => simplify_implication H by tac
+  | [H : _ <-> _ |- _] => simplify_implication H by tac
   end.
-Ltac simplify_assumps := simplify_assumps_with my_crush.
+Tactic Notation "simplify_context" := simplify_context by my_crush.
+
+(* Misc. *)
 
 Ltac find_solve_inversion := 
   match goal with 
@@ -130,14 +120,17 @@ Ltac find_solve_inversion :=
   end.
 
 Ltac find_contradiction :=
-  simplify_assumps; subst;
+  simplify_context; subst;
   solve [contradiction + discriminate + lia + find_solve_inversion].
 
-Ltac expand x := unfold x; fold x.
+(* Ltac expand x := unfold x; fold x. *)
+Tactic Notation "expand" constr(x) := unfold x; fold x.
 
-Ltac expand_in x H := unfold x in H; fold x in H.
+(* Ltac expand_in x H := unfold x in H; fold x in H. *)
+Tactic Notation "expand" constr(x) "in" hyp(H) := unfold x in H; fold x in H.
 
-Ltac expand_all x := unfold x in *; fold x in *.
+(* Ltac expand_all x := unfold x in *; fold x in *. *)
+Tactic Notation "expand" constr(x) "in" "*" := unfold x in *; fold x in *.
 
 Lemma breakable_andb : forall x y, andb x y = true <-> x = true /\ y = true.
 Proof.
@@ -149,3 +142,4 @@ Ltac break_andb :=
   | [H : andb _ _ = true |- _] => apply breakable_andb in H; destruct H
   | [_ : _ |- andb _ _ = true] => apply breakable_andb; split; try break_andb
   end.
+

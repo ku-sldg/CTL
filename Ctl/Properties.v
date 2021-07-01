@@ -21,6 +21,24 @@ Proof.
   eassumption.
 Qed.
 
+Ltac copy H ident := pose proof H as ident.
+
+Lemma EG_idempotent {state}:
+  forall (R: relation state) s P, R;s ⊨ EG P -> R;s ⊨ EG (EG P).
+Proof.
+  intros R s P H.
+  intro n.
+  copy H Hpath1.
+  tspecialize Hpath1 n.
+  destructExists Hpath1 p.
+  exists p.
+  intros s' Hin.
+  (* simpl in *. *)
+
+  induction Hin; [assumption|assumption|].
+  intros n'.
+Admitted.
+
 Theorem rtc_AG {state}: forall (R: relation state) s P, 
   (forall s', R^* s s' -> R;s' ⊨ P) ->
   R;s ⊨ AG P.
@@ -28,17 +46,8 @@ Proof.
   intros R s P H.
   intros n p s' Hin.
   apply H.
-  induction Hin.
-  - apply rt_refl.
-  - apply rt_refl.
-  - eapply rt_trans.
-    + eapply rt_step. eassumption.
-    + applyc IHHin.
-      intros s'' H2.
-      apply H.
-      eapply rt_trans.
-      * eapply rt_step. eassumption.
-      * assumption.
+  eapply path_to_rtc.
+  eassumption.
 Qed. 
 
 Theorem AG_rtc {state}: forall (R: relation state) s P, 

@@ -38,7 +38,7 @@ Arguments EU    {state}%type_scope.
 
 Notation "⊤" := (TTop).
 Notation "⊥" := (TBot).
-Notation "^ P" := (TLift P) (at level 35).
+(* Notation "⟨ P ⟩" := (TLift P) (at level 35). *)
 Notation "P ∧ Q" := (TConj P Q) (at level 45, right associativity).
 Notation "P ∨ Q" := (TDisj P Q) (at level 55, right associativity).
 Notation "P --> Q" := (TImpl P Q) (at level 68,  right associativity).
@@ -54,7 +54,7 @@ Fixpoint tEntails {state} (R: relation state) (s: state) (tp: TProp state) : Pro
   match tp with
   | ⊤ => True
   | ⊥ => False
-  | ^ P => P s
+  | TLift P => P s
   | ¬P => R;s ⊭ P
   | P ∧ Q => R;s ⊨ P /\ R;s ⊨ Q
   | P ∨ Q => R;s ⊨ P \/ R;s ⊨ Q
