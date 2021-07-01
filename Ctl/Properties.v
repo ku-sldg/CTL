@@ -55,19 +55,11 @@ Theorem AG_rtc {state}: forall (R: relation state) s P,
   forall s', R^* s s' -> R;s' ⊨ P.
 Proof.
   intros R s P H s' Hsteps.
-  generalize dependent P.
-  induction Hsteps; intros.
-  - remember (path_singleton H) as p.
-    apply H0 with (p:=p).
-    subst.
-    constructor.
-    constructor.
-  - apply (H 0 (path_trivial x)).
-    constructor.
-  - apply IHHsteps2.
-    apply IHHsteps1.
-    apply AG_idempotent.
-    assumption.
+  apply rtc_to_path in Hsteps.
+  destructExists Hsteps n.
+  destructExists Hsteps p.
+  apply H with (p:=p).
+  assumption.
 Qed.
 
 Theorem tModusPonens {state}: forall (M: relation state) s P Q,
@@ -132,7 +124,7 @@ Proof.
   apply rtc_AG.
   intros s'' Hsteps2.
   apply H.
-  eapply rt_trans; eassumption.
+  eapply rtc_trans; eassumption.
 Qed.
 
 Lemma AG_steps_weak {state}: forall (R: relation state) s s' P,
@@ -154,7 +146,7 @@ Proof.
       econstructor.
     + intros s' Hstep.
       eapply AG_steps_strong.
-      * eapply rt_step. eassumption.
+      * eapply rtn1_trans; [eassumption|constructor].
       * assumption.
   - destruct H as [H1 H2].
     intros n p s' Hin.

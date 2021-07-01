@@ -1,13 +1,50 @@
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
-
 Require Import Coq.Lists.List.
+
+Require Import GeneralTactics.
 
 Definition rel_singleton {A} (x y : A): relation A :=
   fun x' y' => x' = x /\ y' = y -> True.
 
 (* Notation for reflexive transitive closures *)
-Notation "R ^*" := (clos_refl_trans _ R) (at level 35).
+(* Notation "R ^*" := (clos_refl_trans _ R) (at level 35). *)
+(* This definition of reflexive transitive closure for the convenient inductive structure *)
+Notation "R ^*" := (clos_refl_trans_n1 _ R) (at level 35).
+
+Lemma rtc_trans {A}: forall (R: relation A) a b c,
+  R^* a b -> R^* b c -> R^* a c.
+Proof.
+  intros R a b c Hab Hbc.
+  induction Hbc.
+  - assumption.
+  - econstructor; eassumption.
+Qed.
+
+Lemma rtc_alt_trans {A}: forall (R: relation A) a b c,
+  R a b -> R^* b c -> R^* a c.
+Proof.
+  intros R a b c Hab Hbc.
+  eapply rtc_trans; [|eassumption].
+  econstructor.
+  - eassumption.
+  - constructor.
+Qed.
+
+Lemma rtc_1n_n1_equiv {A}: forall (R: relation A) a b,
+  clos_refl_trans_1n _ R a b <-> R^* a b.
+Proof.
+  (* intros R a b H1n.
+  induction H1n.
+  - constructor.
+  - induction IHH1n.
+    + econstructor.
+      * eassumption.
+      * constructor.
+    + econstructor.
+      * eassumption.
+      * apply IHIHH1n. *)
+Admitted.
 
 Definition is_serial {A} (R: relation A) := forall a, exists b, R a b.
 Definition serial A := {R: relation A | is_serial R}.

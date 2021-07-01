@@ -17,16 +17,9 @@ Inductive either_transition {G A B} (R: transition G A) (Q: transition G B) : tr
 Notation "R ⊔ S" := (either_transition R S) (at level 70).
 
 (* Todo, support hoare logic syntax of relations? *)
-Inductive sprop_closure {comp loc A} (R: transition (sprop comp loc) A) : transition (sprop comp loc) A :=
-  | frame_rule : forall Q Q' S a a',
-      R (Q,a) (Q',a') ->
-      (* Nothing "modified" by R free in S? -> *)
-      sprop_closure R (Q ** S, a) (Q' ** S, a')
-  | sEntails_pre : forall Q Q' S a a',
-      Q ⊢ S ->
-      sprop_closure R (Q,a) (Q',a') ->
-      sprop_closure R (S,a) (Q',a')
-  | sEntails_post : forall Q Q' S a a',
-      Q' ⊢ S ->
-      sprop_closure R (Q,a) (Q',a') ->
-      sprop_closure R (Q,a) (S,a').
+Inductive sEntails_clos {comp loc A} (R: transition (sprop comp loc) A) : transition (sprop comp loc) A :=
+  | sEntails_step : forall x x' y y' a a',
+      x' ⊢ x  ->
+      y  ⊢ y' ->
+      R (x,a) (y,a') ->
+      sEntails_clos R (x',a) (y',a').
