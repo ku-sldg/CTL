@@ -34,7 +34,7 @@ Definition path_pop n {state} {R: relation state} {m s} (p: path R s m)
   - exists s.
     replace (m - 0) with m by lia.
     assumption.
-  - destructExists IHn s'.
+  - destruct exists IHn s'.
     inv IHn.
     + exists s'.
       rewrite <- H1 in IHn.
@@ -71,8 +71,7 @@ induction n; intros.
   clear H1.
   assert (HLt: n < m') by lia.
   specialize (IHn state R m' s' HLt X).
-  destructExists IHn x.
-  destructExists IHn y.
+  destruct exists IHn x y.
   repeat eexists.
   eapply IHn.
 Defined.
@@ -83,7 +82,7 @@ induction n.
 - constructor.
 - induction IHn.
   + specialize (sw s).
-    destructExists sw s'.
+    destruct exists sw s'.
     econstructor.
     * eassumption.
     * constructor.
@@ -96,7 +95,7 @@ induction n.
 - constructor.
 - induction IHn.
   + specialize (sfw s (rtn1_refl _ R s)).
-    destructExists sfw s'.
+    destruct exists sfw s'.
     econstructor.
     * eassumption.
     * constructor.
@@ -126,8 +125,7 @@ Proof.
   intros s x x' n n' p p' Hx Hx'.
   induction Hx; [eauto|eauto|].
   specialize (IHHx p' Hx').
-  destructExists IHHx n''.
-  destructExists IHHx p''.
+  destruct exists IHHx n'' p''.
   exists (S n'').
   exists (path_step s s' n'' r p'').
   constructor.
@@ -151,8 +149,7 @@ Proof.
   apply rtc_1n_n1_equiv in Hsteps.
   induction Hsteps.
   - repeat eexists. econstructor.
-  - destructExists IHHsteps n;
-    destructExists IHHsteps p.
+  - destruct exists IHHsteps n p;
     exists (S n).
     exists (path_step _ _ _ H p).
     constructor.

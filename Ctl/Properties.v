@@ -15,8 +15,7 @@ Proof.
   intros n p x Hin.
   intros n' p' x' Hin'.
   pose proof (path_combine _ _ _ _ _ p p' Hin Hin') as HIn''.
-  destructExists HIn'' n''.
-  destructExists HIn'' p''.
+  destruct exists HIn'' n'' p''.
   eapply H.
   eassumption.
 Qed.
@@ -30,7 +29,7 @@ Proof.
   intro n.
   copy H Hpath1.
   tspecialize Hpath1 n.
-  destructExists Hpath1 p.
+  destruct exists Hpath1 p.
   exists p.
   intros s' Hin.
   (* simpl in *. *)
@@ -56,8 +55,7 @@ Theorem AG_rtc {state}: forall (R: relation state) s P,
 Proof.
   intros R s P H s' Hsteps.
   apply rtc_to_path in Hsteps.
-  destructExists Hsteps n.
-  destructExists Hsteps p.
+  destruct exists Hsteps n p.
   apply H with (p:=p).
   assumption.
 Qed.
@@ -185,11 +183,11 @@ Theorem AF_EG {state}: forall R (s: state) P, R;s ⊨ AF (¬P) --> ¬EG P.
 Proof.
   intros R s P H H2.
   simpl in H, H2.
-  destructExists H n.
+  destruct exists H n.
   tspecialize H2 n.
-  destructExists H2 p.
+  destruct exists H2 p.
   tspecialize H p.
-  destructExists H s'.
+  destruct exists H s'.
   tspecialize H2 s'.
   destruct H; auto.
 Qed.
@@ -210,7 +208,7 @@ Proof.
     split.
     + apply in_path_head.
     + assumption.
-  - destructExists IHn p.
+  - destruct exists IHn p.
     (* Could proceed from induction on p.
        But where to deduce extra step at the end of the path?
        Hypothetically, from H. But can that be done intuitionistically? *)
@@ -263,11 +261,11 @@ Theorem EG_AF {state}: forall R (s: state) P, R;s ⊨ EG (¬P) --> ¬AF P.
 Proof.
   intros R s P H H2.
   simpl in H, H2.
-  destructExists H2 n.
+  destruct exists H2 n.
   tspecialize H n.
-  destructExists H p.
+  destruct exists H p.
   tspecialize H2 p.
-  destructExists H2 s'.
+  destruct exists H2 s'.
   tspecialize H s'.
   destruct H2.
   apply H; assumption.

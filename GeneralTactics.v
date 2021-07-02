@@ -5,7 +5,15 @@ Require Import Psatz.
 Ltac inv H := inversion H; subst; try contradiction.
 Ltac invc H := inversion H; clear H; subst; try contradiction.
 
-Ltac destructExists H id := destruct H as [id H].
+(* Ltac destructExists H id := destruct H as [id H]. *)
+Tactic Notation "destruct" "exists" hyp(H) ident(id) :=
+  destruct H as [id H].
+Tactic Notation "destruct" "exists" hyp(H) ident(id1) ident(id2) :=
+  destruct H as [id1 [id2 H]].
+Tactic Notation "destruct" "exists" hyp(H) ident(id1) ident(id2) ident(id3) :=
+  destruct H as [id1 [id2 [id3 H]]].
+Tactic Notation "destruct" "exists" hyp(H) ident(id1) ident(id2) ident(id3) ident (id4) :=
+  destruct H as [id1 [id2 [id3 [id4 H]]]].
 
 (* Todo: Support usecase `applyc (H a)`, by grabbing H from the head of arg *)
 Ltac applyc H := apply H; clear H.
@@ -54,6 +62,7 @@ Ltac find_N_compare_destruct :=
 
 Ltac my_crush := repeat constructor + easy + lia + assumption. 
 
+(* This cut has little to do with the cut tactic of the standard library *)
 Tactic Notation "cut" hyp(H) "by" tactic(tac) :=
   match type of H with
   (* | forall (_: ?a), _ => *)
@@ -143,3 +152,17 @@ Ltac break_andb :=
   | [_ : _ |- andb _ _ = true] => apply breakable_andb; split; try break_andb
   end.
 
+Ltac fail_if_in_hyps H :=
+  let t := type of H in
+  lazymatch goal with 
+  | [_: t |- _] => fail "This proposition is already assumed"
+  | [_: _ |- _] => idtac
+  end.
+
+Tactic Notation "pose" "new" "proof" constr(H) :=
+  fail_if_in_hyps H;
+  pose proof H.
+
+Tactic Notation "pose" "new" "proof" constr(H) "as" ident(H2) :=
+  fail_if_in_hyps H;
+  pose proof H as H2.

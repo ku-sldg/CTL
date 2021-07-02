@@ -36,28 +36,20 @@ Proof.
 
   dependent induction Hsteps.
   - simpl.
-    intro Hcontra.
-    apply empty_entails in Hcontra.
-    discriminate.
+    sprop_discriminate.
   - intros Hcontra.
     invc H.
     invc H2.
     + inv Hcontra.
       * simpl in H2; subst.
-        (* H1 is a contraction *)
-        admit.
+        sprop_discriminate H1.
       * simpl in H.
-        pose proof (sEntails_trans _ _ _ (sEntails_trans _ _ _ H1 H) H2) as H3.
-        (* H3 is a contradiction *)
-        admit.
+        sprop_discriminate.
    + inv Hcontra.
      * simpl in H2; subst.
-        (* H1 is a contraction *)
-        admit.
-      * simpl in H.
-        pose proof (sEntails_trans _ _ _ (sEntails_trans _ _ _ H1 H) H2) as H3.
-        (* H3 is a contradiction *)
-        admit.
+       sprop_discriminate H1.
+     * simpl in H.
+       sprop_discriminate.
   + 
   
 Admitted.
