@@ -15,18 +15,17 @@ Inductive readonly {component} : access component :=
 Inductive private {component} (c: component): access component :=
   | anyPriv : forall (p: privilege), private c c p.
 
-(* Is acc_at a spatial predicate? I think so *)
 Inductive sprop (comp loc: Set) :=
-  | sep_con : sprop comp loc -> sprop comp loc -> sprop comp loc
-  (* | sep_at  : forall v, loc -> access -> v -> sprop loc *)
-  | val_at  : forall v, loc -> v -> sprop comp loc
-  | acc_at  : loc -> access comp -> sprop comp loc
-  | empty   : sprop comp loc.
+  | sep_con  : sprop comp loc -> sprop comp loc -> sprop comp loc
+  | val_at   : forall v, loc -> v -> sprop comp loc
+  | acc_at   : loc -> access comp -> sprop comp loc
+  | sep_pure : Prop -> sprop comp loc.
 
-Arguments sep_con {comp loc}%type_scope.
-Arguments val_at  {comp loc v}%type_scope.
-Arguments acc_at  {comp loc}%type_scope.
-Arguments empty   {comp loc}%type_scope.
+Arguments sep_con  {comp loc}%type_scope.
+Arguments val_at   {comp loc v}%type_scope.
+Arguments acc_at   {comp loc}%type_scope.
+(* Arguments empty   {comp loc}%type_scope. *)
+Arguments sep_pure {comp loc}%type_scope.
 
 (* Declare Scope sep_scope. *)
 (* Bind Scope sep_scope with sprop. *)
@@ -55,6 +54,7 @@ Inductive overlap {comp loc}: sprop comp loc -> sprop comp loc -> Prop :=
 Definition separate {comp loc} (x y: sprop comp loc ):=
   ~ overlap x y.
 
+(* TODO, introduce sep_eq? *)
 Reserved Notation "X ⊢ Y" (at level 70).
 Inductive sEntails {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
   | sep_con_intro : forall x x' y y',
@@ -62,26 +62,30 @@ Inductive sEntails {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
       y ⊢ y' ->
       separate x y ->
       x ** y ⊢ x' ** y'
-  | sep_con_comm  : forall X Y, 
-      X ** Y ⊢ Y ** X
-  | sep_con_assoc_l : forall X Y Z,
-      X ** Y ** Z ⊢ (X ** Y) ** Z
-  | sep_con_assoc_r : forall X Y Z,
-      (X ** Y) ** Z ⊢ X ** Y ** Z
+  | sep_con_comm  : forall x y, 
+      x ** y ⊢ y ** x
+  | sep_con_assoc_l : forall x y z,
+      x ** y ** z ⊢ (x ** y) ** z
+  | sep_con_assoc_r : forall x y z,
+      (x ** y) ** z ⊢ x ** y ** z
+  | pure_entails : forall (p q: Prop),
+      (p -> q) ->
+      sep_pure p ⊢ sep_pure q
   | sEntails_refl : forall x,
       x ⊢ x
-  | sEntails_trans : forall X Y Z,
-      X ⊢ Y ->
-      Y ⊢ Z ->
-      X ⊢ Z
-  where "X ⊢ Y" := (sEntails X Y).
-Notation "X ⊬ Y" := (~ X ⊢ Y) (at level 70).
+  | sEntails_trans : forall x y z,
+      x ⊢ y ->
+      y ⊢ z ->
+      x ⊢ z
+  where "x ⊢ y" := (sEntails x y).
+Notation "x ⊬ y" := (~ x ⊢ y) (at level 70).
 
+Definition empty {comp loc}: sprop comp loc := sep_pure True.
 
-Definition flip_sEntails_trans {comp loc}: forall (X Y Z: sprop comp loc),
-  Y ⊢ Z ->
-  X ⊢ Y ->
-  X ⊢ Z.
+Definition flip_sEntails_trans {comp loc}: forall (x y z: sprop comp loc),
+  y ⊢ z ->
+  x ⊢ y ->
+  x ⊢ z.
 Proof.
   intros.
   eapply sEntails_trans; eassumption.
@@ -192,16 +196,49 @@ Proof.
   intros. dependent induction H; auto.
 Qed.
 
-Lemma empty_only_entails_empty {comp loc}: forall z: sprop comp loc,
-  empty ⊢ z -> z = empty.
+(* Ltac _espec_cut_by H tac :=
+  match type of H with
+  | _ -> _ =>
+      cut H by tac;
+      _espec_cut_by H tac
+  | forall (x: ?t), _ => 
+      let xfresh := fresh x in
+      evar (xfresh: t);
+      specialize (H xfresh);
+      _espec_cut_by H tac
+  | _ => idtac
+  end.
+Tactic Notation "espec_cut" hyp(H) "by" tactic(tac) := _espec_cut_by H tac. *)
+
+Lemma sep_pure_only_entails_sep_pure {comp loc}: forall (p: Prop) (z: sprop comp loc),
+  sep_pure p ⊢ z -> exists (q: Prop), (p -> q) /\ z = sep_pure q.
 Proof.
-  intros z Hent. dependent induction Hent; auto.
+  intros.
+  dependent induction H; eauto.
+  (* TODO: specializecut tactic which automatically specializes to cut *)
+  specialize (IHsEntails1 p).
+  cut IHsEntails1 by reflexivity.
+  destruct exists IHsEntails1 q.
+  specialize (IHsEntails2 q).
+  cut IHsEntails2 by my_crush.
+  destruct exists IHsEntails2 q'.
+  exists q'.
+  destruct IHsEntails1; destruct IHsEntails2; auto.
 Qed.
 
-Lemma only_empty_entails_empty {comp loc}: forall z: sprop comp loc,
-  z ⊢ empty -> z = empty.
+Lemma only_sep_pure_entails_sep_pure {comp loc}: forall (q: Prop) (z: sprop comp loc),
+  z ⊢ sep_pure q -> exists (p: Prop), (p -> q) /\ z = sep_pure p.
 Proof.
-  intros z Hent. dependent induction Hent; auto.
+  intros.
+  dependent induction H; eauto.
+  specialize (IHsEntails2 q).
+  cut IHsEntails2 by reflexivity.
+  destruct exists IHsEntails2 p.
+  specialize (IHsEntails1 p).
+  cut IHsEntails1 by my_crush.
+  destruct exists IHsEntails1 p'.
+  exists p'.
+  destruct IHsEntails1; destruct IHsEntails2; auto.
 Qed.
 
 (* Lemma bar {comp loc: Set}: forall (l l': loc) V (v: V) (a: access comp),
@@ -250,11 +287,11 @@ Ltac sprop_discriminate_basic H :=
   | _ ⊢ _ =>
     ((simple apply val_at_only_entails_val_at in H
     + simple apply acc_at_only_entails_acc_at in H
-    + simple apply empty_only_entails_empty in H
+    + simple apply sep_pure_only_entails_sep_pure in H
     ); discriminate H) +
     ((simple apply only_val_at_entails_val_at in H
     + simple apply only_acc_at_entails_acc_at in H
-    + simple apply only_empty_entails_empty in H
+    + simple apply only_sep_pure_entails_sep_pure in H
     ); discriminate H) +
     fail "Could not discriminate sprop"
   end.

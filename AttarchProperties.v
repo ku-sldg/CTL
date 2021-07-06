@@ -45,12 +45,12 @@ Proof.
         sprop_discriminate H1.
       * simpl in H.
         sprop_discriminate.
-   + inv Hcontra.
-     * simpl in H2; subst.
-       sprop_discriminate H1.
-     * simpl in H.
-       sprop_discriminate.
-  + 
+    + inv Hcontra.
+      * simpl in H2; subst.
+        sprop_discriminate H1.
+      * simpl in H.
+        sprop_discriminate.
+    + 
   
 Admitted.
   
