@@ -5,7 +5,22 @@ Require Import Psatz.
 Ltac inv H := inversion H; subst; try contradiction.
 Ltac invc H := inversion H; clear H; subst; try contradiction.
 
-(* Ltac destructExists H id := destruct H as [id H]. *)
+Tactic Notation "exists" ident(x1) :=
+  exists x1.
+Tactic Notation "exists" ident(x1) ident(x2) :=
+  exists x1; exists x2.
+Tactic Notation "exists" ident(x1) ident(x2) ident(x3) :=
+  exists x1 x2; exists x3.
+Tactic Notation "exists" ident(x1) ident(x2) ident(x3) ident(x4) :=
+  exists x1 x2 x3; exists x4.
+
+Tactic Notation "destruct" "multi" hyp(h1) hyp(h2) :=
+  destruct h1; destruct h2.
+Tactic Notation "destruct" "multi" hyp(h1) hyp(h2) hyp(h3) :=
+  destruct multi h1 h2; destruct h3.
+Tactic Notation "destruct" "multi" hyp(h1) hyp(h2) hyp(h3) hyp(h4) :=
+  destruct multi h1 h2 h3; destruct h4.
+
 Tactic Notation "destruct" "exists" hyp(H) ident(id) :=
   destruct H as [id H].
 Tactic Notation "destruct" "exists" hyp(H) ident(id1) ident(id2) :=
@@ -14,6 +29,8 @@ Tactic Notation "destruct" "exists" hyp(H) ident(id1) ident(id2) ident(id3) :=
   destruct H as [id1 [id2 [id3 H]]].
 Tactic Notation "destruct" "exists" hyp(H) ident(id1) ident(id2) ident(id3) ident (id4) :=
   destruct H as [id1 [id2 [id3 [id4 H]]]].
+
+Tactic Notation "destruct" "or" hyp(H) := destruct H as [H|H].
 
 (* Todo: Support usecase `applyc (H a)`, by grabbing H from the head of arg *)
 Ltac applyc H := apply H; clear H.
