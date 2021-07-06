@@ -183,3 +183,24 @@ Tactic Notation "pose" "new" "proof" constr(H) :=
 Tactic Notation "pose" "new" "proof" constr(H) "as" ident(H2) :=
   fail_if_in_hyps H;
   pose proof H as H2.
+
+Ltac find_destruct_and :=
+  match goal with 
+  | [H : _ /\ _ |- _] => destruct H
+  end.
+
+Ltac find_destruct_or :=
+  match goal with 
+  | [H : _ \/ _ |- _] => destruct or H
+  end.
+
+Ltac find_destruct_exists :=
+  match goal with
+  | [H : ex _ |- _] => destruct H
+  end.
+
+Ltac break_context :=
+  repeat (
+    repeat (repeat find_destruct_exists; repeat find_destruct_and);
+    repeat find_destruct_or
+  ).

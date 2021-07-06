@@ -13,8 +13,9 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
 Require Import GeneralTactics.
 
+(* Assert some fact about the global state *)
 Definition gassert {comp loc L} (s: sprop comp loc) : TProp (sprop comp loc * L) :=
-    TLift (fun st => fst st ⊢ s).
+    TLift (fun st => fst st ⊢ s \/ exists frame, fst st ⊢ s ** frame).
 
 Theorem useram_key_never_compromised: forall (acc: access component),
   acc malicious_linux_component read ->
@@ -35,22 +36,24 @@ Proof.
   intros s' Hsteps.
 
   dependent induction Hsteps.
-  - simpl.
-    sprop_discriminate.
+  - sentails.
   - intros Hcontra.
     invc H.
     invc H2.
-    + inv Hcontra.
-      * simpl in H2; subst.
-        sprop_discriminate H1.
-      * simpl in H.
-        sprop_discriminate.
-    + inv Hcontra.
-      * simpl in H2; subst.
-        sprop_discriminate H1.
-      * simpl in H.
-        sprop_discriminate.
-    + 
-  
-Admitted.
-  
+    + inv Hcontra; sentails.
+    + inv Hcontra; sentails.
+    + invc H3. 
+      (* platam_trans *)
+      * invc H2; sentails.
+      (* vm_trans *)
+      * invc H2. 
+        -- sentails.
+        -- tapplyc IHHsteps.
+           destruct or Hcontra; simpl in Hcontra.
+           ++ left.
+              sentails.
+           ++ right.
+              destruct exists Hcontra frame.
+              exists frame.
+              sentails.
+Qed.

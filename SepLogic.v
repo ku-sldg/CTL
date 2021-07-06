@@ -1,5 +1,6 @@
 Require Import GeneralTactics.
 Require Import Coq.Program.Equality.
+Require Import Coq.Relations.Relation_Definitions.
 
 Notation component := nat (only parsing).
 
@@ -15,18 +16,18 @@ Inductive readonly {component} : access component :=
 Inductive private {component} (c: component): access component :=
   | anyPriv : forall (p: privilege), private c c p.
 
+(* This separation logic is restricted in its lack of arbitrary propositions,
+   and its treatment of `empty` (which is only equal to and can only entail `empty`) *)
 Inductive sprop (comp loc: Set) :=
   | sep_con  : sprop comp loc -> sprop comp loc -> sprop comp loc
   | val_at   : forall v, loc -> v -> sprop comp loc
   | acc_at   : loc -> access comp -> sprop comp loc
-  | sep_pure : Prop -> sprop comp loc.
+  | empty : sprop comp loc.
 
-Arguments sep_con  {comp loc}%type_scope.
-Arguments val_at   {comp loc v}%type_scope.
-Arguments acc_at   {comp loc}%type_scope.
-Arguments sep_pure {comp loc}%type_scope.
-
-Definition empty {comp loc}: sprop comp loc := sep_pure True.
+Arguments sep_con {comp loc}%type_scope.
+Arguments val_at  {comp loc v}%type_scope.
+Arguments acc_at  {comp loc}%type_scope.
+Arguments empty   {comp loc}%type_scope.
 
 (* Declare Scope sep_scope. *)
 (* Bind Scope sep_scope with sprop. *)
@@ -41,6 +42,7 @@ Notation "l ↦ v" := (val_at l v) (at level 50).
 (* Check (0 : nat ↦ 1). *)
 Notation "a @ l" := (acc_at l a) (at level 50).
 
+(* Non-contradictory and non-redundant *)
 Inductive overlap {comp loc}: sprop comp loc -> sprop comp loc -> Prop :=
   | overlap_val_at : forall l V1 (v1: V1) V2 (v2: V2),
       overlap (l ↦ v1) (l ↦ v2)
@@ -51,12 +53,30 @@ Inductive overlap {comp loc}: sprop comp loc -> sprop comp loc -> Prop :=
       overlap (x ** y) z
   | overlap_sep_con_right : forall x y z,
       overlap x y \/ overlap x z ->
-      overlap x (y ** z).
+      overlap x (y ** z)
+  | overlap_empty_l : forall x,
+      overlap empty x
+  | overlap_empty_r : forall x,
+      overlap x empty.
+
+Theorem overlap_is_eq {comp loc}: equivalence (sprop comp loc) overlap.
+Proof.
+  split.
+  - unfold reflexive.
+    induction x; try constructor.
+    left.
+    constructor.
+    left.
+    assumption.
+  - unfold transitive.
+    intros.
+    induction H.
+Admitted.
+
 Definition separate {comp loc} (x y: sprop comp loc ):=
   ~ overlap x y.
 
-(* TODO, introduce sep_eq? *)
-(* Inductive sprop_eq_step {comp loc} : sprop comp loc -> sprop comp loc -> Prop := *)
+(* TODO: seq (acc1 @ l) (acc2 @ l) if (forall c p, acc1 c p <-> acc2 c p) *)
 Inductive seq {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
   | seq_refl : forall x,
       seq x x
@@ -73,16 +93,9 @@ Inductive seq {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
       seq x x' ->
       seq y y' ->
       seq z z' ->
-      seq ((x ** y) ** z) (x' ** y' ** z')
-  | sep_con_empty_eq : forall x x',
-      seq x x' ->
-      seq (empty ** x) x'
-  | sep_prop_eq : forall (p q: Prop),
-      (p <-> q) ->
-      seq (sep_pure p) (sep_pure q).
+      seq ((x ** y) ** z) (x' ** y' ** z').
 
 (* Definition sprop_eq := clos_refl_sym_transn1 _ sprop_eq_step. *)
-Require Import Coq.Relations.Relation_Definitions.
 Theorem seq_is_eq {comp loc}: equivalence (sprop comp loc) seq.
 Proof.
   split.
@@ -97,7 +110,6 @@ Proof.
     + apply sep_con_eq_comm; assumption.
     + apply sep_con_eq_assoc_r; assumption. 
     + apply sep_con_eq_assoc_l; assumption.
-    + apply sep_con_empty_eq.
 Admitted.
 
 Reserved Notation "x ⊢ y" (at level 70).
@@ -110,9 +122,6 @@ Inductive sentails {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
       y ⊢ y' ->
       separate x y ->
       x ** y ⊢ x' ** y'
-  | sep_pure_weaken : forall (p q: Prop),
-      (p -> q) ->
-      sep_pure p ⊢ sep_pure q
   | sentails_trans : forall x y z,
       x ⊢ y ->
       y ⊢ z ->
@@ -210,23 +219,12 @@ Proof.
 
 (* Ltac percolate_up_sprop x H := *)
 
-Ltac sentails :=
-  normalize_sprops;
-  (* repeat *)
-  match goal with
-  | [_:_ |- ?x ⊢ ?x] => exact (seq_entails x x (seq_refl x))
-  (* find common conjuncts, shuffle them to the left side, then elim them *)
-  (* | [_:_ |- ?x ** ?y ⊢ ?z] => *)
-  (* | [H: ?x ⊢ ?y |- ?x ⊢ ?y] => exact H *)
-  end.
-
 Lemma sep_con_only_entails_sep_con {comp loc}: forall (x y z: sprop comp loc),
   x ** y ⊢ z -> exists x' y', z = x' ** y'.
 Proof.
   intros.
   dependent induction H.
   - inv H; eauto.
-    inv H.
   - eauto.
   - specialize (IHsentails1 x y).
     cut IHsentails1 by reflexivity.
@@ -295,38 +293,22 @@ Qed.
   end.
 Tactic Notation "espec_cut" hyp(H) "by" tactic(tac) := _espec_cut_by H tac. *)
 
-Lemma sep_pure_only_entails_sep_pure {comp loc}: forall (p: Prop) (z: sprop comp loc),
-  sep_pure p ⊢ z -> exists (q: Prop), (p -> q) /\ z = sep_pure q.
+Lemma empty_only_entails_empty {comp loc}: forall z: sprop comp loc,
+  empty ⊢ z -> z = empty.
 Proof.
   intros.
   dependent induction H.
-  - inv H; eauto.
-  - eauto.
-  - specialize (IHsentails1 p).
-    cut IHsentails1 by reflexivity.
-    destruct exists IHsentails1 q.
-    specialize (IHsentails2 q).
-    cut IHsentails2 by easy.
-    destruct exists IHsentails2 q'.
-    exists q'.
-    destruct multi IHsentails1 IHsentails2; auto.
+  - inv H; auto.
+  - auto.
 Qed.
 
-Lemma only_sep_pure_entails_sep_pure {comp loc}: forall (q: Prop) (z: sprop comp loc),
-  z ⊢ sep_pure q -> exists (p: Prop), (p -> q) /\ z = sep_pure p.
+Lemma only_empty_entails_empty {comp loc}: forall z: sprop comp loc,
+  z ⊢ empty -> z = empty.
 Proof.
   intros.
   dependent induction H.
-  - inv H; eauto.
-  - eauto.
-  - specialize (IHsentails2 q).
-    cut IHsentails2 by reflexivity.
-    destruct exists IHsentails2 p.
-    specialize (IHsentails1 p).
-    cut IHsentails1 by easy.
-    destruct exists IHsentails1 p'.
-    exists p'.
-    destruct multi IHsentails1 IHsentails2; auto.
+  - inv H; auto.
+  - auto.
 Qed.
 
 Lemma inv_sep_con_entails {comp loc}: forall (a b c d: sprop comp loc),
@@ -338,27 +320,7 @@ Proof.
   - inv H.
     + left. split; apply seq_entails; apply seq_refl.
     + right. split; apply seq_entails; assumption.
-    + admit.
-    + admit.
-  - 
-
-  dependent induction H.
-  - left. split; assumption.
-  - right. split; apply sEntails_refl.
-  - admit.
-  - admit.
-  - left. split; apply sEntails_refl.
-  - apply sep_con_only_entails_sep_con in H.
-    destruct exists H x' y'.
-    subst.
-    specialize (IHsEntails1 a b x' y').
-    specialize (IHsEntails2 x' y' c d).
-    auto_cut by reflexivity.
-    destruct or IHsEntails1;
-    destruct IHsEntails1;
-    destruct or IHsEntails2;
-    destruct IHsEntails2;
-    sprop_facts; auto.
+    + (* the goal is incorrect *)
 Admitted.
 
 Ltac sprop_discriminate_basic H :=
@@ -366,11 +328,11 @@ Ltac sprop_discriminate_basic H :=
   | _ ⊢ _ =>
     ((simple apply val_at_only_entails_val_at in H
     + simple apply acc_at_only_entails_acc_at in H
-    + simple apply sep_pure_only_entails_sep_pure in H
+    + simple apply empty_only_entails_empty in H
     ); discriminate H) +
     ((simple apply only_val_at_entails_val_at in H
     + simple apply only_acc_at_entails_acc_at in H
-    + simple apply only_sep_pure_entails_sep_pure in H
+    + simple apply only_empty_entails_empty in H
     ); discriminate H) +
     fail "Could not discriminate sprop"
   end.
@@ -391,9 +353,20 @@ Ltac _sprop_discriminate H :=
   end.
 Tactic Notation "sprop_discriminate" hyp(H) := _sprop_discriminate H.
 
+(* Ltac find_sprop_discriminate H :=
+  match goal with
+  | [H: _ |- _] => sprop_discriminate H
+  end.
 Tactic Notation "sprop_discriminate" :=
-  unfold not;
+  repeat (simpl in *; unfold not);
   intros;
+  break_context;
+  sprop_facts;
+  find_sprop_discriminate. *)
+Tactic Notation "sprop_discriminate" :=
+  repeat (simpl in *; unfold not);
+  intros;
+  break_context;
   sprop_facts;
   match goal with
   | [H: _ |- _] => sprop_discriminate H
@@ -405,3 +378,15 @@ Proof.
   intros.
   sprop_discriminate.
 Qed. *)
+
+Ltac sentails :=
+  normalize_sprops;
+  try sprop_discriminate;
+  try (sprop_facts; assumption);
+  (* repeat *)
+  match goal with
+  | [_:_ |- ?x ⊢ ?x] => exact (seq_entails x x (seq_refl x))
+  (* find common conjuncts, shuffle them to the left side, then elim them *)
+  (* | [_:_ |- ?x ** ?y ⊢ ?z] => *)
+  (* | [H: ?x ⊢ ?y |- ?x ⊢ ?y] => exact H *)
+  end.
