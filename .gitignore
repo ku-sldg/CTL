@@ -5,3 +5,5 @@
 *.vo
 *.vok
 *.vos
+
+Makefile.conf
