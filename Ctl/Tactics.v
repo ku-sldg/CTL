@@ -157,20 +157,20 @@ Tactic Notation "fold_TProp" "in" hyp(H) :=
 
 (* tapply: like apply, but rolls-back over-reduction of TProps *)
 
-Tactic Notation "tapply" constr(c) :=
+Tactic Notation "tapply" uconstr(c) :=
   apply c;
   repeat fold_TProp.
 
-Tactic Notation "tapply" constr(c) "in" hyp(H) :=
+Tactic Notation "tapply" uconstr(c) "in" hyp(H) :=
   apply c in H;
   repeat fold_TProp.
 
 (* etapply is untested *)
-Tactic Notation "etapply" constr(c) :=
+Tactic Notation "etapply" uconstr(c) :=
   eapply c;
   repeat fold_TProp.
 
-Tactic Notation "etapply" constr(c) "in" hyp(H) :=
+Tactic Notation "etapply" uconstr(c) "in" hyp(H) :=
   eapply c in H;
   repeat fold_TProp.
 
@@ -181,15 +181,15 @@ Tactic Notation "tapplyc" hyp(H) "in" hyp(H2) := tapply H in H2; clear H.
 
 (* If simpl isn't called before specialize, and specializable binder isn't visible,
    then specialize will over-evaluate before specializing *)
-Tactic Notation "tspecialize" hyp(H) constr(a) :=
+Tactic Notation "tspecialize" hyp(H) uconstr(a) :=
   (* simpl in H; specialize (H a). *)
   simpl in H; specialize (H a); repeat fold_TProp in H.
-Tactic Notation "tspecialize" hyp(H) constr(a) constr(b) :=
+Tactic Notation "tspecialize" hyp(H) uconstr(a) uconstr(b) :=
   tspecialize H a;
   tspecialize H b.
-Tactic Notation "tspecialize" hyp(H) constr(a) constr(b) constr(c) :=
+Tactic Notation "tspecialize" hyp(H) uconstr(a) uconstr(b) uconstr(c) :=
   tspecialize H a b;
   tspecialize H c.
-Tactic Notation "tspecialize" hyp(H) constr(a) constr(b) constr(c) constr(d) :=
+Tactic Notation "tspecialize" hyp(H) uconstr(a) uconstr(b) uconstr(c) uconstr(d) :=
   tspecialize H a b c;
   tspecialize H d.

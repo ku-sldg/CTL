@@ -23,11 +23,9 @@ Theorem useram_key_never_compromised: forall (acc: access component),
   attarch_strans; (empty, boot_from_good_plat) ⊨ ¬ EF (gassert (acc @ useram_key)).
 Proof.
   intros acc Hmal_acc.
-
-  tapply @AG_EF.
+  tapply AG_EF.
   apply rtc_AG.
   intros s' Hsteps.
-
   dependent induction Hsteps.
   - sentails.
   - intros Hcontra.
