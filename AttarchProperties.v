@@ -17,21 +17,14 @@ Require Import GeneralTactics.
 Definition gassert {comp loc L} (s: sprop comp loc) : TProp (sprop comp loc * L) :=
     TLift (fun st => fst st ⊢ s \/ exists frame, fst st ⊢ s ** frame).
 
+
 Theorem useram_key_never_compromised: forall (acc: access component),
   acc malicious_linux_component read ->
   attarch_strans; (empty, boot_from_good_plat) ⊨ ¬ EF (gassert (acc @ useram_key)).
 Proof.
   intros acc Hmal_acc.
 
-  (* Apply AG_EF. TODO, better version of tapply *)
-  (* - Perhaps refular apply, followed by a smart fold? *)
-  pose proof (AG_EF attarch_strans (empty, boot_from_good_plat) (gassert (acc @ useram_key))) as H.
-  assert (H0:
-      attarch_strans;(empty, boot_from_good_plat) ⊨ AG (¬(gassert (acc @ useram_key))) ->
-      attarch_strans;(empty, boot_from_good_plat) ⊨ ¬EF (gassert (acc @ useram_key))
-  ) by auto; apply H0; clear H0.
-  clear H.
-
+  tapply @AG_EF.
   apply rtc_AG.
   intros s' Hsteps.
 

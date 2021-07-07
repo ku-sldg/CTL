@@ -82,8 +82,8 @@ Theorem tbimpl_neg {state}: forall (R: relation state) s P Q,
   R;s ⊨ (P <--> Q) --> (¬P <--> ¬Q).
 Proof.
   intros R s P Q.
-  split; intro;
-  (etapply (tModusTollens R); [apply H | assumption]).
+  split; intro; (eapply (tModusTollens R); [apply H | assumption]).
+  (* (etapply (tModusTollens R); [apply H | assumption]). *)
 Qed.
 
 (* Good test for tactics *)

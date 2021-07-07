@@ -2,6 +2,10 @@ Require Import Coq.Init.Nat.
 Require Import Coq.Arith.Compare_dec.
 Require Import Psatz.
 
+Require Import List.
+Import ListNotations.
+
+
 Ltac inv H := inversion H; subst; try contradiction.
 Ltac invc H := inversion H; clear H; subst; try contradiction.
 
@@ -204,3 +208,36 @@ Ltac break_context :=
     repeat (repeat find_destruct_exists; repeat find_destruct_and);
     repeat find_destruct_or
   ).
+
+
+(* intros do revert *)
+
+Ltac n_times tac x n :=
+  match constr:(n) with
+  | 0 => idtac
+  | S ?n' => tac x; n_times tac x n'
+  end.
+
+Ltac revert_bot_hyp _ :=
+  match goal with
+  | H:_ |- _ => revert H
+  end.
+
+Ltac revert_n n :=
+  n_times ltac:(fun _ =>
+    match goal with 
+    | H :_ |- _ => revert H
+    end
+  ) tt n.
+
+Ltac _intros_do_revert_aux tac n :=
+  match goal with
+  | |- forall _,_ =>
+      intro;
+      _intros_do_revert_aux tac (S n)
+  | _ =>
+    tac;
+    revert_n n
+  end.
+
+Tactic Notation "intros_do_revert" tactic(tac) := _intros_do_revert_aux tac 0.

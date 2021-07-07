@@ -70,3 +70,4 @@ Fixpoint tEntails {state} (R: relation state) (s: state) (tp: TProp state) : Pro
   end
   where "M ; s ⊨ P" := (tEntails M s P)
     and "M ; s ⊭ P" := (~ M;s ⊨ P).
+
