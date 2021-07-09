@@ -1,5 +1,6 @@
 Require Import Coq.Relations.Relation_Definitions.
-Require Import SepLogic.
+Require Import SepLogic.Definition.
+Require Import SepLogic.Entailment.
 
 (* Record state A B := mkState {global : A; local : B}.
 Definition transition A B := relation (state A B). *)

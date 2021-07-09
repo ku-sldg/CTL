@@ -1,6 +1,6 @@
 Require Import Ctl.Definition.
 Require Import TransitionSystems.
-Require Import SepLogic.
+Require Import SepLogic.Definition.
 
 (* Maybe sel4 should not be its own place *)
 Inductive component : Set := 

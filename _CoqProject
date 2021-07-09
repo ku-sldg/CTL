@@ -1,11 +1,18 @@
 -R . Attarch
+
 GeneralTactics.v
 BinaryRelations.v
+
 Ctl/Paths.v
 Ctl/Definition.v
 Ctl/Tactics.v
 Ctl/Properties.v
-SepLogic.v
+
+SepLogic/Definition.v
+SepLogic/Separation.v
+SepLogic/Equality.v
+SepLogic/Entailment.v
+
 TransitionSystems.v
 AttarchTrans.v
 AttarchProperties.v

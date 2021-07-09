@@ -3,8 +3,10 @@ Require Import Ctl.Definition.
 Require Import Ctl.Tactics.
 Require Import Ctl.Properties.
 
+Require Import SepLogic.Definition.
+Require Import SepLogic.Entailment.
+
 Require Import BinaryRelations.
-Require Import SepLogic.
 Require Import TransitionSystems.
 Require Import AttarchTrans.
 
