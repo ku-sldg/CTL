@@ -272,7 +272,12 @@ Proof.
 Qed.
 
 Theorem AG_EF {state}: forall R (s: state) P, R;s ⊨ AG (¬P) --> ¬EF P.
-Admitted.
+  intros R s P H H2.
+  simpl in H, H2.
+  destruct exists H2 n p s'.
+  tspecialize H n p s'.
+  tapply H; destruct H2; assumption.
+Qed.
 
 Theorem EF_AG {state}: forall R (s: state) P, R;s ⊨ EF (¬P) --> ¬AG P.
 Admitted.

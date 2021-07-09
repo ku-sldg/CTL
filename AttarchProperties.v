@@ -17,7 +17,6 @@ Require Import GeneralTactics.
 Definition gassert {comp loc L} (s: sprop comp loc) : TProp (sprop comp loc * L) :=
     TLift (fun st => fst st ⊢ s \/ exists frame, fst st ⊢ s ** frame).
 
-
 Theorem useram_key_never_compromised: forall (acc: access component),
   acc malicious_linux_component read ->
   attarch_strans; (empty, boot_from_good_plat) ⊨ ¬ EF (gassert (acc @ useram_key)).
@@ -29,7 +28,19 @@ Proof.
   dependent induction Hsteps.
   - sentails.
   - intros Hcontra.
+    (* simpl in Hcontra. *)
     invc H.
+    + invc H2.
+      * inv Hcontra.
+       -- simpl in H.
+          sprop_facts.
+          apply only_acc_at_entails_acc_at in H2.
+          discriminate H2.
+       -- destruct exists H frame.
+          simpl in H.
+          sprop_facts.
+          inv H2.
+
     invc H2.
     + inv Hcontra; sentails.
     + inv Hcontra; sentails.

@@ -99,4 +99,4 @@ Inductive attarch_trans : stransition attarch_state :=
       attarch_trans 
         (g, sel4_run s)
         (g', sel4_run s').
-Definition attarch_strans := sEntails_clos attarch_trans.
+Definition attarch_strans := sentails_clos attarch_trans.

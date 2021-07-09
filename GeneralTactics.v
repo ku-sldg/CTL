@@ -209,18 +209,12 @@ Ltac break_context :=
     repeat find_destruct_or
   ).
 
-
 (* intros do revert *)
 
 Ltac n_times tac x n :=
   match constr:(n) with
   | 0 => idtac
   | S ?n' => tac x; n_times tac x n'
-  end.
-
-Ltac revert_bot_hyp _ :=
-  match goal with
-  | H:_ |- _ => revert H
   end.
 
 Ltac revert_n n :=
@@ -241,3 +235,39 @@ Ltac _intros_do_revert_aux tac n :=
   end.
 
 Tactic Notation "intros_do_revert" tactic(tac) := _intros_do_revert_aux tac 0.
+
+(* NOTE: this only brings the front-most binders into the context *)
+Tactic Notation "deep" "rewrite" uconstr(c) := intros_do_revert (rewrite c).
+
+(* 
+Ltac clear_all :=
+  repeat match goal with
+  | H :_ |- _ => clear H
+  end.
+
+Tactic Notation "transform_hyp" hyp(H) := 
+  let t := type of H in
+  let H' := fresh in
+  eassert (H': t -> _); [clear_all; intro H | apply H' in H; clear H'].
+
+Tactic Notation "transform_hyp" hyp(H) "by" tactic(tac) := 
+  let t := type of H in
+  let H' := fresh in
+  eassert (H': t -> _) by (clear_all; intro H; tac);
+  apply H' in H;
+  clear H'.
+
+Goal (forall x, True -> x + 0 = x) -> False.
+intro H.
+
+eassert (H': (forall x: nat, True -> x + 0 = x) -> (forall x: nat, True -> _)).
+{ clear_all.
+  intro H.
+  intro x; specialize (H x).
+  intro T; specialize (H T).
+  rewrite PeanoNat.Nat.add_0_r in H. exact H. }
+specialize (H' H); clear H; rename H' into H.
+Admitted.
+
+Tactic Notation "deep" "rewrite" "in" hyp(H) "by" tactic(tac) :=
+   *)

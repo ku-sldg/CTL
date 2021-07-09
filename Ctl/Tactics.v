@@ -3,6 +3,59 @@ Require Import Ctl.Definition.
 
 Require Import GeneralTactics.
 
+(* tapply: carefully unfolds TProp hypothesis just enough to use apply *)
+
+Tactic Notation "unfold_TImpl" :=
+  change_no_check (?R;?s ⊨ ?p --> ?q) with (R;s ⊨ p -> R;s ⊨ q).
+Tactic Notation "unfold_TImpl" "in" hyp(H) :=
+  change_no_check (?R;?s ⊨ ?p --> ?q) with (R;s ⊨ p -> R;s ⊨ q) in H.
+
+Tactic Notation "unfold_TNot" := 
+  change_no_check (?R;?s ⊨ ¬?P) with (R;s ⊭ P).
+Tactic Notation "unfold_TNot" "in" hyp(H) := 
+  change_no_check (?R;?s ⊨ ¬?P) with (R;s ⊭ P) in H.
+
+Ltac tapply_normalize H :=
+  repeat unfold_TImpl in H;
+  unfold_TNot in H.
+
+Tactic Notation "tapply" uconstr(c) :=
+  let Htemp := fresh in 
+  eset (Htemp := c);
+  tapply_normalize Htemp;
+  apply Htemp;
+  clear Htemp.
+
+Tactic Notation "tapply" uconstr(c) "in" hyp(H) :=
+  let Htemp := fresh in 
+  eset (Htemp := c);
+  tapply_normalize Htemp;
+  apply Htemp in H;
+  clear Htemp.
+
+Tactic Notation "etapply" uconstr(c) :=
+  let Htemp := fresh in 
+  eset (Htemp := c);
+  tapply_normalize Htemp;
+  eapply Htemp;
+  clear Htemp.
+
+Tactic Notation "etapply" uconstr(c) "in" hyp(H) :=
+  let Htemp := fresh in 
+  eset (Htemp := c);
+  tapply_normalize Htemp;
+  eapply Htemp in H;
+  clear Htemp.
+
+Tactic Notation "tapplyc" hyp(H) :=
+  tapply H; clear H.
+Tactic Notation "tapplyc" hyp(H) "in" hyp(H2) :=
+  tapply H in H2; clear H.
+Tactic Notation "etapplyc" hyp(H) :=
+  etapply H; clear H.
+Tactic Notation "etapplyc" hyp(H) "in" hyp(H2) :=
+  etapply H in H2; clear H.
+
 (* Folds to roll-back over-reduction *)
 
 Tactic Notation "fold_TNot" :=
@@ -155,29 +208,8 @@ Tactic Notation "fold_TProp" "in" hyp(H) :=
   fold_EF in H +
   fold_tEntails in H.
 
-(* tapply: like apply, but rolls-back over-reduction of TProps *)
-
-Tactic Notation "tapply" uconstr(c) :=
-  apply c;
-  repeat fold_TProp.
-
-Tactic Notation "tapply" uconstr(c) "in" hyp(H) :=
-  apply c in H;
-  repeat fold_TProp.
-
-(* etapply is untested *)
-Tactic Notation "etapply" uconstr(c) :=
-  eapply c;
-  repeat fold_TProp.
-
-Tactic Notation "etapply" uconstr(c) "in" hyp(H) :=
-  eapply c in H;
-  repeat fold_TProp.
-
-Tactic Notation "tapplyc" hyp(H) := tapply H; clear H.
-Tactic Notation "tapplyc" hyp(H) "in" hyp(H2) := tapply H in H2; clear H.
-
 (* tspecialize: like specialize, but rolls-back over-reduction of TProps *)
+(* TODO: rewrite to just unfold 1-step if no forall-binder *)
 
 (* If simpl isn't called before specialize, and specializable binder isn't visible,
    then specialize will over-evaluate before specializing *)
