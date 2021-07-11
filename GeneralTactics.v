@@ -1,10 +1,4 @@
-Require Import Coq.Init.Nat.
-Require Import Coq.Arith.Compare_dec.
 Require Import Psatz.
-
-Require Import List.
-Import ListNotations.
-
 
 Ltac inv H := inversion H; subst; try contradiction.
 Ltac invc H := inversion H; clear H; subst; try contradiction.
@@ -36,9 +30,10 @@ Tactic Notation "destruct" "exists" hyp(H) ident(id1) ident(id2) ident(id3) iden
 
 Tactic Notation "destruct" "or" hyp(H) := destruct H as [H|H].
 
-(* Todo: Support usecase `applyc (H a)`, by grabbing H from the head of arg *)
-Ltac applyc H := apply H; clear H.
-Ltac eapplyc H := eapply H; clear H.
+Tactic Notation "applyc" hyp(H) := apply H; clear H.
+Tactic Notation "applyc" hyp(H) "in" hyp(H2) := apply H in H2; clear H.
+Tactic Notation "eapplyc" hyp(H) := eapply H; clear H.
+Tactic Notation "eapplyc" hyp(H) "in" hyp(H2) := eapply H in H2; clear H.
 
 Ltac specializec H x := specialize (H x); clear x.
 
@@ -52,59 +47,34 @@ Ltac max_induction x :=
   generalize_max;
   induction x.
 
-(* nat reflection *)
-
-Lemma reflect_N_compare: forall n m,
-  match n ?= m with
-  | Eq => n = m
-  | Lt => n < m
-  | Gt => n > m
-  end.
-Proof.
-  intros.
-  destruct (n ?= m) eqn:case;
-  [ apply nat_compare_eq
-  | apply nat_compare_Lt_lt
-  | apply nat_compare_Gt_gt];
-  assumption.
-Qed.
-
-(* TODO: replace `subst` with something that just rewrites with new `x=y` hypothesis. *)
-Ltac reflect_destruct_N_compare x y :=
-  pose proof (reflect_N_compare x y); destruct (x ?= y) eqn:?; [subst | | ].
-
-Ltac find_N_compare_destruct :=
-  match goal with 
-  | [_ : _ |- context [compare ?X ?Y]] => reflect_destruct_N_compare X Y
-  | [_ : context [compare ?X ?Y] |- _] => reflect_destruct_N_compare X Y
-  end.
-
 (* Automatic simplificiations on the context *)
 
 Ltac my_crush := repeat constructor + easy + lia + assumption. 
 
-(* This cut has little to do with the cut tactic of the standard library *)
-Tactic Notation "cut" hyp(H) "by" tactic(tac) :=
+Tactic Notation "cut_hyp" hyp(H):=
   match type of H with
-  (* | forall (_: ?a), _ => *)
   | ?x -> _ =>
       let H' := fresh in 
-      assert (H': x) by tac;
-      specialize (H H');
-      clear H'
+      assert (H': x); 
+        [ idtac
+        | specialize (H H'); clear H'
+        ]
   end.
 
-Tactic Notation "auto_cut" "by" tactic(tac) := 
+Tactic Notation "cut_hyp" hyp(H) "by" tactic(tac) :=
+  cut_hyp H; [solve [tac]|].
+
+Tactic Notation "find_cut_hyp" "by" tactic(tac) := 
   repeat match goal with 
-  | [H : ?x -> _ |- _] => cut H by tac
+  | [H : ?x -> _ |- _] => cut_hyp H by tac
   | [H : ?x <-> _ |- _] => 
       destruct H as [H _];
-      cut H by tac
+      cut_hyp H by tac
   | [H : _ <-> ?x |- _] => 
       destruct H as [_ H];
-      cut H by tac
+      cut_hyp H by tac
   end.
-Tactic Notation "auto_cut" := auto_cut by my_crush.
+Tactic Notation "find_cut_hyp" := find_cut_hyp by my_crush.
 
 Theorem modus_tollens : forall {a b: Prop}, (a -> b) -> ~b -> ~a.
 Proof. auto. Qed.
@@ -122,7 +92,7 @@ Tactic Notation "cut_modus_tollens" hyp(H) "by" tactic(tac) :=
 Tactic Notation "cut_modus_tollens" hyp(H) := cut_modus_tollens H by my_crush.
 
 Tactic Notation "simplify_implication" hyp(H) "by" tactic(tac) :=
-  cut H by tac + cut_modus_tollens H by tac.
+  cut_hyp H by tac + cut_modus_tollens H by tac.
 Tactic Notation "simplify_implication" hyp(H) :=
   simplify_implication H by my_crush.
 

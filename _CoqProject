@@ -10,7 +10,6 @@ Ctl/Properties.v
 
 SepLogic/Definition.v
 SepLogic/Separation.v
-SepLogic/Equality.v
 SepLogic/Entailment.v
 
 TransitionSystems.v

@@ -33,31 +33,22 @@ Proof.
     (* simpl in Hcontra. *)
     invc H.
     + invc H2.
-      * inv Hcontra.
-       -- simpl in H.
-          sprop_facts.
-          apply only_acc_at_entails_acc_at in H2.
-          discriminate H2.
+      * invc Hcontra.
+       -- sprop_discriminate.
        -- destruct exists H frame.
           simpl in H.
           sprop_facts.
-          inv H2.
+          (* From H2 derive
+             readonly @ boot_ev ⊢ acc @ useram_key
+             This is a contradiction, since the two acces locations 
+             are not equal
+           *)
+          admit.
+      * invc Hcontra.
+       -- sprop_discriminate.
+       -- simpl in H.
+          (* contradiction found by advanced sprop_discriminate *)
+          admit.
+      * 
 
-    invc H2.
-    + inv Hcontra; sentails.
-    + inv Hcontra; sentails.
-    + invc H3. 
-      (* platam_trans *)
-      * invc H2; sentails.
-      (* vm_trans *)
-      * invc H2. 
-        -- sentails.
-        -- tapplyc IHHsteps.
-           destruct or Hcontra; simpl in Hcontra.
-           ++ left.
-              sentails.
-           ++ right.
-              destruct exists Hcontra frame.
-              exists frame.
-              sentails.
-Qed.
+Admitted.

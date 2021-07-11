@@ -7,25 +7,29 @@ Inductive privilege : Set :=
 
 Definition access component := component -> privilege -> Prop.
 
+Definition access_eq {component} (a1 a2: access component) :=
+  forall c p, a1 c p <-> a2 c p.
+
 (* TODO: move these definitions *)
 Inductive readonly {component} : access component :=
   | ro : forall c, readonly c read.
 Inductive private {component} (c: component): access component :=
   | anyPriv : forall (p: privilege), private c c p.
 
-(* This separation logic is restricted in its lack of arbitrary propositions,
-   and its treatment of `empty` (which is only equal to and can only entail `empty`) *)
+
 Inductive sprop (comp loc: Set) :=
-  | sep_con  : sprop comp loc -> sprop comp loc -> sprop comp loc
-  | val_at   : forall v, loc -> v -> sprop comp loc
-  | acc_at   : loc -> access comp -> sprop comp loc
-  | empty : sprop comp loc.
+  | val_at  : forall v, loc -> access comp -> v -> sprop comp loc
+  (* | sep_pure : Prop -> sprop comp loc *)
+  | empty   : Prop -> sprop comp loc
+  | sep_con : sprop comp loc -> sprop comp loc -> sprop comp loc.
 
-Arguments sep_con {comp loc}%type_scope.
 Arguments val_at  {comp loc v}%type_scope.
-Arguments acc_at  {comp loc}%type_scope.
+(* Arguments sep_pure {comp loc}%type_scope. *)
 Arguments empty   {comp loc}%type_scope.
+Arguments sep_con {comp loc}%type_scope.
 
-Notation "X ** Y" := (sep_con X Y) (at level 55, right associativity).
-Notation "l ↦ v" := (val_at l v) (at level 50).
-Notation "a @ l" := (acc_at l a) (at level 50).
+Notation "l ; a ↦ v" := (val_at l a v) (at level 50).
+(* Notation "⟨ p ⟩" := (sep_pure p) (at level 0).
+Notation "⟨ ⟩" := (sep_pure True) (at level 0). *)
+Notation "⟨⟩" := (empty) (at level 0).
+Notation "x ** y" := (sep_con x y) (at level 55, right associativity).
