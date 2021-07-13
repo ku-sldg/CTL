@@ -1,16 +1,13 @@
 Require Import SepLogic.Definition.
 Require Import Coq.Relations.Relation_Definitions.
 
-Require Import Coq.Lists.List.
-Import ListNotations.
-
 Require Import Coq.Program.Equality.
 Require Import GeneralTactics.
 
 (* Contradictory or redundant *)
 Inductive overlap {comp loc}: sprop comp loc -> sprop comp loc -> Prop :=
   | overlap_val_at : forall l a1 a2 V1 (v1: V1) V2 (v2: V2),
-      overlap (l;a1 ↦ v1) (l;a2 ↦ v2)
+      overlap (l#a1 ↦ v1) (l#a2 ↦ v2)
   | overlap_sep_con_ll : forall x y z,
       overlap x z ->
       overlap (x ** y) z
@@ -54,122 +51,89 @@ Proof using.
   assumption.
 Qed.
 
-Fixpoint pure {comp loc} (s: sprop comp loc) : Prop :=
-  match s with
-  | val_at _ _ _ => False
-  | sep_pure _ => True
-  | sep_con s1 s2 => pure s1 /\ pure s2
-  end.
-
-Fixpoint spatial {comp loc} (s: sprop comp loc) : Prop :=
-  match s with
-  | val_at _ _ _ => True
-  | sep_pure _ => False
-  | sep_con s1 s2 => spatial s1 \/ spatial s2
-  end.
-
-Theorem pure_is_nonspatial {comp loc}: forall s: sprop comp loc,
-  pure s <-> ~ spatial s.
-Proof.
-  intro s; induction s; simpl; try easy.
-  split.
-  - intros [H1 H2].
-    applyc IHs1 in H1;
-    applyc IHs2 in H2.
-    intro Hcontra; destruct or Hcontra; auto.
-  - intro H.
-    split.
-    + apply IHs1.
-      auto.
-    + apply IHs2.
-      auto.
-Qed.
-
-Definition spatial_dec {comp loc} (s: sprop comp loc):
-  {spatial s} + {~ spatial s}.
-induction s; try solve [simpl; auto].
-destruct multi IHs1 IHs2; try solve [simpl; auto].
-simpl.
-right.
-intro H.
-destruct or H; contradiction H.
-Defined.
-
-Theorem pure_is_separate {comp loc}: forall x y: sprop comp loc,
-  pure x ->
-  separate x y.
+Lemma empty_is_separate {comp loc}: forall x: sprop comp loc,
+  separate ⟨⟩ x.
 Proof using.
-  intros x y H.
-  apply pure_is_nonspatial in H.
-  unfold separate, not in *.
-  intros Hcontra.
-  applyc H.
-  induction Hcontra; simpl; auto.
+  intros x Hcontra.
+  dependent induction Hcontra.
+  - apply IHHcontra. reflexivity. 
+  - apply IHHcontra. reflexivity.
 Qed.
 
+Lemma separate_sep_con_elim_r {comp loc}: forall a b c: sprop comp loc,
+  separate a (b ** c) ->
+  separate a b /\ separate a c.
+Proof using.
+  unfold separate, not.
+  intros a b c H.
+  split; intro.
+  - applyc H.
+    apply overlap_sep_con_rl.
+    assumption.
+  - applyc H.
+    apply overlap_sep_con_rr.
+    assumption.
+Qed.
 
-(* Inductive well_formed {comp loc} : sprop comp loc -> Prop :=
-  | wf_val_at: forall V l a (v: V),
-      well_formed (l;a ↦ v)
-  | wf_sep_pure: forall P: Prop,
-      well_formed ⟨P⟩
-  | wf_sep_con:
-      well_formed (a ** b)
-  . *)
+Lemma separate_sep_con_elim_l {comp loc}: forall a b c: sprop comp loc,
+  separate (a ** b) c ->
+  separate a c /\ separate b c.
+Proof using.
+  intros.
+  apply separate_sym in H.
+  apply separate_sep_con_elim_r in H.
+  destruct H as [H1 H2].
+  split; apply separate_sym; assumption.
+Qed.
 
-Fixpoint conjunct_list (l: list Prop) : Prop := 
-  match l with 
-  | [] => True
-  | [P] => P
-  | P :: t => P /\ conjunct_list t
-  end.
+Lemma separate_sep_con_intro_r {comp loc}: forall a b c: sprop comp loc,
+  separate a b ->
+  separate a c ->
+  separate a (b ** c).
+Proof using.
+  unfold separate, not.
+  intros a b c H1 H2 Hcontra.
+  dependent induction Hcontra.
+  - eapply (IHHcontra b c); clear IHHcontra.
+    + intro H.
+      apply H1.
+      apply overlap_sep_con_ll.
+      assumption.
+    + intro H.
+      apply H2.
+      apply overlap_sep_con_ll.
+      assumption.
+    + reflexivity.
+  - eapply (IHHcontra b c); clear IHHcontra.
+    + intro H.
+      apply H1.
+      apply overlap_sep_con_lr.
+      assumption.
+    + intro H.
+      apply H2.
+      apply overlap_sep_con_lr.
+      assumption.
+    + reflexivity.
+  - apply H1. assumption.
+  - apply H2. assumption.
+Qed.
 
-Definition get_pure_props {comp loc} (s: sprop comp loc) : Prop :=
-  let get_pure_props_list := fix get_pure_props_list s :=
-    match s with 
-    | _;_ ↦ _ => []
-    | ⟨P⟩ => [P]
-    | s1 ** s2 => get_pure_props_list s1 ++ get_pure_props_list s2
-    end
-  in 
-    conjunct_list (get_pure_props_list s).
+Lemma separate_sep_con_intro_l {comp loc}: forall a b c: sprop comp loc,
+  separate a c ->
+  separate b c ->
+  separate (a ** b) c.
+Proof using.
+  intros.
+  apply separate_sym.
+  apply separate_sep_con_intro_r; apply separate_sym; assumption.
+Qed.
 
-Fixpoint get_spatial_props {comp loc} (s: sprop comp loc) : sprop comp loc :=
+Fixpoint well_formed {comp loc} (s: sprop comp loc) : Prop :=
   match s with 
-  | _;_ ↦ _ => s 
-  | ⟨_⟩ => ⟨⟩
-  | a ** b =>
-    match get_spatial_props a ** get_spatial_props b with
-    | x ** ⟨_⟩ => x
-    | ⟨_⟩ ** x => x
-    | x  => x
-    end
-  end.
-
-(* Fixpoint well_formed_no_assumptions {comp loc} (s: sprop comp loc) : Prop :=
-  match s with 
-  | val_at _ _ _ => True 
-  | sep_pure _ => True
+  | _#_ ↦ _ => True 
+  | ⟨⟩ => True
   | sep_con s1 s2 =>
-      well_formed_no_assumptions s1 /\
-      well_formed_no_assumptions s2 /\
+      well_formed s1 /\
+      well_formed s2 /\
       separate s1 s2
   end.
-
-Definition well_formed {comp loc} (s: sprop comp loc) : Prop :=
-  get_pure_props s -> well_formed_no_assumptions s. *)
-
-
-Inductive well_formed {comp loc} : sprop comp loc -> Prop :=
-  | wf_val_at: forall V l a (v: V),
-      well_formed (l;a ↦ v)
-  | wf_sep_pure: forall P: Prop,
-      well_formed ⟨P⟩
-  | wf_sep_con:
-      a ** b ⊢ ⟨P⟩
-      well_formed (a ** b)
-  .
-
-
-Definition well_formed {comp loc} (s: sprop comp loc) : Prop :=
-  get_pure_props s -> well_formed_no_assumptions s. 

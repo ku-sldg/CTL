@@ -17,38 +17,35 @@ Require Import GeneralTactics.
 
 (* Assert some fact about the global state *)
 Definition gassert {comp loc L} (s: sprop comp loc) : TProp (sprop comp loc * L) :=
-    TLift (fun st => fst st ⊢ s \/ exists frame, fst st ⊢ s ** frame).
+    TLift (fun st => exists frame, fst st ⊢ s ** frame).
 
-Theorem useram_key_never_compromised: forall (acc: access component),
+Theorem useram_key_never_compromised: forall V (v: V) (acc: access component),
   acc malicious_linux_component read ->
-  attarch_strans; (empty, boot_from_good_plat) ⊨ ¬ EF (gassert (acc @ useram_key)).
+  attarch_strans; (⟨⟩, boot_from_good_plat) ⊨ ¬ EF (gassert (useram_key #acc ↦ v)).
 Proof.
-  intros acc Hmal_acc.
+  intros V v acc Hmal_acc.
   tapply AG_EF.
   apply rtc_AG.
   intros s' Hsteps.
   dependent induction Hsteps.
-  - sentails.
-  - intros Hcontra.
-    (* simpl in Hcontra. *)
+  - simpl. 
+    (* Trivial by sentails discrimination *)
+    admit.
+  - 
+    (* intros Hcontra. *)
     invc H.
-    + invc H2.
-      * invc Hcontra.
-       -- sprop_discriminate.
-       -- destruct exists H frame.
-          simpl in H.
-          sprop_facts.
-          (* From H2 derive
-             readonly @ boot_ev ⊢ acc @ useram_key
-             This is a contradiction, since the two acces locations 
-             are not equal
-           *)
-          admit.
-      * invc Hcontra.
-       -- sprop_discriminate.
-       -- simpl in H.
-          (* contradiction found by advanced sprop_discriminate *)
-          admit.
-      * 
+    invc H2.
+    + intro Hcontra.
+      simpl in Hcontra.
+      (* Hcontra is a contradiction. 
+         y' can only entail `bootev # readonly ↦ ...`, by H1.
+         z0 can't entail `useram_key # ...` either, by IHHsteps
+       *)
+      admit.
+    + (* Hsteps is an impossible path *)
+      invc Hsteps.
+      invc H.
+      inv H9.
+    +  
 
 Admitted.

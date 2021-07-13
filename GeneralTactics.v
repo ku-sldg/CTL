@@ -47,6 +47,8 @@ Ltac max_induction x :=
   generalize_max;
   induction x.
 
+Ltac max_split := try (split; max_split).
+
 (* Automatic simplificiations on the context *)
 
 Ltac my_crush := repeat constructor + easy + lia + assumption. 
