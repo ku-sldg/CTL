@@ -11,6 +11,7 @@ Ctl/Properties.v
 SepLogic/Definition.v
 SepLogic/Separation.v
 SepLogic/Entailment.v
+SepLogic/Rewrite.v
 
 TransitionSystems.v
 AttarchTrans.v

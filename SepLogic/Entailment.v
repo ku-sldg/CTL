@@ -20,9 +20,15 @@ Inductive sentails {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
   | empty_intro_l : forall x x',
       x ⊢ x' ->
       ⟨⟩ ** x ⊢ x'
+  | empty_elim_l : forall x x',
+      ⟨⟩ ** x ⊢ x' ->
+      x ⊢ x'
   | empty_intro_r : forall x x',
       x ⊢ x' ->
       x ⊢ ⟨⟩ ** x'
+  | empty_elim_r : forall x x',
+      x ⊢ ⟨⟩ ** x' ->
+      x ⊢ x'
   | sep_con_assoc_l : forall a b c d,
       a ** b ** c ⊢ d ->
       (a ** b) ** c ⊢ d
@@ -35,34 +41,23 @@ Inductive sentails {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
   | sep_con_comm_r : forall a b c,
       a ⊢ b ** c ->
       a ⊢ c ** b
+  | sentails_trans : forall a b c,
+      a ⊢ b ->
+      b ⊢ c ->
+      a ⊢ c
   where "x ⊢ y" := (sentails x y).
 Notation "x ⊬ y" := (~ x ⊢ y) (at level 70).
 
-
-Definition sprop_wf comp loc := {s: sprop comp loc| well_formed s}.
-
-Definition seq {comp loc} (a b: sprop_wf comp loc) := 
-  proj1_sig a ⊢ proj1_sig b.
-Notation "a ≅ b" := (seq a b) (at level 70).
-Notation "a ≇ b" := (~ seq a b) (at level 70).
-
-Theorem seq_refl {comp loc}: reflexive (sprop_wf comp loc) seq.
+(* Theorem empty_elim {comp loc}: forall x y z: sprop comp loc,
+  z = ⟨⟩ ** y \/ z = y ** ⟨⟩ ->
+  x ⊢ z ->
+  x ⊢ y.
 Proof using.
-  unfold reflexive.
-  intro x.
-  destruct x as [x Hwf].
-  unfold seq; simpl. 
-  induction x.
-  - constructor.
-    apply access_eq_refl.
-  - constructor.
-  - apply sep_con_intro.
-    + apply IHx1.
-      destruct Hwf; easy.
-    + apply IHx2.
-      destruct Hwf; easy.
-    + destruct Hwf; easy.
-Qed.
+  intros x y z Hz Hxz.
+  induction Hxz;
+    try solve [destruct or Hz; discriminate Hz].
+  - destruct or Hz; subst; invc Hz.
+    + apply empty_intro_r. *)
 
 Lemma sentails_preserves_separation {comp loc}: forall x x' y: sprop comp loc,
   x ⊢ x' ->
@@ -92,10 +87,17 @@ Proof using.
   - apply IHHsent.
     apply separate_sep_con_elim_l in Hsep.
     easy.
+  - apply IHHsent.
+    apply separate_sep_con_intro_l.
+    * apply empty_is_separate.
+    * assumption.
   - apply separate_sep_con_intro_l.
     + apply empty_is_separate.
     + apply IHHsent.
       assumption.
+  - applyc IHHsent in Hsep.
+    apply separate_sep_con_elim_l in Hsep.
+    easy.
   - apply IHHsent.
     apply separate_sep_con_intro_l.
     + apply separate_sep_con_elim_l in Hsep.
@@ -128,6 +130,9 @@ Proof using.
   - applyc IHHsent in Hsep.
     apply separate_sep_con_elim_l in Hsep.
     apply separate_sep_con_intro_l; easy.
+  - apply IHHsent2.
+    apply IHHsent1.
+    assumption.
 Qed. 
 
 Lemma sentails_preserves_separation_strong {comp loc}: forall x x' y y': sprop comp loc,
@@ -157,7 +162,11 @@ Proof using.
   - constructor.
   - apply empty_intro_r.
     assumption.
+  - apply empty_elim_r.
+    assumption.
   - apply empty_intro_l.
+    assumption.
+  - apply empty_elim_l.
     assumption.
   - apply sep_con_assoc_r.
     assumption.
@@ -167,33 +176,53 @@ Proof using.
     assumption.
   - apply sep_con_comm_l.
     assumption.
+  - eapply sentails_trans; eassumption.
 Qed.
 
-Theorem seq_sym {comp loc}: symmetric (sprop_wf comp loc) seq.
+Theorem sentails_wf_l {comp loc}: forall a b: sprop comp loc,
+  a ⊢ b ->
+  well_formed a.
 Proof using.
-  unfold symmetric, seq.
-  intros x y.
+  intros a b H.
+  induction H.
+  - simpl. auto.
+  - simpl. auto.
+  - simpl. auto.
+  - simpl. split; [|split].
+    + exact I.
+    + assumption. 
+    + apply empty_is_separate.
+  - simpl in IHsentails. easy.
+  - assumption.
+  - assumption.
+  - simpl in *.
+    max_split; try easy.
+    + destruct IHsentails as [_ [_ IHsentails]].
+      apply separate_sep_con_elim_r in IHsentails.
+      easy.
+    + destruct IHsentails as [_ [[_ [_ H1]] H2]].
+      apply separate_sep_con_elim_r in H2.
+      destruct H2 as [_ H2].
+      apply separate_sep_con_intro_l; assumption.
+  - assumption.
+  - simpl in *.
+    destruct IHsentails as [H1 [H2 H3]].
+    max_split; try assumption.
+    apply separate_sym.
+    assumption.
+  - assumption.
+  - assumption.
+Qed.
+
+Theorem sentails_wf_r {comp loc}: forall a b: sprop comp loc,
+  a ⊢ b ->
+  well_formed b.
+Proof using.
+  intros a b H.
+  eapply sentails_wf_l.
   apply sentails_sym.
+  eassumption.
 Qed.
-
-Lemma empty_elim_l {comp loc}: forall x x': sprop comp loc,
-  ⟨⟩ ** x ⊢ x' ->
-  x ⊢ x'.
-Proof using.
-  intros x x' H.
-  revert x' H;
-  induction x; intros x' H.
-  - induction x'.
-    + dependent induction H.
-      * assumption.
-      * apply IHsentails.
-Admitted.
-
-Lemma empty_elim_r {comp loc}: forall x x': sprop comp loc,
-  x ⊢ ⟨⟩ ** x' ->
-  x ⊢ x'.
-Proof using.
-Admitted.
 
 Lemma sep_con_assoc_l_rev {comp loc}: forall a b c d: sprop comp loc,
   (a ** b) ** c ⊢ d ->
@@ -217,21 +246,15 @@ Proof using.
   assumption.
 Qed.
 
-(* Lemma empty_elim_strong_r {comp loc}: forall e x x': sprop comp loc,
-  e ⊢ ⟨⟩ ->
-  x ⊢ ⟨⟩ ** x' ->
-  x ⊢ x'.
-Proof using.
-  intros e x x' he hx.
-  revert e he.
-  dependent induction hx; intros e he.
-  - 
-Abort. *)
-
+(*
 Lemma empty_entails_decomp_l {comp loc}: forall e1 e2: sprop comp loc,
   e1 ** e2 ⊢ ⟨⟩ ->
   e1 ⊢ ⟨⟩.
 Proof using.
+  intros e1.
+  destruct e1.
+  - intros.
+    apply 
 Admitted.
 
 Lemma empty_is_separate_strong {comp loc}: forall e x: sprop comp loc,
@@ -272,109 +295,6 @@ Proof using.
       assumption.
 Qed.
 
-(* Theorem 
-  x ** y ⊢ x' ** y' ->
-  x' ** y' ⊢ z ->
-  x ** y ⊢ z *)
-
-Theorem sentails_trans {comp loc}: forall x y z: sprop comp loc,
-  x ⊢ y ->
-  y ⊢ z -> 
-  x ⊢ z.
-Proof using.
-  intros x y z Hxy Hyz.
-  revert z Hyz.
-  dependent induction Hxy; intros z Hyz.
-  - dependent induction Hyz.
-    + constructor.
-      eapply access_eq_trans; eassumption.
-    + apply empty_intro_r.
-      eapply IHHyz.
-      * eassumption.
-      * reflexivity.
-    + apply sep_con_assoc_r.
-      eapply IHHyz.
-      * eassumption.
-      * reflexivity.
-    + apply sep_con_comm_r.
-      eapply IHHyz.
-      * eassumption.
-      * reflexivity.
- - dependent induction Hyz.
-    + apply sep_con_intro.
-      * apply IHHxy1. assumption.
-      * apply IHHxy2. assumption.
-      * assumption.
-    + apply empty_elim_r.
-      apply sep_con_intro.
-      * assumption.
-      * apply IHHxy2.
-        assumption.
-      * assumption.
-    + apply empty_intro_r.
-      eapply IHHyz; try eassumption.
-      reflexivity.
-    + 
-(* 
-      induction d.
-      * admit.
-      * apply empty_elim_r.
-        apply sep_con_intro.
-       -- apply IHHxy1.
-          apply sep_con_assoc_l in Hyz.
-          apply empty_entails_decomp in Hyz.
-          assumption.
-       -- apply IHHxy2.
-          apply sep_con_assoc_l in Hyz.
-          apply sep_con_comm_l in Hyz.
-          apply empty_entails_decomp in Hyz.
-          assumption.
-       -- assumption.
-      *  *)
-      admit.
-    + apply sep_con_assoc_r.
-      eapply IHHyz; try eassumption.
-      reflexivity.
-    + apply sep_con_comm_l.
-      eapply IHHyz; try eassumption.
-      * apply separate_sym. assumption.
-      * reflexivity.
-    + apply sep_con_comm_r.
-      eapply IHHyz; try eassumption.
-      reflexivity.
-  - assumption.
-  - apply empty_intro_l.
-    apply IHHxy.
-    assumption.
-  - apply IHHxy.
-    apply empty_elim_l.
-    assumption.
-  - apply sep_con_assoc_l.
-    apply IHHxy.
-    assumption.
-  - apply IHHxy.
-    apply sep_con_assoc_l_rev.
-    assumption.
-  - apply sep_con_comm_l.
-    apply IHHxy.
-    assumption.
-  - apply IHHxy.
-    apply sep_con_comm_l.
-    assumption.
-Admitted. 
-
-(* sep_pure sanity check *)
-(* Goal forall {comp loc} a l,
-  ⟨False⟩ ** a @ l ⊢ (a @ l ** ⟨False⟩: sprop comp loc).
-intros comp loc a l.
-apply sep_pure_intro_l.
-intro F.
-apply sep_con_comm_r.
-apply sep_pure_intro_r.
-- assumption.
-- apply sentails_refl.
-Qed. *)
-
 Theorem entailment_preserves_separation {comp loc}: forall x y: sprop comp loc,
   x ⊢ y ->
   forall z, separate x z <-> separate y z.
@@ -389,54 +309,6 @@ Proof.
   intros.
   eapply sentails_trans; eassumption.
 Qed.
-
-Theorem sentails_wf_l {comp loc}: forall a b: sprop comp loc,
-  a ⊢ b ->
-  well_formed a.
-Proof using.
-  intros a b H.
-  induction H.
-  - simpl. auto.
-  - simpl. auto.
-  - simpl. auto.
-  - simpl. split; [|split].
-    + exact I.
-    + assumption. 
-    + apply empty_is_separate.
-  - assumption.
-  - simpl in *.
-    max_split; try easy.
-    + destruct IHsentails as [_ [_ IHsentails]].
-      apply separate_sep_con_elim_r in IHsentails.
-      easy.
-    + destruct IHsentails as [_ [[_ [_ H1]] H2]].
-      apply separate_sep_con_elim_r in H2.
-      destruct H2 as [_ H2].
-      apply separate_sep_con_intro_l; assumption.
-  - assumption.
-  - simpl in *.
-    destruct IHsentails as [H1 [H2 H3]].
-    max_split; try assumption.
-    apply separate_sym.
-    assumption.
-  - assumption.
-Qed.
-
-Theorem sentails_wf_r {comp loc}: forall a b: sprop comp loc,
-  a ⊢ b ->
-  well_formed b.
-Admitted.
-
-Lemma sentails_wf_refl {comp loc}: forall a: sprop comp loc,
-  well_formed a ->
-  a ⊢ a.
-Proof using.
-  induction a; intro H.
-  - constructor.
-    apply access_eq_refl.
-  - 
-Admitted.
-
 
 (* Tactics *)
 
@@ -735,3 +607,5 @@ Ltac sentails :=
   (* | [_:_ |- ?x ** ?y ⊢ ?z] => *)
   (* | [H: ?x ⊢ ?y |- ?x ⊢ ?y] => exact H *)
   end. *)
+
+*)
