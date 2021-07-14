@@ -179,6 +179,41 @@ Proof using.
   - eapply sentails_trans; eassumption.
 Qed.
 
+Require Import Setoid.
+Add Parametric Relation (comp loc: Set): (sprop comp loc) (@sentails comp loc)
+  symmetry proved by (@sentails_sym comp loc)
+  transitivity proved by (@sentails_trans comp loc)
+  as sentails_rel.
+  
+Theorem normalization_preserves_entailment_l {comp loc}:
+  forall (x x' y: sprop comp loc) Hnorm,
+    normalize x = exist _ x' Hnorm ->
+    x ⊢ y ->
+    x' ⊢ y.
+Proof using.
+  simpl.
+  intros. 
+  induction H0.
+  - invc H.
+    constructor.
+    assumption.
+  - 
+  
+
+Lemma empty_entails_decomp_l {comp loc}: forall e1 e2: sprop comp loc,
+  e1 ** e2 ⊢ ⟨⟩ ->
+  e1 ⊢ ⟨⟩ /\ e2 ⊢ ⟨⟩.
+Proof using.
+  intros e1 e2 H.
+  
+
+  dependent induction H.
+  - split. 
+    + constructor. 
+    + assumption.
+  - 
+
+
 Theorem sentails_wf_l {comp loc}: forall a b: sprop comp loc,
   a ⊢ b ->
   well_formed a.
