@@ -1,26 +1,18 @@
 Require Import SepLogic.Definition.
 Require Import SepLogic.Separation.
 Require Import Coq.Relations.Relation_Definitions.
+
 Require Import Coq.Lists.List.
 Import ListNotations.
+
 Require Coq.Sorting.Permutation.
 Import Permutation.
 
 Require Import GeneralTactics.
 Require Import Coq.Program.Equality.
 
-(* Definition snoc {A} (l: list A) (a: A) := l ++ [a].
-
-Lemma snoc_comm_cons {A}: forall x y (l: list A),
-  x :: snoc l y = snoc (x :: l) y.
-Proof using.
-  intros x y l.
-  unfold snoc.
-  apply app_comm_cons.
-Qed. *)
-
 (* Can potentially be deleted *)
-Theorem permutation_singleton {A}: forall (x: list A) (y: A), 
+(* Theorem permutation_singleton {A}: forall (x: list A) (y: A), 
   Permutation x [y] ->
   x = [y].
 Proof using.
@@ -28,18 +20,23 @@ Proof using.
   symmetry in H.
   apply Permutation_length_1_inv in H.
   assumption.
-Qed. 
+Qed.  *)
 
 Reserved Notation "x ⊢ y" (at level 70).
 Inductive sentails {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
   | val_at_entails : forall V l a1 a2 (v: V),
       access_eq a1 a2 ->
       [l#a1 ↦ v] ⊢ [l#a2 ↦ v]
-  | sep_con_intro : forall x x' y y',
+  (* | sep_con_intro : forall x x' y y',
       x ⊢ x' ->
       y ⊢ y' ->
       separate x y ->
-      x ** y ⊢ x' ** y'
+      x ** y ⊢ x' ** y' *)
+  | head_intro : forall x x' y y',
+     [x] ⊢ [x'] ->
+     y ⊢ y' ->
+     atom_sprop_separate x y ->
+     x :: y ⊢ x' :: y'
   | empty_entails :
       ⟨⟩ ⊢ ⟨⟩
   | sentails_perm : forall x x' y y',
@@ -50,21 +47,104 @@ Inductive sentails {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
   where "x ⊢ y" := (sentails x y).
 Notation "x ⊬ y" := (~ x ⊢ y) (at level 70).
 
+Theorem empty_intro_l {comp loc}: forall x x': sprop comp loc,
+  x ⊢ x' ->
+  ⟨⟩ ** x ⊢ x'.
+Proof. auto. Qed.
+
+Theorem empty_intro_r {comp loc}: forall x x': sprop comp loc,
+  x ⊢ x' ->
+  x ⊢ ⟨⟩ ** x'.
+Proof. auto. Qed.
+
+Theorem empty_elim_l {comp loc}: forall x x': sprop comp loc,
+  ⟨⟩ ** x ⊢ x' ->
+  x ⊢ x'.
+Proof. auto. Qed.
+
+Theorem empty_elim_r {comp loc}: forall x x': sprop comp loc,
+  x ⊢ ⟨⟩ ** x' ->
+  x ⊢ x'.
+Proof. auto. Qed.
+
+Theorem sep_con_assoc_l {comp loc}: forall a x y z: sprop comp loc,
+  x ** y ** z ⊢ a <-> (x ** y) ** z ⊢ a.
+Proof. 
+  intros.
+  unfold sep_con. 
+  rewrite app_assoc.
+  split; auto.
+Qed.
+
+Theorem sep_con_assoc_r {comp loc}: forall a x y z: sprop comp loc,
+  a ⊢ x ** y ** z <-> a ⊢ (x ** y) ** z.
+Proof. 
+  intros.
+  unfold sep_con. 
+  rewrite app_assoc.
+  split; auto.
+Qed.
+
 Lemma empty_only_entails_empty {comp loc}: forall x: sprop comp loc,
   ⟨⟩ ⊢ x ->
   x = ⟨⟩.
-Proof. auto. Qed.
+Proof.
+  intros x H.
+  dependent induction H.
+  - reflexivity.
+  - symmetry in H; apply Permutation_nil in H; subst.
+    cut_hyp IHsentails by reflexivity. subst.
+    apply Permutation_nil in H0; subst.
+    reflexivity.
+Qed.
 
 Lemma only_empty_entails_empty {comp loc}: forall x: sprop comp loc,
   x ⊢ ⟨⟩ ->
   x = ⟨⟩.
-Proof. auto. Qed.
+Proof.
+  intros x H.
+  dependent induction H.
+  - reflexivity.
+  - symmetry in H0; apply Permutation_nil in H0; subst.
+    cut_hyp IHsentails by reflexivity. subst.
+    apply Permutation_nil in H; subst.
+    reflexivity.
+Qed.
 
 Lemma sentails_preserves_separation {comp loc}: forall x x' y: sprop comp loc,
   x ⊢ x' ->
   separate x y ->
   separate x' y.
-Admitted.
+Proof using.
+  intros x x' y H Hsep.
+  induction H.
+  - invc Hsep; clear H3; rename H2 into Hsep.
+    repeat constructor.
+    induction y.
+    + constructor.
+    + invc Hsep.
+      specializec IHy H3.
+      constructor. 
+      * invc H2.
+        constructor.
+        assumption.
+      * assumption.
+  - invc Hsep.
+    cut_hyp IHsentails1.
+    { repeat constructor. assumption. }
+    invc IHsentails1; clear H7; rename H6 into IHsentails1.
+    constructor.
+    + assumption.
+    + apply IHsentails2.
+      assumption.
+  - apply separate_empty_l.
+  - eapply separate_perm; [eassumption|reflexivity|].
+    apply IHsentails.
+    eapply separate_perm. 
+    + symmetry. eassumption.
+    + reflexivity.
+    + assumption.
+Qed.
 
 Lemma sentails_preserves_separation_strong {comp loc}: forall x x' y y': sprop comp loc,
   x ⊢ x' ->
@@ -72,14 +152,13 @@ Lemma sentails_preserves_separation_strong {comp loc}: forall x x' y y': sprop c
   separate x y ->
   separate x' y'.
 Proof.
-  (* intros x x' y y' Hx Hy Hsep.
-  eapply sentails_preserves_separation in Hsep; [|eassumption].
-  apply separate_sym in Hsep.
-  eapply sentails_preserves_separation in Hsep; [|eassumption].
-  apply separate_sym in Hsep.
+  intros x x' y y' Hx Hy Hsep.
+  eapply sentails_preserves_separation; [eassumption|].
+  symmetry.
+  eapply sentails_preserves_separation; [eassumption|].
+  symmetry.
   assumption.
-Qed. *)
-Admitted.
+Qed.
 
 Theorem sentails_sym {comp loc}: symmetric (sprop comp loc) sentails.
 Proof using.
@@ -89,10 +168,15 @@ Proof using.
   - constructor.
     apply access_eq_sym.
     assumption.
-  - apply sep_con_intro.
+  - apply head_intro.
     + assumption.
     + assumption.
-    + eapply sentails_preserves_separation_strong; eassumption.
+    + apply separate_singleton.
+      eapply sentails_preserves_separation_strong.
+      * eassumption.
+      * eassumption.
+      * apply separate_singleton.
+        assumption.
   - constructor.
   - eapply sentails_perm; eassumption.
 Qed.
@@ -128,6 +212,8 @@ Theorem sep_con_empty_r {comp loc}: forall x: sprop comp loc,
 Proof.
   apply app_nil_r.
 Qed.
+
+ 
   
 Theorem sentails_trans {comp loc}: transitive (sprop comp loc) sentails.
 Proof using.
@@ -176,7 +262,7 @@ Proof using.
         
 Admitted. 
 
-(* This pattern is likely importation for induction over entailments *)
+(* This pattern is likely important for induction over entailments *)
 Theorem singleton_entails_strong {comp loc}: forall a (x b: sprop comp loc),
   Permutation x (a :: b) ->
   [a] ⊢ x ->
@@ -215,20 +301,101 @@ Proof using.
   reflexivity.
 Qed.
 
-Theorem head_elim_strong {comp loc}: forall a (x y b c: sprop comp loc),
+Theorem head_elim_Strong {comp loc}: forall a (b x y: sprop comp loc),
   Permutation x (a :: b) ->
-  Permutation y (a :: c) ->
   x ⊢ y ->
-  b ⊢ c.
+  exists a' b', 
+    Permutation y (a' :: b') /\
+    [a] ⊢ [a'] /\
+    b ⊢ b'.
 Proof using.
-  intros a x y b c Hpermx Hpermy H.
+  intros a b x y Hperm H.
+  revert a b Hperm.
+  dependent induction H; intros a b Hperm.
+  - apply Permutation_length_1_inv in Hperm; invc Hperm.
+    repeat eexists.
+    + reflexivity.
+    + constructor.
+      assumption.
+    + constructor.
+  - specialize (IHsentails1 x []).
+    cut_hyp IHsentails1 by reflexivity.
+    destruct exists IHsentails1 a' b'.
+    destruct IHsentails1 as [Hpermx' [_ Htemp]];
+      apply empty_only_entails_empty in Htemp; subst.
+    apply Permutation_length_1 in Hpermx'; subst.
+    destruct y.
+    * apply empty_only_entails_empty in H0; subst.
+      apply Permutation_length_1_inv in Hperm; invc Hperm.
+      exists a'.
+      exists [].
+      max_split.
+     -- reflexivity.
+     -- assumption.
+     -- constructor.
+    * (* induction on Hperm? *)
+      admit.
+  - apply Permutation_nil_cons in Hperm.
+    contradiction Hperm.
+  - specialize (IHsentails a b).
+    cut_hyp IHsentails by (eapply Permutation_trans; eassumption).
+    destruct exists IHsentails a' b'.
+    destruct IHsentails as [IHsentails1 [IHsentails2 IHsentails3]].
+    exists a';
+    exists b'.
+    max_split; try assumption.
+    eapply Permutation_trans.
+    + symmetry. eassumption.
+    + assumption.
+Admitted.   
+
+Theorem head_elim {comp loc}: forall a (b x: sprop comp loc),
+  a :: b ⊢ x ->
+  exists a' b', 
+    Permutation x (a' :: b') /\
+    [a] ⊢ [a'] /\
+    b ⊢ b'.
+Proof using.
+  intros a b x H.
   dependent induction H.
-  - apply Permutation_length_1_inv in Hpermx, Hpermy.
-    invc Hpermx; invc Hpermy.
+  - repeat eexists.
+    + reflexivity.
+    + constructor.
+      assumption.
+    + constructor.
+  - specialize (IHsentails1 a []).
+    cut_hyp IHsentails1 by reflexivity.
+    destruct exists IHsentails1 a' b'.
+    destruct IHsentails1 as [IHsentails1 [_ Htemp]];
+      apply empty_only_entails_empty in Htemp; subst.
+    apply Permutation_length_1 in IHsentails1; subst.
+    exists a'.
+    exists y'.
+    max_split; try assumption.
+    reflexivity.
+  - 
+  
+
+Theorem sep_con_intro {comp loc}: forall x x' (y y': sprop comp loc),
+  x ⊢ x' ->
+  y ⊢ y' ->
+  separate x y ->
+  x ** y ⊢ x' ** y'.
+Proof using.
+  intros x.
+  induction x; intros x' y y' Hx Hy Hsep.
+  - apply empty_only_entails_empty in Hx; subst.
+    simpl.
+    assumption.
+  - apply IHx.
+
+    destruct x' as [| b x'].
+    { apply only_empty_entails_empty in Hx;
+      discriminate Hx. }
+    simpl.
+    apply head_intro.
     constructor.
-  - admit.
-  - apply Permutation_nil_cons in Hpermx.
-    contradiction.
+
 
 Theorem sep_con_elim_weak {comp loc}: forall a (b c: sprop comp loc),
   a :: b ⊢ a :: c ->
