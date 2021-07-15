@@ -1,9 +1,27 @@
 Require Import SepLogic.Definition.
 Require Import Coq.Relations.Relation_Definitions.
+Require Import Coq.Lists.List.
 
 Require Import Coq.Program.Equality.
 Require Import GeneralTactics.
 
+Inductive atom_separate {comp loc}
+  : sprop_atom comp loc -> sprop_atom comp loc -> Prop :=
+  | separate_val_at : forall (l1 l2: loc) a1 a2 V1 (v1: V1) V2 (v2: V2),
+      l1 <> l2 ->
+      atom_separate (l1 #a1 ↦ v1) (l2 #a2 ↦ v2).
+
+Definition Forall_prod {A B} (P: A -> B -> Prop) (l1: list A) (l2: list B) :=
+  (* Forall (uncurry P) (list_prod l1 l2). *)
+  Forall (fun a => Forall (P a) l2) l1.
+
+Definition separate {comp loc}: sprop comp loc -> sprop comp loc -> Prop :=
+  Forall_prod atom_separate.
+
+
+(* Old stuff *)
+
+(*
 (* Contradictory or redundant *)
 Inductive overlap {comp loc}: sprop comp loc -> sprop comp loc -> Prop :=
   | overlap_val_at : forall l a1 a2 V1 (v1: V1) V2 (v2: V2),
@@ -137,3 +155,4 @@ Fixpoint well_formed {comp loc} (s: sprop comp loc) : Prop :=
       well_formed s2 /\
       separate s1 s2
   end.
+*)

@@ -66,6 +66,16 @@ Tactic Notation "cut_hyp" hyp(H):=
 Tactic Notation "cut_hyp" hyp(H) "by" tactic(tac) :=
   cut_hyp H; [solve [tac]|].
 
+Ltac _max_cut_hyp H :=
+  try (cut_hyp H; [|_max_cut_hyp]).
+Tactic Notation "max_cut_hyp" hyp(H) :=
+  _max_cut_hyp.
+
+Ltac _max_cut_hyp_by H tac :=
+  try (cut_hyp H; [tac|_max_cut_hyp]).
+Tactic Notation "max_cut_hyp" hyp(H) "by" tactic(tac) :=
+  _max_cut_hyp_by H tac.
+
 Tactic Notation "find_cut_hyp" "by" tactic(tac) := 
   repeat match goal with 
   | [H : ?x -> _ |- _] => cut_hyp H by tac

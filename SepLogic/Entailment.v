@@ -1,15 +1,40 @@
 Require Import SepLogic.Definition.
 Require Import SepLogic.Separation.
 Require Import Coq.Relations.Relation_Definitions.
+Require Import Coq.Lists.List.
+Import ListNotations.
+Require Coq.Sorting.Permutation.
+Import Permutation.
 
 Require Import GeneralTactics.
 Require Import Coq.Program.Equality.
+
+(* Definition snoc {A} (l: list A) (a: A) := l ++ [a].
+
+Lemma snoc_comm_cons {A}: forall x y (l: list A),
+  x :: snoc l y = snoc (x :: l) y.
+Proof using.
+  intros x y l.
+  unfold snoc.
+  apply app_comm_cons.
+Qed. *)
+
+(* Can potentially be deleted *)
+Theorem permutation_singleton {A}: forall (x: list A) (y: A), 
+  Permutation x [y] ->
+  x = [y].
+Proof using.
+  intros.
+  symmetry in H.
+  apply Permutation_length_1_inv in H.
+  assumption.
+Qed. 
 
 Reserved Notation "x ⊢ y" (at level 70).
 Inductive sentails {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
   | val_at_entails : forall V l a1 a2 (v: V),
       access_eq a1 a2 ->
-      l#a1 ↦ v ⊢ l#a2 ↦ v
+      [l#a1 ↦ v] ⊢ [l#a2 ↦ v]
   | sep_con_intro : forall x x' y y',
       x ⊢ x' ->
       y ⊢ y' ->
@@ -17,36 +42,259 @@ Inductive sentails {comp loc} : sprop comp loc -> sprop comp loc -> Prop :=
       x ** y ⊢ x' ** y'
   | empty_entails :
       ⟨⟩ ⊢ ⟨⟩
-  | empty_intro_l : forall x x',
-      x ⊢ x' ->
-      ⟨⟩ ** x ⊢ x'
-  | empty_elim_l : forall x x',
-      ⟨⟩ ** x ⊢ x' ->
-      x ⊢ x'
-  | empty_intro_r : forall x x',
-      x ⊢ x' ->
-      x ⊢ ⟨⟩ ** x'
-  | empty_elim_r : forall x x',
-      x ⊢ ⟨⟩ ** x' ->
-      x ⊢ x'
-  | sep_con_assoc_l : forall a b c d,
-      a ** b ** c ⊢ d ->
-      (a ** b) ** c ⊢ d
-  | sep_con_assoc_r : forall a b c d,
-      a ⊢ b ** c ** d ->
-      a ⊢ (b ** c) ** d
-  | sep_con_comm_l : forall a b c,
-      a ** b ⊢ c ->
-      b ** a ⊢ c
-  | sep_con_comm_r : forall a b c,
-      a ⊢ b ** c ->
-      a ⊢ c ** b
-  | sentails_trans : forall a b c,
-      a ⊢ b ->
-      b ⊢ c ->
-      a ⊢ c
+  | sentails_perm : forall x x' y y',
+      Permutation x x' ->
+      Permutation y y' ->
+      x ⊢ y ->
+      x' ⊢ y'
   where "x ⊢ y" := (sentails x y).
 Notation "x ⊬ y" := (~ x ⊢ y) (at level 70).
+
+Lemma empty_only_entails_empty {comp loc}: forall x: sprop comp loc,
+  ⟨⟩ ⊢ x ->
+  x = ⟨⟩.
+Proof. auto. Qed.
+
+Lemma only_empty_entails_empty {comp loc}: forall x: sprop comp loc,
+  x ⊢ ⟨⟩ ->
+  x = ⟨⟩.
+Proof. auto. Qed.
+
+Lemma sentails_preserves_separation {comp loc}: forall x x' y: sprop comp loc,
+  x ⊢ x' ->
+  separate x y ->
+  separate x' y.
+Admitted.
+
+Lemma sentails_preserves_separation_strong {comp loc}: forall x x' y y': sprop comp loc,
+  x ⊢ x' ->
+  y ⊢ y' ->
+  separate x y ->
+  separate x' y'.
+Proof.
+  (* intros x x' y y' Hx Hy Hsep.
+  eapply sentails_preserves_separation in Hsep; [|eassumption].
+  apply separate_sym in Hsep.
+  eapply sentails_preserves_separation in Hsep; [|eassumption].
+  apply separate_sym in Hsep.
+  assumption.
+Qed. *)
+Admitted.
+
+Theorem sentails_sym {comp loc}: symmetric (sprop comp loc) sentails.
+Proof using.
+  unfold symmetric.
+  intros x y H.
+  induction H.
+  - constructor.
+    apply access_eq_sym.
+    assumption.
+  - apply sep_con_intro.
+    + assumption.
+    + assumption.
+    + eapply sentails_preserves_separation_strong; eassumption.
+  - constructor.
+  - eapply sentails_perm; eassumption.
+Qed.
+
+Theorem concat_eq_singleton {A}: forall (x y: list A) (z: A),
+  x ++ y = [z] ->
+  (x = [] /\ y = [z]) \/ (x = [z] /\ y = []).
+Proof using.
+  intros x y z H.
+  destruct x.
+  - left. split.
+    + reflexivity.
+    + apply H.
+  - right. destruct y.
+    + split.
+      * rewrite app_nil_r in H.
+        assumption.
+      * reflexivity.
+    + simpl in H.
+      invc H.
+      destruct x; discriminate H2.
+Qed.
+
+Theorem sep_con_eq_singleton {comp loc}: forall (x y: sprop comp loc) z,
+  x ** y = [z] -> 
+  (x = ⟨⟩ /\ y = [z]) \/ (x = [z] /\ y = ⟨⟩).
+Proof using.
+  apply concat_eq_singleton.
+Qed.
+
+Theorem sep_con_empty_r {comp loc}: forall x: sprop comp loc,
+  x ** ⟨⟩ = x.
+Proof.
+  apply app_nil_r.
+Qed.
+  
+Theorem sentails_trans {comp loc}: transitive (sprop comp loc) sentails.
+Proof using.
+  unfold transitive.
+  (* intros x y z Hxy Hyz. *)
+  intros x y z Hxy; revert z.
+  induction Hxy; intros z Hyz.
+  - dependent induction Hyz.
+    + constructor.
+      eapply access_eq_trans; eassumption.
+    + apply sep_con_eq_singleton in x.
+      destruct or x; destruct x; subst.
+      * apply empty_only_entails_empty in Hyz1; subst.
+        simpl.
+        eapply IHHyz2.
+       -- eassumption.
+       -- reflexivity.
+      * apply empty_only_entails_empty in Hyz2; subst.
+        simpl.
+        rewrite sep_con_empty_r.
+        eapply IHHyz1.
+       -- eassumption.
+       -- reflexivity.
+    + apply permutation_singleton in H1; subst.
+      eapply sentails_perm.
+      * reflexivity.
+      * eassumption.
+      * eapply IHHyz.
+       -- eassumption.
+       -- reflexivity.
+  - dependent induction Hyz.
+    + symmetry in x.
+      apply sep_con_eq_singleton in x.
+      destruct or x; destruct x; subst.
+      * apply only_empty_entails_empty in Hxy1; subst.
+        simpl.
+        apply IHHxy2.
+        constructor.
+        assumption.
+      * apply only_empty_entails_empty in Hxy2; subst.
+        rewrite sep_con_empty_r.
+        apply IHHxy1.
+        constructor.
+        assumption.
+    + 
+        
+Admitted. 
+
+(* This pattern is likely importation for induction over entailments *)
+Theorem singleton_entails_strong {comp loc}: forall a (x b: sprop comp loc),
+  Permutation x (a :: b) ->
+  [a] ⊢ x ->
+  b = ⟨⟩.
+Proof using.
+  intros a x b Hperm H.
+  dependent induction H. 
+  - apply Permutation_length_1_inv in Hperm.
+    invc Hperm.
+    reflexivity.
+  - apply sep_con_eq_singleton in x.
+    destruct or x; destruct x; subst.
+    + apply empty_only_entails_empty in H; subst.
+      simpl in Hperm.
+      eapply IHsentails2.
+      * eassumption.
+      * reflexivity.
+    + apply empty_only_entails_empty in H0; subst.
+      rewrite sep_con_empty_r in Hperm.
+      eapply IHsentails1.
+      * eassumption.
+      * reflexivity.
+  - symmetry in H.
+    apply Permutation_length_1_inv in H; subst.
+    eapply IHsentails.
+    + eapply Permutation_trans; eassumption.
+    + reflexivity.
+Qed.
+
+Theorem singleton_entails {comp loc}: forall a (x b: sprop comp loc),
+  [a] ⊢ a :: b ->
+  b = ⟨⟩.
+Proof using.
+  intros.
+  eapply singleton_entails_strong; [|eassumption].
+  reflexivity.
+Qed.
+
+Theorem head_elim_strong {comp loc}: forall a (x y b c: sprop comp loc),
+  Permutation x (a :: b) ->
+  Permutation y (a :: c) ->
+  x ⊢ y ->
+  b ⊢ c.
+Proof using.
+  intros a x y b c Hpermx Hpermy H.
+  dependent induction H.
+  - apply Permutation_length_1_inv in Hpermx, Hpermy.
+    invc Hpermx; invc Hpermy.
+    constructor.
+  - admit.
+  - apply Permutation_nil_cons in Hpermx.
+    contradiction.
+
+Theorem sep_con_elim_weak {comp loc}: forall a (b c: sprop comp loc),
+  a :: b ⊢ a :: c ->
+  b ⊢ c.
+Proof using.
+  intros a b.
+  revert a.
+  induction b; intros.
+  - assert ()
+
+
+  intros a b c H.
+  dependent induction H.
+  - constructor. 
+  - specialize (IHsentails1 a (b ** y)).
+  
+ 
+
+Theorem sep_con_elim {comp loc}: forall a b c: sprop comp loc,
+  a ** b ⊢ a ** c ->
+  b ⊢ c.
+Proof using.
+  intros a b c H.
+  dependent induction H.
+  - symmetry in x0, x.
+    apply sep_con_eq_singleton in x0, x.
+    destruct or x0; destruct or x; destruct multi x0 x; subst.
+    + constructor.
+      assumption.
+    + discriminate H2.
+    + discriminate H2.
+    + constructor.
+  - 
+
+
+Theorem empty_intro_l {comp loc}: forall x x': sprop comp loc,
+  x ⊢ x' ->
+  ⟨⟩ ** x ⊢ x'.
+Proof. auto. Qed.
+
+Theorem empty_intro_r {comp loc}: forall x x': sprop comp loc,
+  x ⊢ x' ->
+  x ⊢ ⟨⟩ ** x'.
+Proof. auto. Qed.
+
+Theorem empty_elim_l {comp loc}: forall x x': sprop comp loc,
+  ⟨⟩ ** x ⊢ x' ->
+  x ⊢ x'.
+Proof. auto. Qed.
+
+Theorem empty_elim_r {comp loc}: forall x x': sprop comp loc,
+  x ⊢ ⟨⟩ ** x' ->
+  x ⊢ x'.
+Proof. auto. Qed.
+
+Theorem sep_con_assoc_l {comp loc}: forall a x y z: sprop comp loc,
+  x ** y ** z ⊢ a ->
+  (x ** y) ** z ⊢ a.
+Proof. 
+  intros.
+  unfold sep_con. 
+  rewrite <- app_assoc.
+  assumption.
+Qed.
+
+
 
 (* Theorem empty_elim {comp loc}: forall x y z: sprop comp loc,
   z = ⟨⟩ ** y \/ z = y ** ⟨⟩ ->
