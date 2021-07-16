@@ -67,12 +67,12 @@ Inductive private {component} (c: component): access component :=
 Inductive sprop_atom (comp loc: Set) :=
   | val_at : forall v, loc -> access comp -> v -> sprop_atom comp loc.
 Arguments val_at {comp loc v}%type_scope.
-Notation "l # a ↦ v" := (val_at l a v) (at level 50).
+Notation "l # a ↦ v" := (val_at l a v) (at level 50, format "l  # a  ↦  v").
  
 Definition sprop (comp loc: Set) := list (sprop_atom comp loc).
 
 Definition empty {comp loc}: sprop comp loc := nil.
-Notation "⟨⟩" := (empty) (at level 0).
+Notation "⟨ ⟩" := (empty) (at level 0, format "⟨ ⟩").
 
 Definition sep_con {comp loc} (x y: sprop comp loc) := x ++ y.
 Notation "x ** y" := (sep_con x y) (at level 55, right associativity).

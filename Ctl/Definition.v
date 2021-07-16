@@ -47,8 +47,8 @@ Notation "¬ P" := (TNot P) (at level 40).
 Notation "'A' [ P 'U' Q ]" := (AU P Q) (at level 40).
 Notation "'E' [ P 'U' Q ]" := (EU P Q) (at level 40).
 
-Reserved Notation "M ; s ⊨ P" (at level 70).
-Reserved Notation "M ; s ⊭ P" (at level 70).
+Reserved Notation "M ; s ⊨ P" (at level 70, format "M ; s  ⊨  P").
+Reserved Notation "M ; s ⊭ P" (at level 70, format "M ; s  ⊭  P").
 (* Replace binary_relation with serial_transition if needed *)
 Fixpoint tEntails {state} (R: relation state) (s: state) (tp: TProp state) : Prop :=
   match tp with
@@ -70,4 +70,3 @@ Fixpoint tEntails {state} (R: relation state) (s: state) (tp: TProp state) : Pro
   end
   where "M ; s ⊨ P" := (tEntails M s P)
     and "M ; s ⊭ P" := (~ M;s ⊨ P).
-
