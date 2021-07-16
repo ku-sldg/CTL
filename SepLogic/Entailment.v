@@ -111,6 +111,54 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma only_val_at_entails_val_at {comp loc}: forall (x: sprop comp loc) V l a1 (v: V),
+  x ⊢ [l #a1 ↦ v] ->
+  exists a2, x = [l #a2 ↦ v] /\ access_eq a1 a2.
+Proof using.
+  intros x V l a1 v H.
+  dependent induction H.
+  - eexists.
+    split.
+    + reflexivity.
+    + symmetry. eassumption.
+  - apply only_empty_entails_empty in H0; subst.
+    apply IHsentails1.
+    reflexivity.
+  - symmetry in H0; apply Permutation_length_1_inv in H0; subst.
+    specialize (IHsentails V l a1 v).
+    cut_hyp IHsentails by reflexivity.
+    destruct exists IHsentails a2.
+    exists a2.
+    split; [|easy].
+    destruct IHsentails as [IHsentails _]; subst.
+    apply Permutation_length_1_inv in H; subst.
+    reflexivity.
+Qed.
+
+Lemma val_at_only_entails_val_at {comp loc}: forall (x: sprop comp loc) V l a1 (v: V),
+  [l #a1 ↦ v] ⊢ x ->
+  exists a2, x = [l #a2 ↦ v] /\ access_eq a1 a2.
+Proof using.
+  intros x V l a1 v H.
+  dependent induction H.
+  - eexists.
+    split. 
+    + reflexivity.
+    + assumption.
+  - apply empty_only_entails_empty in H0; subst.
+    apply IHsentails1.
+    reflexivity.
+  - symmetry in H; apply Permutation_length_1_inv in H; subst.
+    specialize (IHsentails V l a1 v).
+    cut_hyp IHsentails by reflexivity.
+    destruct exists IHsentails a2.
+    exists a2.
+    split; [|easy].
+    destruct IHsentails as [IHsentails _]; subst.
+    apply Permutation_length_1_inv in H0; subst.
+    reflexivity.
+Qed.
+
 Lemma sentails_preserves_separation {comp loc}: forall x x' y: sprop comp loc,
   x ⊢ x' ->
   separate x y ->
@@ -213,31 +261,85 @@ Proof.
   apply app_nil_r.
 Qed.
 
+Theorem sentails_trans_perm' {comp loc}: forall x y y' z: sprop comp loc,
+  Permutation y y' ->
+  x ⊢ y ->
+  y' ⊢ z ->
+  x ⊢ z.
+Proof using.
+  intros x y y' z perm Hxy Hyz;
+    revert x y perm Hxy.
+  induction Hyz; intros.
+  - admit.
+  - dependent induction Hxy.
+    + admit.
+    + Print Permutation.
+      dependent induction perm.
+      * apply head_intro.
+       -- eapply IHHyz1.
+        ++ reflexivity.
+        ++ assumption.
+       -- eapply IHHyz2; eassumption.
+       -- assumption.
+      * apply head_intro.
+       -- eapply IHHyz1; [|eassumption].
  
+  (* intros x y y' z perm Hxy;
+    revert y' z perm.
+  induction Hxy; intros.
+  - admit.
+  - specialize (IHHxy1 [x']).
+    (* cut_hyp IHHxy1 by reflexivity. *)
+    + eapply sentails_perm. *)
+Admitted.
+
+(* Theorem sentails_trans_perm {comp loc}: forall x x' y y' z z': sprop comp loc,
+  Permutation x x' ->
+  Permutation y y' ->
+  Permutation z z' ->
+  x ⊢ y ->
+  y' ⊢ z ->
+  x' ⊢ z'.
+Proof using.
+  intros x x' y y' z z' permx permy permz Hxy;
+    revert x' y' z z' permx permy permz.
+  induction Hxy; intros.
+  - apply Permutation_length_1_inv in permx, permy; subst.
+    apply val_at_only_entails_val_at in H0.
+    destruct exists H0 a3.
+    destruct H0 ; subst.
+    apply Permutation_length_1_inv in permz; subst.
+    apply val_at_entails.
+    eapply access_eq_trans; eassumption.
+  - dependent induction H0.
+    + symmetry in permy; apply Permutation_length_1_inv in permy; invc permy.
+      apply only_empty_entails_empty in Hxy2; subst.
+      apply Permutation_length_1_inv in permz; subst.
+      apply Permutation_length_1_inv in permx; subst.
+      apply only_val_at_entails_val_at in Hxy1.
+      destruct exists Hxy1 a3.
+      destruct Hxy1 as [_temp Hxy1]; rewrite _temp; clear _temp.
+      apply val_at_entails.
+      eapply access_eq_trans.
+      * symmetry. eassumption.
+      * assumption.
+    + eapply IHHxy2.
+      * 
+Admitted.
   
 Theorem sentails_trans {comp loc}: transitive (sprop comp loc) sentails.
 Proof using.
   unfold transitive.
-  (* intros x y z Hxy Hyz. *)
   intros x y z Hxy; revert z.
   induction Hxy; intros z Hyz.
   - dependent induction Hyz.
     + constructor.
       eapply access_eq_trans; eassumption.
-    + apply sep_con_eq_singleton in x.
-      destruct or x; destruct x; subst.
-      * apply empty_only_entails_empty in Hyz1; subst.
-        simpl.
-        eapply IHHyz2.
-       -- eassumption.
-       -- reflexivity.
-      * apply empty_only_entails_empty in Hyz2; subst.
-        simpl.
-        rewrite sep_con_empty_r.
-        eapply IHHyz1.
-       -- eassumption.
-       -- reflexivity.
-    + apply permutation_singleton in H1; subst.
+    + apply empty_only_entails_empty in Hyz2; subst.
+      eapply IHHyz1.
+      * eassumption.
+      * reflexivity.
+    + symmetry in H1; apply Permutation_length_1_inv in H1; subst.
       eapply sentails_perm.
       * reflexivity.
       * eassumption.
@@ -245,22 +347,25 @@ Proof using.
        -- eassumption.
        -- reflexivity.
   - dependent induction Hyz.
-    + symmetry in x.
-      apply sep_con_eq_singleton in x.
-      destruct or x; destruct x; subst.
-      * apply only_empty_entails_empty in Hxy1; subst.
-        simpl.
-        apply IHHxy2.
-        constructor.
-        assumption.
-      * apply only_empty_entails_empty in Hxy2; subst.
-        rewrite sep_con_empty_r.
-        apply IHHxy1.
-        constructor.
-        assumption.
-    + 
+    + apply head_intro; try assumption.
+      apply only_val_at_entails_val_at in Hxy1.
+      destruct exists Hxy1 a3.
+      destruct Hxy1 as [Htemp Hxy1]; rewrite Htemp; clear Htemp.
+      constructor.
+      eapply access_eq_trans.
+      * symmetry. eassumption.
+      * assumption.
+    + apply head_intro.
+      * apply IHHxy1. assumption.
+      * apply IHHxy2. assumption.
+      * assumption.
+    + eapply sentails_perm.
+      * reflexivity.
+      * eassumption.
+      * eapply IHHyz; try eassumption.
         
-Admitted. 
+        
+Admitted.  *)
 
 (* This pattern is likely important for induction over entailments *)
 Theorem singleton_entails_strong {comp loc}: forall a (x b: sprop comp loc),
@@ -301,7 +406,7 @@ Proof using.
   reflexivity.
 Qed.
 
-Theorem head_elim_Strong {comp loc}: forall a (b x y: sprop comp loc),
+Theorem head_elim_strong {comp loc}: forall a (b x y: sprop comp loc),
   Permutation x (a :: b) ->
   x ⊢ y ->
   exists a' b', 
@@ -374,28 +479,73 @@ Proof using.
     max_split; try assumption.
     reflexivity.
   - 
-  
+ Admitted. 
 
-Theorem sep_con_intro {comp loc}: forall x x' (y y': sprop comp loc),
+Theorem sep_con_intro {comp loc}: forall x x' px px' (y y': sprop comp loc),
+  Permutation x px ->
+  Permutation x' px' ->
   x ⊢ x' ->
   y ⊢ y' ->
   separate x y ->
-  x ** y ⊢ x' ** y'.
+  px ** y ⊢ px' ** y'.
 Proof using.
-  intros x.
-  induction x; intros x' y y' Hx Hy Hsep.
-  - apply empty_only_entails_empty in Hx; subst.
-    simpl.
-    assumption.
-  - apply IHx.
-
-    destruct x' as [| b x'].
-    { apply only_empty_entails_empty in Hx;
-      discriminate Hx. }
-    simpl.
+  intros x x' px px' y y' perm_x perm_x' Hx;
+    revert y y' px px' perm_x perm_x'.
+  induction Hx; intros.
+  - apply Permutation_length_1_inv in perm_x, perm_x'; subst.
     apply head_intro.
-    constructor.
+    + apply val_at_entails.
+      assumption.
+    + assumption.
+    + apply separate_singleton.
+      assumption.
+  - specialize (IHHx2 y0 y'0 y y').
+    repeat cut_hyp IHHx2 by reflexivity.
+    cut_hyp IHHx2 by assumption.
+    cut_hyp IHHx2 by (invc H1; assumption).
 
+  - simpl.
+    apply head_intro.
+    + assumption.
+    + eapply IHHx2.
+      * reflexivity.
+      * reflexivity.
+      * assumption.
+      * invc H1.
+        assumption.
+    + apply Forall_app. split. 
+      * assumption.
+      * invc H1.
+        assumption.
+  - simpl.
+    assumption.
+  - eapply IHHx. 
+
+    
+  induction Hx; intros.
+  - apply head_intro.
+    + apply val_at_entails.
+      assumption.
+    + assumption.
+    + apply separate_singleton.
+      assumption.
+  - simpl.
+    apply head_intro.
+    + assumption.
+    + eapply IHHx2.
+      * reflexivity.
+      * reflexivity.
+      * assumption.
+      * invc H1.
+        assumption.
+    + apply Forall_app. split. 
+      * assumption.
+      * invc H1.
+        assumption.
+  - simpl.
+    assumption.
+  - eapply IHHx. 
+Qed.
 
 Theorem sep_con_elim_weak {comp loc}: forall a (b c: sprop comp loc),
   a :: b ⊢ a :: c ->
