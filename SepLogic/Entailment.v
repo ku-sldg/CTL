@@ -6,6 +6,7 @@ Require Import Coq.Lists.List.
 Import ListNotations.
 
 Require Coq.Sorting.Permutation.
+Require Import PermutationExtra.
 Import Permutation.
 
 Require Import Setoid.
@@ -384,17 +385,108 @@ Proof.
   apply app_nil_r.
 Qed.
 
+(* Inductive perm_trace {A} : list A -> list A -> Prop :=
+  | pt_nil : 
+      perm_trace [] []
+  | pt_step : forall h t t1 t2,
+      perm_trace t (t1 ++ t2) ->
+      perm_trace (h::t) (t1 ++ h :: t2).
+
+Theorem perm_trace_refl {A}: reflexive (list A) perm_trace.
+Admitted.
+Theorem perm_trace_sym {A}: symmetric (list A) perm_trace.
+Admitted.
+Theorem perm_trace_trans {A}: transitive (list A) perm_trace.
+Admitted.
+
+Theorem perm_to_trace {A}: forall x y: list A,
+  Permutation x y ->
+  perm_trace x y.
+Proof using.
+  intros x y H.
+  induction H.
+  - constructor.
+  - fold ([] ++ x :: l').
+    constructor.
+    assumption.
+  - fold ([x] ++ y :: l).
+    constructor.
+    simpl.
+    apply perm_trace_refl.
+  - eapply perm_trace_trans; eassumption.
+Qed.
+
+Theorem trace_to_perm {A}: forall x y: list A,
+  perm_trace x y ->
+  Permutation x y.
+Proof using.
+  intros x y H.
+  induction H.
+  - constructor.
+  - apply Permutation_cons_app.
+    assumption.
+Qed.
+
 Lemma Permutation_cons_structure {A}: forall x (y z: list A),
   Permutation (x :: y) z ->
   exists z1 z2,
+    Permutation y (z1 ++ z2) /\
     z = z1 ++ x :: z2.
 Proof using.
   intros x y z H.
-  apply in_split.
-  eapply Permutation_in.
-  - eassumption.
-  - left; reflexivity.
-Qed. 
+  apply perm_to_trace in H.
+  invc H.
+  exists t1 t2.
+  split. 
+  - apply trace_to_perm.
+    assumption.
+  - reflexivity.
+Qed. *)
+
+Theorem entails_cons_l_inv_strong {comp loc}: forall a (ax x y: sprop comp loc),
+  Permutation ax (a :: x) ->
+  ax ⊢ y ->
+  exists a' x',
+    Permutation y (a' :: x') /\
+    a ⊢ₐ a' /\ 
+    x ⊢ x'.
+Proof using. 
+  intros a ax x y Hperm H; revert a x Hperm.
+  induction H; intros.
+  - apply Permutation_nil in Hperm; discriminate Hperm.
+  - apply Permutation_cons_structure in Hperm.
+    destruct exists Hperm z1 z2.
+    destruct z1.
+    + simpl in Hperm.
+      invc Hperm.
+      exists x' y'.
+
+  
+
+  ax ⊢ y ->
+    forall(a : sprop_atom comp loc) (x : sprop comp loc),
+      Permutation (a :: x) ax ->
+      exists (a' : sprop_atom comp loc) (x' : list (sprop_atom comp loc)),
+        Permutation y (a' :: x') /\
+        a ⊢ₐ a' /\
+        x ⊢ x'.
+Proof using.
+  intros y ax H a x Hperm; revert a x Hperm.
+  induction H; intros.
+  - symmetry in Hperm.
+    apply Permutation_nil in Hperm; discriminate Hperm.
+  - apply Permutation_cons_structure in Hperm.
+    destruct exists Hperm z1 z2.
+    destruct z1.  
+    + simpl in Hperm.
+      invc Hperm.
+      exists x' y'.
+      max_split.
+      * reflexivity.
+      * assumption.
+      * apply sentails_wf_refl.
+        eapply sentails_wf_r.
+ 
 
 Theorem entails_cons_l_inv_strong {comp loc}: forall y ax,
   ax ⊢ y ->
@@ -403,7 +495,7 @@ Theorem entails_cons_l_inv_strong {comp loc}: forall y ax,
       exists (a' : sprop_atom comp loc) (x' : list (sprop_atom comp loc)),
         Permutation y (a' :: x') /\
         a ⊢ₐ a' /\
-        x' ⊢ x'.
+        x ⊢ x'.
 Proof using.
   intros y ax H a x Hperm; revert a x Hperm.
   induction H; intros.
@@ -475,105 +567,19 @@ Proof using.
   - reflexivity.
 Qed.
 
-Theorem entails_cons_r_inv_strong {comp loc}: forall b (x y y': sprop comp loc),
-  Permutation y (b :: y') ->
-  x ⊢ y ->
-  exists a x',
-    Permutation x (a :: x') /\ 
-    a ⊢ₐ b /\
-    x' ⊢ y'.
+Theorem entails_cons_r_inv {comp loc}: forall a' (x y': sprop comp loc),
+  x ⊢ a' :: y' ->
+  exists a y,
+    Permutation x (a :: y) /\ 
+    a ⊢ₐ a' /\
+    y ⊢ y'.
 Proof using.
-  intros b x y y' Hperm H; revert b y' Hperm.
-  induction H; intros.
-  - apply Permutation_nil in Hperm; discriminate Hperm.
-
-  (* - assert (H2: exists x'y', Permutation (x' :: y') x'y') by (eexists; reflexivity);
-      destruct exists H2 x'y'.
-    assert (H3: exists by'0, Permutation (b :: y'0) by'0) by (eexists; reflexivity);
-      destruct exists H3 by'0.
-    rename Hperm into Hperm'.
-    assert (Hperm: Permutation x'y' by'0).
-    { eapply Permutation_trans.
-      - symmetry. eassumption.
-      - eapply Permutation_trans; [|eassumption].
-        assumption. }
-    clear Hperm'.
-    induction Hperm.
-    + admit. (* easy *)
-    + exists x e *)
-        
-
-  (* - dependent induction Hperm.
-    + exists x; exists y.
-      max_split.
-      * reflexivity.
-      * assumption.
-      * eapply sentails_perm.
-       -- reflexivity.
-       -- eassumption.
-       -- assumption.
-    + specialize (IHsentails b l).
-      cut_hyp IHsentails by reflexivity.
-      destruct exists IHsentails a y'.
-      destruct IHsentails as [IHsentails1 [IHsentails2 IHsentails3]].
-      exists a; exists (x :: y').
-      max_split.
-      * destruct y.
-       -- apply Permutation_nil in IHsentails1; discriminate IHsentails1.
-       -- eapply perm_trans.
-        ++ apply perm_skip.
-           eassumption.
-        ++ eapply perm_swap.
-      * assumption.
-      * apply head_intro.
-       -- assumption.
-       -- assumption.
-       -- eapply atom_sprop_separate_subperm; [|eassumption].
-          eapply Permutation_trans; [eassumption|].
-          apply Permutation_cons_append.
-    + eapply IHHperm2; try eassumption.
-       *)
-           
-  - admit.
-
-  - specialize (IHsentails b y'0).
-    cut_hyp IHsentails.
-    { eapply Permutation_trans; eassumption. }
-    destruct exists IHsentails a x'0.
-    destruct IHsentails as [IHsentails1 [IHsentails2 IHsentails3]].
-    exists a; exists x'0.
-    max_split; try assumption.
-    eapply Permutation_trans.
-    + symmetry; eassumption.
-    + eassumption. 
-Admitted.
-
-Theorem entails_cons_r_inv {comp loc}: forall a (x y: sprop comp loc),
-  x ⊢ a :: y ->
-  exists a' y',
-    Permutation x (a' :: y') /\ 
-    a' ⊢ₐ a /\
-    y' ⊢ y.
-Proof using.
-  (* intros.
-  invc H.
-  - eexists; eexists; split. 
-    + reflexivity.
-    + split; assumption.
-  - 
-    induction H2.
-
-    + apply Permutation_nil in H1; discriminate H1.
-    +  *)
-
-  intros a x y H.
-  dependent induction H.
-  - eexists; eexists; split. 
-    + reflexivity.
-    + split; assumption.
-  - 
-
-
+  intros.
+  apply sentails_sym in H.
+  apply entails_cons_l_inv in H.
+  destruct exists H a y.
+  exists a y.
+ 
 Theorem sentails_trans {comp loc}: transitive (sprop comp loc) sentails.
 Proof using.
   unfold transitive.

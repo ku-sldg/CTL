@@ -2,6 +2,7 @@
 
 GeneralTactics.v
 BinaryRelations.v
+PermutationExtra.v
 
 Ctl/Paths.v
 Ctl/Definition.v
