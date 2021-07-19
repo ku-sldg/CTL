@@ -102,35 +102,41 @@ Ltac unset x := unfold x in *; clear x.
 (* `gen`/`to` tactics. Generalizes the term (: A) by a predicate (: A -> Prop)
    Useful when generalizing an inductive principle.
    For instance, `gen z := (x :: y) to (Permutation (x :: y)) in H by reflexivity`
-   replaces instances of (x :: y) in H with `z`, and adds the hypothesis 
-   `Hgen: Permutation (x :: y) z`.
+   replaces instances of (x :: y) in H with `z`, and adds the assumption
+   `Permutation (x :: y) z` to the goal.
  *)
+
+(* A version of cut where the assumption is the first subgoal *)
+Ltac cut_flip p :=
+  let H := fresh in
+  assert (H: p); 
+    [|revert H].
 
 Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P):=
   let I' := fresh I in 
   set (I' := l);
-  let Hgen := fresh "Hgen" in
-  assert (Hgen: P I'); 
+  cut_flip (P I');
     [ unset I'
-    | clearbody I'].
+    | clearbody I'
+    ].
 
 Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
   "in" hyp(H) :=
   let I' := fresh I in 
   set (I' := l) in H;
-  let Hgen := fresh "Hgen" in
-  assert (Hgen: P I'); 
+  cut_flip (P I'); 
     [ unset I'
-    | clearbody I'].
+    | clearbody I'
+    ].
 
 Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
   "in" "*" :=
   let I' := fresh I in 
   set (I' := l) in *;
-  let Hgen := fresh "Hgen" in
-  assert (Hgen: P I'); 
+  cut_flip (P I'); 
     [ unset I'
-    | clearbody I'].
+    | clearbody I'
+    ].
 
 Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
   "by" tactic(tac) :=

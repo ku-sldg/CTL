@@ -7,10 +7,9 @@ Require Import GeneralTactics.
 Definition rel_singleton {A} (x y : A): relation A :=
   fun x' y' => x' = x /\ y' = y -> True.
 
-(* Notation for reflexive transitive closures *)
-(* Notation "R ^*" := (clos_refl_trans _ R) (at level 35). *)
 (* This definition of reflexive transitive closure for the convenient inductive structure *)
-Notation "R ^*" := (clos_refl_trans_n1 _ R) (at level 35).
+(* Notation "R ^*" := (clos_refl_trans_n1 _ R) (at level 35, format "R ^*"). *)
+Notation "R ^*" := (clos_refl_trans_n1 _ R) (at level 5, format "R ^*").
 
 Lemma rtc_trans {A}: forall (R: relation A) a b c,
   R^* a b -> R^* b c -> R^* a c.

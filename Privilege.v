@@ -55,8 +55,12 @@ Add Parametric Relation (comp: Type): (access comp) (@access_eq comp)
 
 (* Specific access controls *)
 
-Inductive readonly {component} : access component :=
+Inductive allAcc {component}: access component :=
+  | aa : forall c p, allAcc c p.
+
+Inductive readonly {component}: access component :=
   | ro : forall c, readonly c read.
 
+(* rename full? *)
 Inductive private {component} (c: component): access component :=
   | anyPriv : forall (p: privilege), private c c p.
