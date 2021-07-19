@@ -9,7 +9,7 @@ Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Program.Equality.
 
 Lemma AG_idempotent {state}:
-  forall (R: relation state) s P, R;s ⊨ AG P -> R;s ⊨ AG (AG P).
+  forall (R: relation state) s P, R@s ⊨ AG P -> R@s ⊨ AG (AG P).
 Proof.
   intros R s P H.
   intros n p x Hin.
@@ -23,7 +23,7 @@ Qed.
 Ltac copy H ident := pose proof H as ident.
 
 Lemma EG_idempotent {state}:
-  forall (R: relation state) s P, R;s ⊨ EG P -> R;s ⊨ EG (EG P).
+  forall (R: relation state) s P, R@s ⊨ EG P -> R@s ⊨ EG (EG P).
 Proof.
   intros R s P H.
   intro n.
@@ -39,8 +39,8 @@ Proof.
 Admitted.
 
 Theorem rtc_AG {state}: forall (R: relation state) s P, 
-  (forall s', R^* s s' -> R;s' ⊨ P) ->
-  R;s ⊨ AG P.
+  (forall s', R^* s s' -> R@s' ⊨ P) ->
+  R@s ⊨ AG P.
 Proof.
   intros R s P H.
   intros n p s' Hin.
@@ -50,8 +50,8 @@ Proof.
 Qed. 
 
 Theorem AG_rtc {state}: forall (R: relation state) s P, 
-  R;s ⊨ AG P ->
-  forall s', R^* s s' -> R;s' ⊨ P.
+  R@s ⊨ AG P ->
+  forall s', R^* s s' -> R@s' ⊨ P.
 Proof.
   intros R s P H s' Hsteps.
   apply rtc_to_path in Hsteps.
@@ -61,15 +61,15 @@ Proof.
 Qed.
 
 Theorem tModusPonens {state}: forall (M: relation state) s P Q,
-  M;s ⊨ P --> Q -> M;s ⊨ P -> M;s ⊨ Q.
+  M@s ⊨ P --> Q -> M@s ⊨ P -> M@s ⊨ Q.
 Proof. auto. Qed.
 
 Theorem tModusPonens_flipped {state}: forall (M: relation state) s P Q,
-  M;s ⊨ P -> M;s ⊨ P --> Q -> M;s ⊨ Q.
+  M@s ⊨ P -> M@s ⊨ P --> Q -> M@s ⊨ Q.
 Proof. auto. Qed.
 
 Theorem tModusTollens {state}: forall (R: relation state) s P Q,
-  R;s ⊨ (P --> Q) --> ¬Q --> ¬P.
+  R@s ⊨ (P --> Q) --> ¬Q --> ¬P.
 Proof.
   intros R s P Q.
   intros Hpq Hnq Hp.
@@ -79,7 +79,7 @@ Proof.
 Qed.
 
 Theorem tbimpl_neg {state}: forall (R: relation state) s P Q,
-  R;s ⊨ (P <--> Q) --> (¬P <--> ¬Q).
+  R@s ⊨ (P <--> Q) --> (¬P <--> ¬Q).
 Proof.
   intros R s P Q.
   split; intro; (eapply (tModusTollens R); [apply H | assumption]).
@@ -88,7 +88,7 @@ Qed.
 
 (* Good test for tactics *)
 Theorem TImpl_trans {state}: forall M (s: state) P Q R,
-  M;s ⊨ (P --> Q) --> (Q --> R) --> P --> R.
+  M@s ⊨ (P --> Q) --> (Q --> R) --> P --> R.
 Proof.
   (* backwards reasoning *)
   intros M s P Q R Hpq Hqr Hp.
@@ -108,14 +108,14 @@ Proof.
 Qed.
 
 (* This is an alternate means of defining TNot *)
-Theorem tNot_def {state}: forall M (s: state) P, M;s ⊨ ¬P <--> (P --> ⊥).
+Theorem tNot_def {state}: forall M (s: state) P, M@s ⊨ ¬P <--> (P --> ⊥).
 Proof.
   intros M s P.
   split; intros H; auto.
 Qed.
 
 Lemma AG_steps_strong {state}: forall (R: relation state) s s' P,
-  R^* s s' -> R;s ⊨ AG P -> R;s' ⊨ AG P.
+  R^* s s' -> R@s ⊨ AG P -> R@s' ⊨ AG P.
 Proof.
   intros R s s' P Hsteps H.
   pose proof (AG_rtc _ _ _ H) as H0; clear H; rename H0 into H.
@@ -126,7 +126,7 @@ Proof.
 Qed.
 
 Lemma AG_steps_weak {state}: forall (R: relation state) s s' P,
-  R^* s s' -> R;s ⊨ AG P -> R;s' ⊨ P.
+  R^* s s' -> R@s ⊨ AG P -> R@s' ⊨ P.
 Proof.
   intros R s s' P Hsteps H.
   pose proof (AG_steps_strong _ _ _ _ Hsteps H) as Hstrong.
@@ -135,7 +135,7 @@ Proof.
 Qed.
 
 (* Expansion Laws *)
-Theorem expand_AG {state}: forall (R: relation state) s P, R;s ⊨ AG P <--> P ∧ AX (AG P).
+Theorem expand_AG {state}: forall (R: relation state) s P, R@s ⊨ AG P <--> P ∧ AX (AG P).
 Proof.
   intros R s P.
   split; intro H.
@@ -162,13 +162,13 @@ Proof.
       * constructor. assumption.
 Qed.
 
-Theorem expand_EG {state}: forall (R: relation state) s P, R;s ⊨ EG P <--> P ∧ EX (EG P).
+Theorem expand_EG {state}: forall (R: relation state) s P, R@s ⊨ EG P <--> P ∧ EX (EG P).
 Admitted.
 
-Theorem expand_AF {state}: forall (R: relation state) s P, R;s ⊨ AF P <--> P ∧ AX (AF P).
+Theorem expand_AF {state}: forall (R: relation state) s P, R@s ⊨ AF P <--> P ∧ AX (AF P).
 Admitted.
 
-Theorem expand_EF {state}: forall (R: relation state) s P, R;s ⊨ EF P <--> P ∧ EX (EF P).
+Theorem expand_EF {state}: forall (R: relation state) s P, R@s ⊨ EF P <--> P ∧ EX (EF P).
 Admitted.
 
 Lemma in_path_head {state} {R: relation state}:
@@ -179,7 +179,7 @@ Proof.
 Qed.
 
 (* De Morgan's Laws *)
-Theorem AF_EG {state}: forall R (s: state) P, R;s ⊨ AF (¬P) --> ¬EG P.
+Theorem AF_EG {state}: forall R (s: state) P, R@s ⊨ AF (¬P) --> ¬EG P.
 Proof.
   intros R s P H H2.
   simpl in H, H2.
@@ -193,7 +193,7 @@ Proof.
 Qed.
 
 (* Needs classical axioms *)
-Theorem AF_EG' {state}: forall R (s: state) P, R;s ⊨ ¬AF P --> EG (¬P).
+Theorem AF_EG' {state}: forall R (s: state) P, R@s ⊨ ¬AF P --> EG (¬P).
 Proof.
   intros R s P H.
   intro n.
@@ -231,7 +231,7 @@ Qed.
 
 Theorem AF_EG' {state}: forall R (s: state) P, 
   serial_from_witness R s ->
-  R;s ⊨ ¬AF P --> EG (¬P).
+  R@s ⊨ ¬AF P --> EG (¬P).
 Proof.
   intros R s P Hserial H n.
   simpl in H.
@@ -248,7 +248,7 @@ Abort.
 Definition classical_double_neg_elim : Prop := forall (P: Prop), ~~P -> P.
 Theorem AF_EG' {state}: forall R (s: state) P, 
   classical_double_neg_elim ->
-  R;s ⊨ ¬AF P --> EG (¬P).
+  R@s ⊨ ¬AF P --> EG (¬P).
 Proof.
   (* Proof sketch:
     ¬AF P ≡ ¬AF (¬¬P)
@@ -257,7 +257,7 @@ Proof.
   *)
 Admitted.
 
-Theorem EG_AF {state}: forall R (s: state) P, R;s ⊨ EG (¬P) --> ¬AF P.
+Theorem EG_AF {state}: forall R (s: state) P, R@s ⊨ EG (¬P) --> ¬AF P.
 Proof.
   intros R s P H H2.
   simpl in H, H2.
@@ -271,7 +271,7 @@ Proof.
   apply H; assumption.
 Qed.
 
-Theorem AG_EF {state}: forall R (s: state) P, R;s ⊨ AG (¬P) --> ¬EF P.
+Theorem AG_EF {state}: forall R (s: state) P, R@s ⊨ AG (¬P) --> ¬EF P.
   intros R s P H H2.
   simpl in H, H2.
   destruct exists H2 n p s'.
@@ -279,11 +279,11 @@ Theorem AG_EF {state}: forall R (s: state) P, R;s ⊨ AG (¬P) --> ¬EF P.
   tapply H; destruct H2; assumption.
 Qed.
 
-Theorem EF_AG {state}: forall R (s: state) P, R;s ⊨ EF (¬P) --> ¬AG P.
+Theorem EF_AG {state}: forall R (s: state) P, R@s ⊨ EF (¬P) --> ¬AG P.
 Admitted.
 
-Theorem AX_EX {state}: forall R (s: state) P, R;s ⊨ AX (¬P) --> ¬EX P.
+Theorem AX_EX {state}: forall R (s: state) P, R@s ⊨ AX (¬P) --> ¬EX P.
 Admitted.
 
-Theorem EX_AX {state}: forall R (s: state) P, R;s ⊨ EX (¬P) --> ¬AX P.
+Theorem EX_AX {state}: forall R (s: state) P, R@s ⊨ EX (¬P) --> ¬AX P.
 Admitted.

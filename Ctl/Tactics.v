@@ -2,18 +2,19 @@ Require Import Ctl.Paths.
 Require Import Ctl.Definition.
 
 Require Import GeneralTactics.
+Require Import MiscTactics.
 
 (* tapply: carefully unfolds TProp hypothesis just enough to use apply *)
 
 Tactic Notation "unfold_TImpl" :=
-  change_no_check (?R;?s ⊨ ?p --> ?q) with (R;s ⊨ p -> R;s ⊨ q).
+  change_no_check (?R@?s ⊨ ?p --> ?q) with (R@s ⊨ p -> R@s ⊨ q).
 Tactic Notation "unfold_TImpl" "in" hyp(H) :=
-  change_no_check (?R;?s ⊨ ?p --> ?q) with (R;s ⊨ p -> R;s ⊨ q) in H.
+  change_no_check (?R@?s ⊨ ?p --> ?q) with (R@s ⊨ p -> R@s ⊨ q) in H.
 
 Tactic Notation "unfold_TNot" := 
-  change_no_check (?R;?s ⊨ ¬?P) with (R;s ⊭ P).
+  change_no_check (?R@?s ⊨ ¬?P) with (R@s ⊭ P).
 Tactic Notation "unfold_TNot" "in" hyp(H) := 
-  change_no_check (?R;?s ⊨ ¬?P) with (R;s ⊭ P) in H.
+  change_no_check (?R@?s ⊨ ¬?P) with (R@s ⊭ P) in H.
 
 Ltac tapply_normalize H :=
   repeat unfold_TImpl in H;
@@ -60,112 +61,112 @@ Tactic Notation "etapplyc" hyp(H) "in" hyp(H2) :=
 
 Tactic Notation "fold_TNot" :=
   match goal with 
-  | |- context[?R;?s ⊭ ?P] =>
-      unfold tEntails; fold (R;s ⊨ ¬P)
+  | |- context[?R@?s ⊭ ?P] =>
+      unfold tEntails; fold (R@s ⊨ ¬P)
   end.
 Tactic Notation "fold_TNot" "in" hyp(H) :=
   match type of H with 
-  | context[?R;?s ⊭ ?P] =>
-      unfold tEntails in H; fold (R;s ⊨ ¬P) in H
+  | context[?R@?s ⊭ ?P] =>
+      unfold tEntails in H; fold (R@s ⊨ ¬P) in H
   end.
 
 Tactic Notation "fold_TConj" :=
   match goal with 
-  | |- context[?R;?s ⊨ ?P /\ ?R;?s ⊨ ?Q] =>
-      unfold tEntails; fold (R;s ⊨ P ∧ Q)
+  | |- context[?R@?s ⊨ ?P /\ ?R@?s ⊨ ?Q] =>
+      unfold tEntails; fold (R@s ⊨ P ∧ Q)
   end.
 Tactic Notation "fold_TConj" "in" hyp(H) :=
   match type of H with 
-  | context[?R;?s ⊨ ?P /\ ?R;?s ⊨ ?Q] =>
-      unfold tEntails in H; fold (R;s ⊨ P ∧ Q) in H
+  | context[?R@?s ⊨ ?P /\ ?R@?s ⊨ ?Q] =>
+      unfold tEntails in H; fold (R@s ⊨ P ∧ Q) in H
   end.
 
 Tactic Notation "fold_TDisj" :=
   match goal with 
-  | |- context[?R;?s ⊨ ?P \/ ?R;?s ⊨ ?Q] =>
-      unfold tEntails; fold (R;s ⊨ P ∨ Q)
+  | |- context[?R@?s ⊨ ?P \/ ?R@?s ⊨ ?Q] =>
+      unfold tEntails; fold (R@s ⊨ P ∨ Q)
   end.
 Tactic Notation "fold_TDisj" "in" hyp(H) :=
   match type of H with 
-  | context[?R;?s ⊨ ?P \/ ?R;?s ⊨ ?Q] =>
-      unfold tEntails in H; fold (R;s ⊨ P ∨ Q) in H
+  | context[?R@?s ⊨ ?P \/ ?R@?s ⊨ ?Q] =>
+      unfold tEntails in H; fold (R@s ⊨ P ∨ Q) in H
   end.
 
 Tactic Notation "fold_TImpl" :=
   match goal with 
-  | |- context[?R;?s ⊨ ?P -> ?R;?s ⊨ ?Q] =>
-      unfold tEntails; fold (R;s ⊨ P --> Q)
+  | |- context[?R@?s ⊨ ?P -> ?R@?s ⊨ ?Q] =>
+      unfold tEntails; fold (R@s ⊨ P --> Q)
   end.
 Tactic Notation "fold_TImpl" "in" hyp(H) :=
   match type of H with 
-  | context[?R;?s ⊨ ?P -> ?R;?s ⊨ ?Q] =>
-      unfold tEntails in H; fold (R;s ⊨ P --> Q) in H
+  | context[?R@?s ⊨ ?P -> ?R@?s ⊨ ?Q] =>
+      unfold tEntails in H; fold (R@s ⊨ P --> Q) in H
   end.
 
 Tactic Notation "fold_AX" :=
   match goal with 
-  | |- context[forall s', ?R ?s s' -> ?R;s' ⊨ ?P] =>
-      unfold tEntails; fold (R;s ⊨ AX P)
+  | |- context[forall s', ?R ?s s' -> ?R@s' ⊨ ?P] =>
+      unfold tEntails; fold (R@s ⊨ AX P)
   end.
 Tactic Notation "fold_AX" "in" hyp(H) :=
   match type of H with 
-  | context[forall s', ?R ?s s' -> ?R;s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R;s ⊨ AX P) in H
+  | context[forall s', ?R ?s s' -> ?R@s' ⊨ ?P] =>
+      unfold tEntails in H; fold (R@s ⊨ AX P) in H
   end.
 
 Tactic Notation "fold_EX" :=
   match goal with 
-  | |- context[exists s', ?R ?s s' -> ?R;s' ⊨ ?P] =>
-      unfold tEntails; fold (R;s ⊨ EX P)
+  | |- context[exists s', ?R ?s s' -> ?R@s' ⊨ ?P] =>
+      unfold tEntails; fold (R@s ⊨ EX P)
   end.
 Tactic Notation "fold_EX" "in" hyp(H) :=
   match type of H with 
-  | context[exists s', ?R ?s s' -> ?R;s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R;s ⊨ EX P) in H
+  | context[exists s', ?R ?s s' -> ?R@s' ⊨ ?P] =>
+      unfold tEntails in H; fold (R@s ⊨ EX P) in H
   end.
 
 Tactic Notation "fold_AG" :=
   match goal with 
-  | |- context[forall n (p: path ?R ?s n) s', in_path s' p -> ?R;s' ⊨ ?P] =>
-      unfold tEntails; fold (R;s ⊨ AG P)
+  | |- context[forall n (p: path ?R ?s n) s', in_path s' p -> ?R@s' ⊨ ?P] =>
+      unfold tEntails; fold (R@s ⊨ AG P)
   end.
 Tactic Notation "fold_AG" "in" hyp(H) :=
   match type of H with 
-  | context[forall n (p: path ?R ?s n) s', in_path s' p -> ?R;s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R;s ⊨ AG P) in H
+  | context[forall n (p: path ?R ?s n) s', in_path s' p -> ?R@s' ⊨ ?P] =>
+      unfold tEntails in H; fold (R@s ⊨ AG P) in H
   end.
 
 Tactic Notation "fold_EG" :=
   match goal with 
-  | |- context[forall n, exists p: path ?R ?s n, forall s', in_path s' p -> ?R;s' ⊨ ?P] =>
-      unfold tEntails; fold (R;s ⊨ EG P)
+  | |- context[forall n, exists p: path ?R ?s n, forall s', in_path s' p -> ?R@s' ⊨ ?P] =>
+      unfold tEntails; fold (R@s ⊨ EG P)
   end.
 Tactic Notation "fold_EG" "in" hyp(H) :=
   match type of H with 
-  | context[forall n, exists p: path ?R ?s n, forall s', in_path s' p -> ?R;s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R;s ⊨ EG P) in H
+  | context[forall n, exists p: path ?R ?s n, forall s', in_path s' p -> ?R@s' ⊨ ?P] =>
+      unfold tEntails in H; fold (R@s ⊨ EG P) in H
   end.
 
 Tactic Notation "fold_AF" :=
   match goal with 
-  | |- context[exists n, forall p: path ?R ?s n, exists s', in_path s' p /\ ?R;s' ⊨ ?P] =>
-      unfold tEntails; fold (R;s ⊨ AF P)
+  | |- context[exists n, forall p: path ?R ?s n, exists s', in_path s' p /\ ?R@s' ⊨ ?P] =>
+      unfold tEntails; fold (R@s ⊨ AF P)
   end.
 Tactic Notation "fold_AF" "in" hyp(H) :=
   match type of H with 
-  | context[exists n, forall p: path ?R ?s n, exists s', in_path s' p /\ ?R;s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R;s ⊨ AF P) in H
+  | context[exists n, forall p: path ?R ?s n, exists s', in_path s' p /\ ?R@s' ⊨ ?P] =>
+      unfold tEntails in H; fold (R@s ⊨ AF P) in H
   end.
   
 Tactic Notation "fold_EF" :=
   match goal with 
-  | |- context[exists n (p: path ?R ?s n) s', in_path s' p /\ ?R;s' ⊨ ?P] =>
-      unfold tEntails; fold (R;s ⊨ EF P)
+  | |- context[exists n (p: path ?R ?s n) s', in_path s' p /\ ?R@s' ⊨ ?P] =>
+      unfold tEntails; fold (R@s ⊨ EF P)
   end.
 Tactic Notation "fold_EF" "in" hyp(H) :=
   match type of H with 
-  | context[exists n (p: path ?R ?s n) s', in_path s' p /\ ?R;s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R;s ⊨ EF P) in H
+  | context[exists n (p: path ?R ?s n) s', in_path s' p /\ ?R@s' ⊨ ?P] =>
+      unfold tEntails in H; fold (R@s ⊨ EF P) in H
   end.
 
 Tactic Notation "fold_tEntails" :=

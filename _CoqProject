@@ -1,6 +1,7 @@
 -R . Attarch
 
 GeneralTactics.v
+MiscTactics.v
 BinaryRelations.v
 
 Ctl/Paths.v
@@ -9,5 +10,6 @@ Ctl/Tactics.v
 Ctl/Properties.v
 
 TransitionSystems.v
+Privilege.v
 AttarchTrans.v
 AttarchProperties.v

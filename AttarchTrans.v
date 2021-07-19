@@ -1,6 +1,6 @@
 Require Import Ctl.Definition.
 Require Import TransitionSystems.
-Require Import SepLogic.Definition.
+Require Import Privilege.
 
 (* Maybe sel4 should not be its own place *)
 Inductive component : Set := 
@@ -10,10 +10,13 @@ Inductive component : Set :=
   | useram
   | malicious_linux_component.
 
-Inductive loc : Set :=
-  | boot_ev 
-  | vm_ev
-  | useram_key.
+Definition mem_store v : Type := access component * v.
+
+Record attarch_global := mkAttarchGl
+  { boot_ev    : mem_store nat
+  ; vm_ev      : mem_store nat
+  ; useram_key : mem_store nat
+  }.
 
 Definition stransition a := transition (sprop component loc) a.
 

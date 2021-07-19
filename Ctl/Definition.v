@@ -47,26 +47,26 @@ Notation "¬ P" := (TNot P) (at level 40).
 Notation "'A' [ P 'U' Q ]" := (AU P Q) (at level 40).
 Notation "'E' [ P 'U' Q ]" := (EU P Q) (at level 40).
 
-Reserved Notation "M ; s ⊨ P" (at level 70, format "M ; s  ⊨  P").
-Reserved Notation "M ; s ⊭ P" (at level 70, format "M ; s  ⊭  P").
+Reserved Notation "M @ s ⊨ P" (at level 70, format "M @ s  ⊨  P").
+Reserved Notation "M @ s ⊭ P" (at level 70, format "M @ s  ⊭  P").
 (* Replace binary_relation with serial_transition if needed *)
 Fixpoint tEntails {state} (R: relation state) (s: state) (tp: TProp state) : Prop :=
   match tp with
   | ⊤ => True
   | ⊥ => False
   | TLift P => P s
-  | ¬P => R;s ⊭ P
-  | P ∧ Q => R;s ⊨ P /\ R;s ⊨ Q
-  | P ∨ Q => R;s ⊨ P \/ R;s ⊨ Q
-  | P --> Q => R;s ⊨ P -> R;s ⊨ Q
-  | AX P => forall s', R s s' -> R;s' ⊨ P
-  | EX P => exists s', R s s' -> R;s' ⊨ P
-  | AG P => forall n, forall (p: path R s n), forall s', in_path s' p -> R;s' ⊨ P
-  | EG P => forall n, exists (p: path R s n), forall s', in_path s' p -> R;s' ⊨ P
-  | AF P => exists n, forall (p: path R s n), exists s', in_path s' p /\ R;s' ⊨ P
-  | EF P => exists n, exists (p: path R s n), exists s', in_path s' p /\ R;s' ⊨ P
+  | ¬P => R@s ⊭ P
+  | P ∧ Q => R@s ⊨ P /\ R@s ⊨ Q
+  | P ∨ Q => R@s ⊨ P \/ R@s ⊨ Q
+  | P --> Q => R@s ⊨ P -> R@s ⊨ Q
+  | AX P => forall s', R s s' -> R@s' ⊨ P
+  | EX P => exists s', R s s' -> R@s' ⊨ P
+  | AG P => forall n, forall (p: path R s n), forall s', in_path s' p -> R@s' ⊨ P
+  | EG P => forall n, exists (p: path R s n), forall s', in_path s' p -> R@s' ⊨ P
+  | AF P => exists n, forall (p: path R s n), exists s', in_path s' p /\ R@s' ⊨ P
+  | EF P => exists n, exists (p: path R s n), exists s', in_path s' p /\ R@s' ⊨ P
   (* TODO: AU and EU *)
   | _ => False
   end
-  where "M ; s ⊨ P" := (tEntails M s P)
-    and "M ; s ⊭ P" := (~ M;s ⊨ P).
+  where "M @ s ⊨ P" := (tEntails M s P)
+    and "M @ s ⊭ P" := (~ M@s ⊨ P).
