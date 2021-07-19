@@ -1,6 +1,4 @@
 Require Import Coq.Relations.Relation_Definitions.
-Require Import SepLogic.Definition.
-Require Import SepLogic.Entailment.
 
 (* Record state A B := mkState {global : A; local : B}.
 Definition transition A B := relation (state A B). *)
@@ -16,12 +14,3 @@ Inductive either_transition {G A B} (R: transition G A) (Q: transition G B) : tr
       Q (g,b) (g',b') -> either_transition R Q (g,(a,b)) (g',(a,b')).
     
 Notation "R ⊔ S" := (either_transition R S) (at level 70).
-
-(* Todo, support hoare logic syntax of relations? *)
-Inductive sentails_clos {comp loc A} (R: transition (sprop comp loc) A) : transition (sprop comp loc) A :=
-  | sentails_with_frame : forall x x' y y' a a' z,
-      x' ** z ⊢ x ** z ->
-      y ** z ⊢ y' ** z ->
-      R (x,a) (y,a') ->
-      sentails_clos R (x' ** z, a) (y' ** z, a')
-  .
