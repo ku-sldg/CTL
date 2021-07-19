@@ -1,16 +1,22 @@
 Require Import Psatz.
 
 Ltac inv H := inversion H; subst; try contradiction.
-Ltac invc H := inversion H; clear H; subst; try contradiction.
 
-Tactic Notation "exists" ident(x1) :=
+(* Overwrite exists tactic to support multiple instantiations 
+   (up to four)
+ *)
+
+Tactic Notation "exists" constr(x1) :=
   exists x1.
-Tactic Notation "exists" ident(x1) ident(x2) :=
+Tactic Notation "exists" constr(x1) constr(x2) :=
   exists x1; exists x2.
-Tactic Notation "exists" ident(x1) ident(x2) ident(x3) :=
+Tactic Notation "exists" constr(x1) constr(x2) constr(x3) :=
   exists x1 x2; exists x3.
-Tactic Notation "exists" ident(x1) ident(x2) ident(x3) ident(x4) :=
+Tactic Notation "exists" constr(x1) constr(x2) constr(x3) constr(x4) :=
   exists x1 x2 x3; exists x4.
+
+
+(* destruct variants *)
 
 Tactic Notation "destruct" "multi" hyp(h1) hyp(h2) :=
   destruct h1; destruct h2.
@@ -30,6 +36,11 @@ Tactic Notation "destruct" "exists" hyp(H) ident(id1) ident(id2) ident(id3) iden
 
 Tactic Notation "destruct" "or" hyp(H) := destruct H as [H|H].
 
+(* Clear variants. Tactics postfixed with "c" clear a hypothesis
+   after using it.
+ *)
+
+Ltac invc H := inv H; clear H.
 Tactic Notation "applyc" hyp(H) := apply H; clear H.
 Tactic Notation "applyc" hyp(H) "in" hyp(H2) := apply H in H2; clear H.
 Tactic Notation "eapplyc" hyp(H) := eapply H; clear H.
@@ -37,16 +48,19 @@ Tactic Notation "eapplyc" hyp(H) "in" hyp(H2) := eapply H in H2; clear H.
 
 Ltac specializec H x := specialize (H x); clear x.
 
+(* Generalizes the entire context *)
 Ltac generalize_max := 
   repeat match goal with 
   | [H: _ |- _] => generalize dependent H
   end.
 
+(* Attempts to maximally generalize before beginning induction *)
 Ltac max_induction x :=
   move x at top;
   generalize_max;
   induction x.
 
+(* Recursive split *)
 Ltac max_split := try (split; max_split).
 
 (* Automatic simplificiations on the context *)
@@ -135,13 +149,10 @@ Ltac find_contradiction :=
   simplify_context; subst;
   solve [contradiction + discriminate + lia + find_solve_inversion].
 
-(* Ltac expand x := unfold x; fold x. *)
 Tactic Notation "expand" constr(x) := unfold x; fold x.
 
-(* Ltac expand_in x H := unfold x in H; fold x in H. *)
 Tactic Notation "expand" constr(x) "in" hyp(H) := unfold x in H; fold x in H.
 
-(* Ltac expand_all x := unfold x in *; fold x in *. *)
 Tactic Notation "expand" constr(x) "in" "*" := unfold x in *; fold x in *.
 
 Lemma breakable_andb : forall x y, andb x y = true <-> x = true /\ y = true.
@@ -221,35 +232,61 @@ Tactic Notation "intros_do_revert" tactic(tac) := _intros_do_revert_aux tac 0.
 (* NOTE: this only brings the front-most binders into the context *)
 Tactic Notation "deep" "rewrite" uconstr(c) := intros_do_revert (rewrite c).
 
-(* 
-Ltac clear_all :=
-  repeat match goal with
-  | H :_ |- _ => clear H
-  end.
 
-Tactic Notation "transform_hyp" hyp(H) := 
-  let t := type of H in
-  let H' := fresh in
-  eassert (H': t -> _); [clear_all; intro H | apply H' in H; clear H'].
+(* Given a hypothesis `x := t` (commonly introduced by tactic `set`),
+   replaces all instances of `x` with `t`, and clears `x`.
+ *)
+Ltac unset i := unfold i in *; clear i.
 
-Tactic Notation "transform_hyp" hyp(H) "by" tactic(tac) := 
-  let t := type of H in
-  let H' := fresh in
-  eassert (H': t -> _) by (clear_all; intro H; tac);
-  apply H' in H;
-  clear H'.
 
-Goal (forall x, True -> x + 0 = x) -> False.
-intro H.
+(* `gen`/`to` tactics. Generalizes the term (: A) by a predicate (: A -> Prop)
+   Useful when generalizing an inductive principle.
+   For instance, `gen z := (x :: y) to (Permutation (x :: y)) in H by reflexivity`
+   replaces instances of (x :: y) in H with `z`, and adds the hypothesis 
+   `Hgen: Permutation (x :: y) z`.
+ *)
 
-eassert (H': (forall x: nat, True -> x + 0 = x) -> (forall x: nat, True -> _)).
-{ clear_all.
-  intro H.
-  intro x; specialize (H x).
-  intro T; specialize (H T).
-  rewrite PeanoNat.Nat.add_0_r in H. exact H. }
-specialize (H' H); clear H; rename H' into H.
-Admitted.
+Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P):=
+  let I' := fresh I in 
+  set (I' := l);
+  let Hgen := fresh "Hgen" in
+  assert (Hgen: P I'); 
+    [ unset I'
+    | clearbody I'].
 
-Tactic Notation "deep" "rewrite" "in" hyp(H) "by" tactic(tac) :=
-   *)
+Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
+  "in" hyp(H) :=
+  let I' := fresh I in 
+  set (I' := l) in H;
+  let Hgen := fresh "Hgen" in
+  assert (Hgen: P I'); 
+    [ unset I'
+    | clearbody I'].
+
+Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
+  "in" "*" :=
+  let I' := fresh I in 
+  set (I' := l) in *;
+  let Hgen := fresh "Hgen" in
+  assert (Hgen: P I'); 
+    [ unset I'
+    | clearbody I'].
+
+Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
+  "by" tactic(tac) :=
+  gen I := l to P; [solve [tac]|].
+
+Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
+  "in" hyp(H) "by" tactic(tac) :=
+  gen I := l to P in H; [solve [tac]|].
+
+Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
+  "in" "*" "by" tactic(tac) :=
+  gen I := l to P in *; [solve [tac]|].
+
+
+(* A sylistic alias for `admit`. Used to distinguish admitted goals
+   which you know how to solve that you will come back to once the 
+   difficult proof goals are solved.
+ *)
+Ltac todo := admit.
