@@ -1,8 +1,8 @@
 Require Import Ctl.Paths.
 Require Import Ctl.Definition.
 
-Require Import GeneralTactics.
-Require Import MiscTactics.
+Require Import Tactics.General.
+Require Import Tactics.Misc.
 
 (* tapply: carefully unfolds TProp hypothesis just enough to use apply *)
 

@@ -1,5 +1,5 @@
 Require Import Psatz.
-Require Import GeneralTactics.
+Require Import Tactics.General.
 
 (* Automatic simplificiations on the context.
    These tend to be more heavy weight, since the do more searching.

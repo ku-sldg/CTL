@@ -2,7 +2,7 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Lists.List.
 
-Require Import GeneralTactics.
+Require Import Tactics.General.
 
 Definition rel_singleton {A} (x y : A): relation A :=
   fun x' y' => x' = x /\ y' = y -> True.

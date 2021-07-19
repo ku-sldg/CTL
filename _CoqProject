@@ -1,7 +1,7 @@
 -R . Attarch
 
-GeneralTactics.v
-MiscTactics.v
+Tactics/General.v
+Tactics/Misc.v
 BinaryRelations.v
 
 Ctl/Paths.v

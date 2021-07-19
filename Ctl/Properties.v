@@ -1,12 +1,13 @@
 Require Import Ctl.Paths.
 Require Import Ctl.Definition.
-Require Import Ctl.Tactics.
 Require Import BinaryRelations.
-Require Import GeneralTactics.
 
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
+
 Require Import Coq.Program.Equality.
+Require Import Ctl.Tactics.
+Require Import Tactics.General.
 
 Lemma AG_idempotent {state}:
   forall (R: relation state) s P, R@s ⊨ AG P -> R@s ⊨ AG (AG P).

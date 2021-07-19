@@ -1,6 +1,5 @@
 Require Import Ctl.Paths.
 Require Import Ctl.Definition.
-Require Import Ctl.Tactics.
 Require Import Ctl.Properties.
 
 Require Import BinaryRelations.
@@ -9,12 +8,11 @@ Require Import Privilege.
 Require Import AttarchTrans.
 
 Require Import Coq.Program.Equality.
-Require Import Coq.Relations.Relation_Definitions.
-Require Import Coq.Relations.Relation_Operators.
-Require Import GeneralTactics.
+Require Import Tactics.General.
+Require Import Ctl.Tactics.
 
-Definition useram_key_secure := 
-  ⟨fun (st: attarch_global * attarch_state) =>
+Definition useram_key_secure : TProp (attarch_global * attarch_state) := 
+  ⟨fun st =>
     val_at (useram_key (fst st)) = Some good_useram_key -> 
     acc_at (useram_key (fst st)) = useram_key_acc
   ⟩. 

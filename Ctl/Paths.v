@@ -1,4 +1,4 @@
-Require Import GeneralTactics.
+Require Import Tactics.General.
 Require Import BinaryRelations.
 
 Require Import Coq.Relations.Relation_Definitions.
