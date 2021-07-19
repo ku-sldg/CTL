@@ -2,16 +2,11 @@
 
 GeneralTactics.v
 BinaryRelations.v
-PermutationExtra.v
 
 Ctl/Paths.v
 Ctl/Definition.v
 Ctl/Tactics.v
 Ctl/Properties.v
-
-SepLogic/Definition.v
-SepLogic/Separation.v
-SepLogic/Entailment.v
 
 TransitionSystems.v
 AttarchTrans.v
