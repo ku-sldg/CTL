@@ -15,13 +15,11 @@ Proof.
   intros R s P H.
   intros n p x Hin.
   intros n' p' x' Hin'.
-  pose proof (path_combine _ _ _ _ _ p p' Hin Hin') as HIn''.
-  destruct exists HIn'' n'' p''.
+  eapply in_path_combine in Hin'; [|eassumption].
+  destruct exists Hin' n'' p''.
   eapply H.
   eassumption.
 Qed.
-
-Ltac copy H ident := pose proof H as ident.
 
 Lemma EG_idempotent {state}:
   forall (R: relation state) s P, R@s ⊨ EG P -> R@s ⊨ EG (EG P).

@@ -24,14 +24,22 @@ Proof.
   intros s' Hsteps.
   dependent induction Hsteps.
   - discriminate.
-  - invc H.
-    + apply IHHsteps.
-    + invc H0.
-      * invc H1.
-       -- apply IHHsteps.
-       -- apply IHHsteps.
-       -- simpl. reflexivity.
-      * invc H1.
-       -- apply IHHsteps.
-       -- invc H0; apply IHHsteps.
+  - invc H; try apply IHHsteps.
+    invc H0.
+    + invc H1; try apply IHHsteps.
+      simpl. reflexivity.
+    + invc H1; try apply IHHsteps.
+      invc H0; apply IHHsteps.
 Qed.
+
+Theorem useram_key_never_compromised__induct_path:
+  attarch_trans @initial_state_good ⊨ AG useram_key_secure.
+Proof.
+  intros n p s' H.
+  dependent induction p.
+  - invc H.
+    discriminate.
+  - 
+    
+  (* Bad induction principle *)
+  (* dependent induction H; try discriminate. *)

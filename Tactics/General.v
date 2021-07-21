@@ -92,6 +92,12 @@ Ltac max_induction x :=
 Ltac _max_split := try (split; _max_split).
 Tactic Notation "max" "split" := _max_split.
 
+(* Copy a hypothesis *)
+Tactic Notation "copy" hyp(H) :=
+  let H' := fresh H in
+  pose proof H as H'.
+
+Tactic Notation "copy" hyp(H) ident(I) := pose proof H as I.
 
 (* When `unset x` is invoked with hypothesis `x := t` (commonly introduced by 
    tactic `set`), replaces all instances of `x` with `t`, and clears `x`.

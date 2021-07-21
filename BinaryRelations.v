@@ -2,6 +2,7 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Lists.List.
 
+Require Import Setoid.
 Require Import Tactics.General.
 
 Definition rel_singleton {A} (x y : A): relation A :=
@@ -11,11 +12,11 @@ Definition rel_singleton {A} (x y : A): relation A :=
 (* Notation "R ^*" := (clos_refl_trans_n1 _ R) (at level 35, format "R ^*"). *)
 Notation "R ^*" := (clos_refl_trans_n1 _ R) (at level 5, format "R ^*").
 
-Lemma rtc_trans {A}: forall (R: relation A) a b c,
-  R^* a b -> R^* b c -> R^* a c.
+Lemma rtc_trans {A}: forall R: relation A,
+  transitive A R^*.
 Proof.
-  intros R a b c Hab Hbc.
-  induction Hbc.
+  intros R x y z Hxy Hyz.
+  induction Hyz.
   - assumption.
   - econstructor; eassumption.
 Qed.
@@ -29,6 +30,12 @@ Proof.
   - eassumption.
   - constructor.
 Qed.
+
+Add Parametric Relation (A: Type) (R: relation A): A (clos_refl_trans_n1 A R)
+  reflexivity  proved by (rtn1_refl A R)
+  transitivity proved by (rtc_trans R)
+  as rtc_rel.
+
 
 Lemma rtc_1n_n1_equiv {A}: forall (R: relation A) a b,
   clos_refl_trans_1n _ R a b <-> R^* a b.
