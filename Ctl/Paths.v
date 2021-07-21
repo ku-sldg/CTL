@@ -1,38 +1,142 @@
-Require Import Tactics.General.
-Require Import BinaryRelations.
-
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
+Require Import BinaryRelations.
 
-(* Old path defn *)
-(* Inductive path {state} (R: relation state) : state -> nat -> Prop := 
-  | path_trivial : forall s, path R s 0
-  | path_step : forall s s' n,
-      R s s' ->
-      path R s' n ->
-      path R s (S n).
-Arguments path_trivial {state R}%type_scope.
-Arguments path_step    {state R}%type_scope. *)
+Require Import Coq.Program.Equality.
+Require Import Tactics.General.
 
-(* A length-indexed transition sequence
-   Essentially a reflexive-transitive closure, where the sequence of steps is 
-   transparent (plus the type-level length info).
-*)
-Inductive path_to {state} (R: relation state): nat -> state -> state -> Prop :=
-  | path_to_refl : forall s,
-      path_to R 0 s s
-  | path_to_step : forall s x x' n,
-      R x x' ->
-      path_to R n s x ->
-      path_to R (S n) s x'.
-Arguments path_to_refl {state R}%type_scope.
-Arguments path_to_step {state R}%type_scope.
+Inductive rtc_len {A} {R: relation A} : nat -> forall {x y}, R^* x y -> Prop :=
+  | rtc_len_0 : forall x,
+      rtc_len 0 (rtn1_refl A R x)
+  | rtc_len_S : forall n x y z Ryz Rxy,
+      rtc_len n Rxy ->
+      rtc_len (S n) (rtn1_trans A R x y z Ryz Rxy).
+
+(* This definition purposefully separates the sequence with the length so that the 
+   length can be discarded
+ *)
+Definition indexed_rtc {A} (R: relation A) n x y :=
+  exists r: R^* x y, rtc_len n r.
+
+Notation "R ^#" := (indexed_rtc R) (at level 5, format "R ^#").
+
+Theorem indexed_rtc_refl {A}: forall (R: relation A) s,
+  R^# 0 s s.
+Proof using.
+  intros.
+  eexists.
+  constructor.
+Qed.
+
+Theorem indexed_rtc_step {A}: forall (R: relation A) s x x' n,
+  R x x' ->
+  R^# n s x ->
+  R^# (S n) s x'.
+Proof using.
+  intros R s x x' n Hstep Hsteps.
+  destruct exists Hsteps Rsx.
+  exists (rtn1_trans A R s x x' Hstep Rsx).
+  constructor.
+  assumption.
+Qed.
+
+(* Inspired by the TLC tactic of the same name
+https://github.com/charguer/tlc/blob/c6c9b344f36df70d600756fe20f2017730e48604/src/LibTactics.v#L1702
+  Likely much simpler, this tactic `intros` all the dependent hypotheses
+  (bound by a `forall`), then `intros` based on identifer list argument
+ *)
+Tactic Notation "introv" :=
+  repeat match goal with 
+  (* Note, this only works because `intro x` fail for implications *)
+  | |- forall x, _ => intro x
+  end.
+
+Tactic Notation "introv" ident_list(il) :=
+  introv; intros il.
+
+Definition clos_refl_trans_n1_ind_double
+  (A: Type) (R: relation A) x (P: A -> A -> Prop)
+  (p_refl: P x x) 
+  (p_step: forall y z, R y z -> R^* x y -> P x y -> P x z) :=
+  fix F y (Rxy: R^* x y) : P x y :=
+  match Rxy with 
+  | rtn1_refl _ _ _ => p_refl
+  | rtn1_trans _ _ _ y z Ryz Rxy => p_step y z Ryz Rxy (F y Rxy)
+  end.
+
+(* Print clos_refl_trans_n1.
+Inductive clos_refl_trans_n1_T (A : Type) (R : relation A) (x : A) : A -> Type :=
+  | rtn1_refl : clos_refl_trans_n1_T A R x x
+  | rtn1_trans : forall y z : A,
+      R y z -> 
+      clos_refl_trans_n1_T A R x y ->
+      clos_refl_trans_n1_T A R x z. *)
+
+(* Inducts over steps rather than states *)
+(* Definition clos_refl_trans_n1_ind_struct 
+  (A: Type) (R: relation A) x (P: forall x y, R^* x y -> Prop)
+  (p_refl: P x x (rtn1_refl A R x)) 
+  (p_step: forall y z (Ryz: R y z) (Rxy: R^* x y), P x y Rxy ->
+    P x z (rtn1_trans A R x y z Ryz Rxy)) :=
+  fix F y (Rxy: R^* x y) : P x y Rxy :=
+  match Rxy with 
+  | rtn1_refl _ _ _ => p_refl 
+  | rtn1_trans _ _ _ y z Ryz Rxy => p_step y z Ryz Rxy (F y Rxy)
+  end. *)
+
+(* This is the definition Coq would have given a Type *)
+Definition clos_refl_trans_n1_ind_struct2 
+  (A: Type) (R: relation A) x (P: forall y, R^* x y -> Prop)
+  (p_refl: P x (rtn1_refl A R x)) 
+  (p_step: forall y z (Ryz: R y z) (Rxy: R^* x y), P y Rxy ->
+    P z (rtn1_trans A R x y z Ryz Rxy)) :=
+  fix F y (Rxy: R^* x y) : P y Rxy :=
+  match Rxy with 
+  | rtn1_refl _ _ _ => p_refl 
+  | rtn1_trans _ _ _ y z Ryz Rxy => p_step y z Ryz Rxy (F y Rxy)
+  end.
+
+
+Theorem rtc_len_refl_inv: forall n A R x,
+  rtc_len n (rtn1_refl A R x) ->
+  n = 0.
+Proof.
+  introv H.
+
+
+Theorem rtc_len_add {A}: forall n m (R: relation A) x y z,
+  forall Rxy: R^* x y,
+  forall Ryz: R^* y z,
+    rtc_len n Rxy ->
+    rtc_len m Ryz ->
+    rtc_len (n+m) (rtc_trans R x y z Rxy Ryz).
+Proof using.
+  introv Hxy Hyz.
+  revert Hxy z Ryz Hyz.
+  induction Rxy using clos_refl_trans_n1_ind_struct; intros.
+  - invc Hxy.
+    + admit.
+    + 
+  - induction Ryz using clos_refl_trans_n1_ind_struct.
+    + 
+
+  induction Rxy.
+  dependent induction Rxy. intros.
+  - 
 
 (* (almost) transitivity *)
-Definition path_to_combine {state n m} {R: relation state} {x y z}:
-  path_to R n x y ->
-  path_to R m y z ->
-  path_to R (n+m) x z.
+Theorem indexed_rtc_combine {A}: forall n m (R: relation A) x y z,
+  R^# n x y ->
+  R^# m y z ->
+  R^# (n+m) x z.
+Proof using.
+  intros n m R x y z Hxy Hyz.
+  destruct exists Hxy Rxy.
+  destruct exists Hyz Ryz.
+  exists (rtc_trans _ _ _ _ Rxy Ryz).
+  induction R.
+  constructor.
+
 intros path_xy path_yz; revert n x path_xy.
 induction path_yz; intros.
 + rewrite PeanoNat.Nat.add_0_r. 
@@ -396,12 +500,7 @@ Proof using.
     econstructor; eassumption.
 Qed.
 
-(*
-(* Print clos_refl_trans_n1. *)
-Inductive rtc_len {A} {R: relation A} : nat -> R^* x y -> Prop :=
-  | rtc_len_0 : 
-      rtc_len 0 
-*)
+
 Inductive in_rtc {state} {R: relation state} {s}
   : forall {s'}, state -> R^* s s' -> Prop :=
   | in_rtc_head_refl :
@@ -413,9 +512,23 @@ Inductive in_rtc {state} {R: relation state} {s}
       in_rtc y (rtn1_trans state R s x x' r p)
   .
 
-Theorem foo {state}: forall (R: relation state) n s s' (p: path_to R n s s') x,
+Theorem in_path_to_impl_in_rtc {state}: forall (R: relation state) n s s' (p: path_to R n s s') x,
   in_path_to x p ->
-  in_rtc x (path_to_impl_rtc _ _ _ _ p).
+  in_rtc x (path_to_impl_rtc R n s s' p).
+Proof using.
+  intros.
+  induction H.
+Admitted.
+
+Check path_to_ind.
+Require Import Coq.Program.Equality.
+Theorem in_rtc_impl_in_path_to {state}: forall (R: relation state) n s s' (p: path_to R n s s') x,
+  in_rtc x (path_to_impl_rtc R n s s' p) ->
+  in_path_to x p.
+Proof using.
+  intros.
+  dependent induction H.
+
 
 Theorem in_path_to_first {state}:
   forall (R: relation state) n s s' (p: path_to R n s s'),
