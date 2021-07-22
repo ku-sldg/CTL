@@ -191,3 +191,17 @@ Tactic Notation "max" "cuth" hyp(H) := _max_cuth.
 
 Ltac _max_cuth_by H tac := try (cuth H; [tac|_max_cuth]).
 Tactic Notation "max" "cuth" hyp(H) "by" tactic(tac) := _max_cuth_by H tac.
+
+(* Inspired by the TLC tactic of the same name
+https://github.com/charguer/tlc/blob/c6c9b344f36df70d600756fe20f2017730e48604/src/LibTactics.v#L1702
+  Likely much simpler, this tactic `intros` all the dependent hypotheses
+  (bound by a `forall`), then `intros` based on identifer list argument
+ *)
+Tactic Notation "introv" :=
+  repeat match goal with 
+  (* Note, this only works because `intro x` fail for implications *)
+  | |- forall x, _ => intro x
+  end.
+
+Tactic Notation "introv" ident_list(il) :=
+  introv; intros il.
