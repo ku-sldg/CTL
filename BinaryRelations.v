@@ -144,7 +144,7 @@ Proof using.
     + eassumption.
     + applyc IHHpath.
       assumption.
-Qed.
+Defined.
 
 (* Definition rtc_idx_ind_struct
   (A: Type) (R: relation A) (P: forall n x y, R^# n x y -> Prop)

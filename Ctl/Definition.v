@@ -66,15 +66,15 @@ Fixpoint tEntails {state} (R: relation state) (s: state) (tp: TProp state) : Pro
   | P --> Q => R @s ⊨ P -> R @s ⊨ Q
   | AX P => forall s', R s s' -> R @s' ⊨ P
   | EX P => exists s', R s s' -> R @s' ⊨ P
-  | AG P => forall n, forall p: path R s n, forall s', in_path s' p -> R @s' ⊨ P
-  | EG P => forall n, exists p: path R s n, forall s', in_path s' p -> R @s' ⊨ P
-  | AF P => exists n, forall p: path R s n, exists s', in_path s' p /\ R @s' ⊨ P
-  | EF P => exists n, exists p: path R s n, exists s', in_path s' p /\ R @s' ⊨ P
-  | A[P U Q] => forall n, forall p: path R s n,
+  | AG P => forall n, forall p: path R n s, forall s', in_path s' p -> R @s' ⊨ P
+  | EG P => forall n, exists p: path R n s, forall s', in_path s' p -> R @s' ⊨ P
+  | AF P => exists n, forall p: path R n s, exists s', in_path s' p /\ R @s' ⊨ P
+  | EF P => exists n, exists p: path R n s, exists s', in_path s' p /\ R @s' ⊨ P
+  | A[P U Q] => forall n (p: path R n s),
       exists sQ i, in_path_at sQ i p /\ 
         R @sQ ⊨ Q /\
         forall sP, in_path_before sP i p -> R @sP ⊨ P
-  | E[P U Q] => forall n, exists p: path R s n,
+  | E[P U Q] => exists n (p: path R n s),
       exists sQ i, in_path_at sQ i p /\ 
         R @sQ ⊨ Q /\
         forall sP, in_path_before sP i p -> R @sP ⊨ P

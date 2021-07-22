@@ -2,6 +2,9 @@ Require Import Ctl.Paths.
 Require Import Ctl.Definition.
 Require Import BinaryRelations.
 
+Require Import Coq.Init.Logic.
+Import EqNotations.
+
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
 
@@ -33,10 +36,11 @@ Proof.
   intros s' Hin.
   (* simpl in *. *)
 
-  induction Hin; [assumption|assumption|].
-  intros n'.
+  (* induction Hin; [assumption|assumption|]. *)
+  (* intros n'. *)
 Admitted.
 
+(*
 Theorem rtc_AG {state}: forall (R: relation state) s P, 
   (forall s', R^* s s' -> R@s' ⊨ P) ->
   R@s ⊨ AG P.
@@ -44,6 +48,7 @@ Proof.
   intros R s P H.
   intros n p s' Hin.
   apply H.
+  eapply in_path_impl_rtc.
   eapply path_to_rtc.
   eassumption.
 Qed. 
@@ -58,6 +63,7 @@ Proof.
   apply H with (p:=p).
   assumption.
 Qed.
+*)
 
 Theorem tModusPonens {state}: forall (M: relation state) s P Q,
   M@s ⊨ P --> Q -> M@s ⊨ P -> M@s ⊨ Q.
@@ -113,6 +119,7 @@ Proof.
   split; intros H; auto.
 Qed.
 
+(*
 Lemma AG_steps_strong {state}: forall (R: relation state) s s' P,
   R^* s s' -> R@s ⊨ AG P -> R@s' ⊨ AG P.
 Proof.
@@ -132,6 +139,59 @@ Proof.
   apply Hstrong with (p:= path_trivial s').
   constructor.
 Qed.
+*)
+
+Lemma path_step_rev_preserves_in {state}: 
+  forall (R: relation state) s s' (r: R s s') n (p: path R n s') x,
+    in_path x p ->
+    in_path x (path_step_rev R n s s' r p).
+Proof using.
+  introv H.
+  invc H.
+  induction H0; simpl; repeat constructor.
+  simpl in IHin_rtcT_idx.
+  dependent induction IHin_rtcT_idx.
+  assumption.
+Qed.
+
+(* TODO: add in type-specific UIPs *)
+Ltac inv_rew H :=
+  inversion H;
+  inversion_sigma;
+  subst;
+  (* Look for equalities we can destruct into eq_refl *)
+  repeat match goal with
+  | H: ?x = ?x |- _ => destruct H
+  end;
+  (* Simplify rews *)
+  (* repeat match goal with 
+  | H: context[rew [_] eq_refl in ?x] |- _ => change (rew [_] eq_refl in x) with x in H
+  | |- context[rew [_] eq_refl in ?x] => change (rew [_] eq_refl in x) with x
+  end. *)
+  repeat change (rew [_] eq_refl in ?x) with x in *.
+
+Ltac inv_rewc H := inv_rew H; clear H.
+
+Lemma rtcT_idx_path_step__rtcT_idx_path_step_rev {X}:
+  forall (R: relation X) s x x' n,
+    R x x' ->
+    R^# n s x ->
+    {s' &
+      R s s' &
+      R^# n s' x'}.
+Proof using.
+  introv Rxx' Rsx.
+  revert x' Rxx'.
+  induction Rsx; intros.
+  - exists x'.
+    + assumption. 
+    + constructor.
+  - applyc IHRsx in r.
+    destruct exists r s'.
+    exists s'.
+    + assumption.
+    + econstructor; eassumption.
+Qed.
 
 (* Expansion Laws *)
 Theorem expand_AG {state}: forall (R: relation state) s P, R@s ⊨ AG P <--> P ∧ AX (AG P).
@@ -140,25 +200,22 @@ Proof.
   split; intro H.
   - split.
     + eapply H.
-      econstructor.
-    + intros s' Hstep.
-      eapply AG_steps_strong.
-      * eapply rtn1_trans; [eassumption|constructor].
-      * assumption.
+      repeat econstructor.
+    + intros s' Hstep n p x Hin.
+      etapply H.
+      eapply (path_step_rev_preserves_in _ _ _ Hstep).
+      eassumption.
   - destruct H as [H1 H2].
     intros n p s' Hin.
-    move Hin at top.
-    generalize dependent P.
-    induction Hin; intros; try assumption.
-    clear H1.
-    applyc IHHin.
-    + eapply H2.
-      * eassumption.
-      * econstructor.
-    + intros s'' r' n' p' y Hin'.
-      apply H2 with (p:= path_step s' s'' n' r' p').
-      * assumption.
-      * constructor. assumption.
+    destruct exists p s''.
+    inv_rewc Hin.
+    induction H3; try assumption.
+    eapply rtcT_idx_path_step__rtcT_idx_path_step_rev in p;
+      [|eassumption]; clear r.
+    destruct exists p s'.
+    etapply H2.
+    + eassumption.
+    + apply (in_path_last _ _ _ _ r).
 Qed.
 
 Theorem expand_EG {state}: forall (R: relation state) s P, R@s ⊨ EG P <--> P ∧ EX (EG P).
@@ -169,13 +226,6 @@ Admitted.
 
 Theorem expand_EF {state}: forall (R: relation state) s P, R@s ⊨ EF P <--> P ∧ EX (EF P).
 Admitted.
-
-Lemma in_path_head {state} {R: relation state}:
-  forall s n (p: path R s n), in_path s p.
-Proof.
-  intros s n p.
-  destruct p; constructor.
-Qed.
 
 (* De Morgan's Laws *)
 Theorem AF_EG {state}: forall R (s: state) P, R@s ⊨ AF (¬P) --> ¬EG P.
@@ -192,6 +242,7 @@ Proof.
 Qed.
 
 (* Needs classical axioms *)
+(*
 Theorem AF_EG' {state}: forall R (s: state) P, R@s ⊨ ¬AF P --> EG (¬P).
 Proof.
   intros R s P H.
@@ -217,44 +268,7 @@ Proof.
        Giving an existential won't work, since the ultimate value would 
        presumably not be in the current scope. *)
 Abort.
-
-Theorem exists_deMorg: forall X (P: X -> Prop), ~(exists x, P x) -> forall x, ~ P x.
-Proof.
-  intros X P H.
-  intros x.
-  intros H'.
-  apply H.
-  exists x.
-  assumption.
-Qed.
-
-Theorem AF_EG' {state}: forall R (s: state) P, 
-  serial_from_witness R s ->
-  R@s ⊨ ¬AF P --> EG (¬P).
-Proof.
-  intros R s P Hserial H n.
-  simpl in H.
-  pose proof (exists_deMorg _ _ H n) as H2; clear H; rename H2 into H; simpl in H.
-  exists (gen_path Hserial n).
-  intros s' Hin H2.
-  apply H.
-  intros p'.
-  exists s'.
-  split; [|assumption].
-  (* No relation between p' and the generated path *)
-Abort.
-
-Definition classical_double_neg_elim : Prop := forall (P: Prop), ~~P -> P.
-Theorem AF_EG' {state}: forall R (s: state) P, 
-  classical_double_neg_elim ->
-  R@s ⊨ ¬AF P --> EG (¬P).
-Proof.
-  (* Proof sketch:
-    ¬AF P ≡ ¬AF (¬¬P)
-          ≡ ¬¬EG (¬¬P)
-          ≡ EG P (double elimination)
-  *)
-Admitted.
+*)
 
 Theorem EG_AF {state}: forall R (s: state) P, R@s ⊨ EG (¬P) --> ¬AF P.
 Proof.

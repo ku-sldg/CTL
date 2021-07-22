@@ -88,7 +88,7 @@ Proof using.
   destruct exists Hpath x.
   eapply rtcT_idx_to_path.
   eapply rtcT_idx_step_rev; eassumption.
-Qed.
+Defined.
 
 (* This would require in_path be switched from `Prop` to `Type` *)
 Theorem in_path_impl_rtc {state}:
@@ -156,11 +156,38 @@ Qed.
 Lemma rtc__in_some_path {state}: forall (R: relation state) s s',
   R^* s s' -> exists n (p: path R n s), in_path s' p.
 Proof using.
-  (* Why is this tactic intro-ing x? *)
-  (* introv. *)
+  (* Why does `introv` intro x? *)
   intros R s s' r.
   apply rtcT_to_rtcT_idx in r.
   destruct exists r n.
   exists n (rtcT_idx_to_path r).
   apply in_path_last.
+Qed.
+
+Theorem in_path_combine {A}:
+  forall (R: relation A) n a (pa: path R n a) m b (pb: path R m b) c,
+    in_path b pa ->
+    in_path c pb ->
+    exists l (p: path R l a), in_path c p.
+Proof using.
+  introv H.
+  revert n a pa x.
+  invc H.
+  induction H0; intros.
+  - eexists.
+    exists pa.
+    assumption.
+  - eapply rtcT_idx_step in p; [|eassumption]; clear r.
+    invc x0.
+    induction H.
+    + exists (S n) (rtcT_idx_to_path p).
+      apply in_path_last.
+    + eapply rtcT_idx_step in p0; [|eassumption]; clear r.
+      eapply rtcT_idx_combine in p; [|eassumption]; clear p0.
+      exists (S n0 + S n) (rtcT_idx_to_path p).
+      apply in_path_last.
+    + applyc IHin_rtcT_idx.
+      assumption.
+  - eapply IHin_rtcT_idx.
+    eassumption.
 Qed.
