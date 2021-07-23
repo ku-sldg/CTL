@@ -218,3 +218,20 @@ Ltac reflexive :=
         ]
   end.
 
+
+(* inverts an inhabits hypothesis *)
+Ltac uninhabit H := 
+  let i := fresh in
+  inversion H as [i];
+  clear H;
+  rename i into H.
+
+(* Applies an inhabits proposition and immediately inverts *)
+Tactic Notation "inhabit" uconstr(c) "in" hyp(H) :=
+  eapply c in H;
+  uninhabit H.
+
+Tactic Notation "inhabitc" hyp(c) "in" hyp(H) :=
+  inhabit c in H;
+  clear c.
+

@@ -6,7 +6,6 @@ Require Import Setoid.
 Require Import Psatz.
 Require Import Coq.Program.Equality.
 Require Import Tactics.General.
-Require Import Tactics.Weaken.
 
 Definition is_serial {A} (R: relation A) := forall a, exists b, R a b.
 Definition serial A := {R: relation A | is_serial R}.
@@ -318,41 +317,39 @@ Definition in_rtcT_idx_before {state} {R: relation state} {n s s'}
 
 Theorem in_rtcT_idx__prefix {state}: 
   forall (R: relation state) x y z n (Rxz: R^# n x z),
-    in_rtcT_idx y Rxz ~>
-    {m & m <= n & R^# m x y}.
+    in_rtcT_idx y Rxz ->
+    inhabited {m & m <= n & R^# m x y}.
 Proof using.
-  introv P H.
-  dependent induction H; intros.
-  - applyc H.
-    eexists.
+  introv H.
+  dependent induction H.
+  - constructor.
+    exists 0.
     + reflexivity.
     + constructor.
-  - applyc H.
+  - constructor.
     exists (S n).
     + reflexivity.
     + econstructor; eassumption.
-  - applyc IHin_rtcT_idx.
-    intros [m Hlt Rxy].
-    applyc H0.
+  - invc IHin_rtcT_idx.
+    destruct exists X m.
+    constructor.
     exists m.
-    + constructor.
-      assumption.
+    + constructor. assumption.
     + assumption.
 Qed.
-
+ 
 Theorem in_rtcT_idx__prefix' {state}: 
   forall (R: relation state) x y z n (Rxz: R^# n x z),
-    in_rtcT_idx y Rxz ~>
-    R^* x y.
+    in_rtcT_idx y Rxz ->
+    inhabited (R^* x y).
 Proof using.
-  introv P H.
-  dependent induction H; intros.
-  - applyc H.
-    constructor.
-  - applyc H.
+  introv H.
+  dependent induction H.
+  - repeat constructor. 
+  - constructor.
     econstructor.
     + eassumption.
     + eapply rtcT_idx_to_rtcT.
       eassumption.
-  - auto.
+  - assumption.
 Qed.

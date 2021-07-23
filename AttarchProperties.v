@@ -10,7 +10,6 @@ Require Import AttarchTrans.
 
 Require Import Coq.Program.Equality.
 Require Import Tactics.General.
-Require Import Tactics.Weaken.
 
 Definition useram_key_secure : TProp (attarch_global * attarch_state) := 
   ⟨fun st =>
@@ -22,7 +21,7 @@ Theorem useram_key_never_compromised:
   attarch_trans @initial_state_good ⊨ AG useram_key_secure.
 Proof.
   intros n p s' Hin.
-  weaken in_path__rtc in Hin.
+  inhabit in_path__rtc in Hin.
   clear p.
   dependent induction Hin.
   - discriminate.
