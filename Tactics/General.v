@@ -192,6 +192,7 @@ Tactic Notation "max" "cuth" hyp(H) := _max_cuth.
 Ltac _max_cuth_by H tac := try (cuth H; [tac|_max_cuth]).
 Tactic Notation "max" "cuth" hyp(H) "by" tactic(tac) := _max_cuth_by H tac.
 
+
 (* Inspired by the TLC tactic of the same name
 https://github.com/charguer/tlc/blob/c6c9b344f36df70d600756fe20f2017730e48604/src/LibTactics.v#L1702
   Likely much simpler, this tactic `intros` all the dependent hypotheses
@@ -205,3 +206,15 @@ Tactic Notation "introv" :=
 
 Tactic Notation "introv" ident_list(il) :=
   introv; intros il.
+
+
+(* Solve a (registered) reflexive relation by proving the arguments equal *)
+Ltac reflexive := 
+  match goal with 
+  | |- _ ?x ?y =>
+      replace x with y;
+        [ reflexivity
+        | try easy; symmetry
+        ]
+  end.
+

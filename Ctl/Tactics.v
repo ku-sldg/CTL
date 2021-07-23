@@ -209,6 +209,14 @@ Tactic Notation "fold_TProp" "in" hyp(H) :=
   fold_EF in H +
   fold_tEntails in H.
 
+Tactic Notation "expand_tEntails" :=
+  unfold tEntails; 
+  fold_tEntails.
+
+Tactic Notation "expand_tEntails" "in" hyp(H) :=
+  unfold tEntails in H; 
+  fold_tEntails in H.
+
 (* tspecialize: like specialize, but rolls-back over-reduction of TProps *)
 (* TODO: rewrite to just unfold 1-step if no forall-binder *)
 

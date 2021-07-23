@@ -1,6 +1,7 @@
 Require Import Ctl.Paths.
 Require Import Ctl.Definition.
 Require Import Ctl.Properties.
+Require Import Ctl.Tactics.
 
 Require Import BinaryRelations.
 Require Import TransitionSystems.
@@ -9,7 +10,7 @@ Require Import AttarchTrans.
 
 Require Import Coq.Program.Equality.
 Require Import Tactics.General.
-Require Import Ctl.Tactics.
+Require Import Tactics.Weaken.
 
 Definition useram_key_secure : TProp (attarch_global * attarch_state) := 
   ⟨fun st =>
@@ -20,26 +21,16 @@ Definition useram_key_secure : TProp (attarch_global * attarch_state) :=
 Theorem useram_key_never_compromised:
   attarch_trans @initial_state_good ⊨ AG useram_key_secure.
 Proof.
-  apply rtc_AG.
-  intros s' Hsteps.
-  dependent induction Hsteps.
+  intros n p s' Hin.
+  weaken in_path__rtc in Hin.
+  clear p.
+  dependent induction Hin.
   - discriminate.
-  - invc H; try apply IHHsteps.
-    invc H0.
-    + invc H1; try apply IHHsteps.
-      simpl. reflexivity.
-    + invc H1; try apply IHHsteps.
-      invc H0; apply IHHsteps.
+  - invc r; try apply IHHin.
+    invc H.
+    + invc H1; try apply IHHin.
+      simpl.
+      reflexivity.
+    + invc H1; try apply IHHin.
+      invc H0; apply IHHin.
 Qed.
-
-Theorem useram_key_never_compromised__induct_path:
-  attarch_trans @initial_state_good ⊨ AG useram_key_secure.
-Proof.
-  intros n p s' H.
-  dependent induction p.
-  - invc H.
-    discriminate.
-  - 
-    
-  (* Bad induction principle *)
-  (* dependent induction H; try discriminate. *)

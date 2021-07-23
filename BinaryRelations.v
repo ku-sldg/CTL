@@ -4,7 +4,9 @@ Require Import Coq.Lists.List.
 
 Require Import Setoid.
 Require Import Psatz.
+Require Import Coq.Program.Equality.
 Require Import Tactics.General.
+Require Import Tactics.Weaken.
 
 Definition is_serial {A} (R: relation A) := forall a, exists b, R a b.
 Definition serial A := {R: relation A | is_serial R}.
@@ -229,6 +231,31 @@ Inductive in_rtcT_idx {A} {R: relation A} {a}
       in_rtcT_idx y p ->
       in_rtcT_idx y (rtcT_idx_step R n a x x' r p).
 
+Definition in_rtcT_idx_ind_struct
+  (A : Type) (R : relation A) (a : A)
+  (P : forall (n : nat) (a' a0 : A) (r : R^# n a a'),
+	   in_rtcT_idx a0 r -> Prop)
+  (f : P 0 a a (rtcT_idx_refl R a) in_rtcT_idx_head_refl)
+  (f0 : forall (n : nat) (x x' : A) (r : R x x') (p : R^# n a x),
+        P (S n) x' x' (rtcT_idx_step R n a x x' r p)
+          (in_rtcT_idx_head_step n x x' r p))
+  (f1 : forall (n : nat) (x x' y : A) (r : R x x') 
+          (p : R^# n a x) (i : in_rtcT_idx y p),
+        P n x y p i ->
+        P (S n) x' y (rtcT_idx_step R n a x x' r p)
+          (in_rtcT_idx_tail n x x' y r p i)) :=
+fix F
+  (n : nat) (a' y : A) (r : R^# n a a') (i : in_rtcT_idx y r) {struct i} :
+    P n a' y r i :=
+  match
+    i as i0 in (@in_rtcT_idx _ _ _ n0 a'0 y0 r0) return (P n0 a'0 y0 r0 i0)
+  with
+  | in_rtcT_idx_head_refl => f
+  | in_rtcT_idx_head_step n0 x x' r0 p => f0 n0 x x' r0 p
+  | in_rtcT_idx_tail n0 x x' y0 r0 p i0 =>
+      f1 n0 x x' y0 r0 p i0 (F n0 x y0 p i0)
+  end.
+
 Theorem in_rtcT_idx_at__in_rtcT_idx {A}:
   forall (R: relation A) x a b n m (r: R^# n a b),
     in_rtcT_idx_at x m r ->
@@ -261,7 +288,6 @@ Proof using.
       assumption.
 Qed. 
 
-Require Import Coq.Program.Equality.
 Theorem in_rtcT__in_rtcT_idx {A}:
   forall (R: relation A) x a b (r: R^* a b),
     in_rtcT x r ->
@@ -290,3 +316,43 @@ Definition in_rtcT_idx_before {state} {R: relation state} {n s s'}
   x i (r: R^# n s s') := 
   exists j, j < i /\ in_rtcT_idx_at x i r.
 
+Theorem in_rtcT_idx__prefix {state}: 
+  forall (R: relation state) x y z n (Rxz: R^# n x z),
+    in_rtcT_idx y Rxz ~>
+    {m & m <= n & R^# m x y}.
+Proof using.
+  introv P H.
+  dependent induction H; intros.
+  - applyc H.
+    eexists.
+    + reflexivity.
+    + constructor.
+  - applyc H.
+    exists (S n).
+    + reflexivity.
+    + econstructor; eassumption.
+  - applyc IHin_rtcT_idx.
+    intros [m Hlt Rxy].
+    applyc H0.
+    exists m.
+    + constructor.
+      assumption.
+    + assumption.
+Qed.
+
+Theorem in_rtcT_idx__prefix' {state}: 
+  forall (R: relation state) x y z n (Rxz: R^# n x z),
+    in_rtcT_idx y Rxz ~>
+    R^* x y.
+Proof using.
+  introv P H.
+  dependent induction H; intros.
+  - applyc H.
+    constructor.
+  - applyc H.
+    econstructor.
+    + eassumption.
+    + eapply rtcT_idx_to_rtcT.
+      eassumption.
+  - auto.
+Qed.

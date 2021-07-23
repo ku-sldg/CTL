@@ -4,6 +4,7 @@ Require Import BinaryRelations.
 
 Require Import Coq.Program.Equality.
 Require Import Tactics.General.
+Require Import Tactics.Weaken.
 
 Definition path {state} (R: relation state) (n: nat) (s: state) :=
   {s' & R^# n s s'}.
@@ -190,4 +191,13 @@ Proof using.
       assumption.
   - eapply IHin_rtcT_idx.
     eassumption.
+Qed.
+
+Theorem in_path__rtc {state}: forall (R:relation state) n s (p: path R n s) s',
+  in_path s' p ~>
+  R^* s s'.
+Proof using.
+ introv P Hin.
+  invc Hin.
+  weaken in_rtcT_idx__prefix' in H.
 Qed.

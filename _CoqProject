@@ -1,6 +1,7 @@
 -R . Attarch
 
 Tactics/General.v
+Tactics/Weaken.v
 Tactics/Misc.v
 BinaryRelations.v
 
