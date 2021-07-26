@@ -1,26 +1,82 @@
 Require Import Ctl.Paths.
 Require Import Ctl.Definition.
-Require Import BinaryRelations.
-
-Require Import Coq.Init.Logic.
-Import EqNotations.
+Require Import Ctl.Basic.
+Open Scope tprop_scope.
 
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
+Require Import BinaryRelations.
 
 Require Import Coq.Program.Equality.
 Require Import Ctl.Tactics.
 Require Import Tactics.General.
 
+(* Require Import Setoid. *)
+
+Theorem timpl_refl {state}: forall R (s: state) a,
+  R @s ⊨ a ⟶ a.
+Proof using.
+  intros.
+  tintro.
+  assumption.
+Qed.
+
+Theorem timpl_trans {state}: forall R (s: state) a b c,
+  R @s ⊨ (a ⟶ b) ⟶ (b ⟶ c) ⟶ a ⟶ c.
+Proof using.
+  intros R s a b c.
+  tintros Hab Hbc Ha.
+  tapplyc Hbc.
+  tapplyc Hab. 
+  assumption.
+Qed.
+
+Theorem timpl_trans' {state}: forall R (s: state) a b c,
+  R @s ⊨ a ⟶ b ->
+  R @s ⊨ b ⟶ c -> 
+  R @s ⊨ a ⟶ c.
+Proof using.
+  intros R s a b c Hab Hbc.
+  tintros Ha.
+  tapplyc Hbc.
+  tapplyc Hab. 
+  assumption.
+Qed.
+
+Ltac treflexivity := simple apply timpl_refl.
+Ltac treflexive := 
+  match goal with 
+  | |- _ @_ ⊨ ?a ⟶ ?a => treflexivity
+  | |- _ @_ ⊨ ?a ⟶ ?b =>
+      replace a with b;
+        [ treflexivity
+        | try easy; symmetry
+        ]
+  end.
+
+Ltac ttransitivity x :=
+  match goal with
+  | |- ?R @?s ⊨ ?a ⟶ ?b =>
+      simple apply (timpl_trans' R s a x b)
+  end.
+
+Ltac ettransitivity :=
+  match goal with
+  | |- ?R @?s ⊨ ?a ⟶ ?b =>
+      simple eapply (timpl_trans' R s a _ b)
+  end.
+
 Lemma AG_idempotent {state}:
   forall (R: relation state) s P, R@s ⊨ AG P -> R@s ⊨ AG (AG P).
 Proof.
   intros R s P H.
+  rewrite rew_AG.
   intros n p x Hin.
+  rewrite rew_AG.
   intros n' p' x' Hin'.
   eapply in_path_combine in Hin'; [|eassumption].
   destruct exists Hin' n'' p''.
-  eapply H.
+  etapplyc H.
   eassumption.
 Qed.
 
@@ -28,9 +84,10 @@ Lemma EG_idempotent {state}:
   forall (R: relation state) s P, R@s ⊨ EG P -> R@s ⊨ EG (EG P).
 Proof.
   intros R s P H.
+  rewrite rew_EG.
   intro n.
   copy H Hpath1.
-  tspecialize Hpath1 n.
+  specialize (Hpath1 n).
   destruct exists Hpath1 p.
   exists p.
   intros s' Hin.
@@ -39,107 +96,6 @@ Proof.
   (* induction Hin; [assumption|assumption|]. *)
   (* intros n'. *)
 Admitted.
-
-(*
-Theorem rtc_AG {state}: forall (R: relation state) s P, 
-  (forall s', R^* s s' -> R@s' ⊨ P) ->
-  R@s ⊨ AG P.
-Proof.
-  intros R s P H.
-  intros n p s' Hin.
-  apply H.
-  eapply in_path_impl_rtc.
-  eapply path_to_rtc.
-  eassumption.
-Qed. 
-
-Theorem AG_rtc {state}: forall (R: relation state) s P, 
-  R@s ⊨ AG P ->
-  forall s', R^* s s' -> R@s' ⊨ P.
-Proof.
-  intros R s P H s' Hsteps.
-  apply rtc_to_path in Hsteps.
-  destruct exists Hsteps n p.
-  apply H with (p:=p).
-  assumption.
-Qed.
-*)
-
-Theorem tModusPonens {state}: forall (M: relation state) s P Q,
-  M@s ⊨ P --> Q -> M@s ⊨ P -> M@s ⊨ Q.
-Proof. auto. Qed.
-
-Theorem tModusPonens_flipped {state}: forall (M: relation state) s P Q,
-  M@s ⊨ P -> M@s ⊨ P --> Q -> M@s ⊨ Q.
-Proof. auto. Qed.
-
-Theorem tModusTollens {state}: forall (R: relation state) s P Q,
-  R@s ⊨ (P --> Q) --> ¬Q --> ¬P.
-Proof.
-  intros R s P Q.
-  intros Hpq Hnq Hp.
-  tapply Hnq.
-  tapply Hpq.
-  assumption.
-Qed.
-
-Theorem tbimpl_neg {state}: forall (R: relation state) s P Q,
-  R@s ⊨ (P <--> Q) --> (¬P <--> ¬Q).
-Proof.
-  intros R s P Q.
-  split; intro; (eapply (tModusTollens R); [apply H | assumption]).
-  (* (etapply (tModusTollens R); [apply H | assumption]). *)
-Qed.
-
-(* Good test for tactics *)
-Theorem TImpl_trans {state}: forall M (s: state) P Q R,
-  M@s ⊨ (P --> Q) --> (Q --> R) --> P --> R.
-Proof.
-  (* backwards reasoning *)
-  intros M s P Q R Hpq Hqr Hp.
-  tapply Hqr.
-  tapply Hpq.
-  exact Hp.
-
-  Restart.
-  (* forward reasoning *)
-  intros M s P Q R Hpq Hqr Hp.
-  tspecialize Hpq Hp.
-  tspecialize Hqr Hpq.
-  exact Hqr.
-
-  Restart.
-  simpl. auto.
-Qed.
-
-(* This is an alternate means of defining TNot *)
-Theorem tNot_def {state}: forall M (s: state) P, M@s ⊨ ¬P <--> (P --> ⊥).
-Proof.
-  intros M s P.
-  split; intros H; auto.
-Qed.
-
-(*
-Lemma AG_steps_strong {state}: forall (R: relation state) s s' P,
-  R^* s s' -> R@s ⊨ AG P -> R@s' ⊨ AG P.
-Proof.
-  intros R s s' P Hsteps H.
-  pose proof (AG_rtc _ _ _ H) as H0; clear H; rename H0 into H.
-  apply rtc_AG.
-  intros s'' Hsteps2.
-  apply H.
-  eapply rtc_trans; eassumption.
-Qed.
-
-Lemma AG_steps_weak {state}: forall (R: relation state) s s' P,
-  R^* s s' -> R@s ⊨ AG P -> R@s' ⊨ P.
-Proof.
-  intros R s s' P Hsteps H.
-  pose proof (AG_steps_strong _ _ _ _ Hsteps H) as Hstrong.
-  apply Hstrong with (p:= path_trivial s').
-  constructor.
-Qed.
-*)
 
 Lemma path_step_rev_preserves_in {state}: 
   forall (R: relation state) s s' (r: R s s') n (p: path R n s') x,
@@ -153,24 +109,6 @@ Proof using.
   dependent induction IHin_rtcT_idx.
   assumption.
 Qed.
-
-(* TODO: add in type-specific UIPs *)
-Ltac inv_rew H :=
-  inversion H;
-  inversion_sigma;
-  subst;
-  (* Look for equalities we can destruct into eq_refl *)
-  repeat match goal with
-  | H: ?x = ?x |- _ => destruct H
-  end;
-  (* Simplify rews *)
-  (* repeat match goal with 
-  | H: context[rew [_] eq_refl in ?x] |- _ => change (rew [_] eq_refl in x) with x in H
-  | |- context[rew [_] eq_refl in ?x] => change (rew [_] eq_refl in x) with x
-  end. *)
-  repeat change (rew [_] eq_refl in ?x) with x in *.
-
-Ltac inv_rewc H := inv_rew H; clear H.
 
 Lemma rtcT_idx_path_step__rtcT_idx_path_step_rev {X}:
   forall (R: relation X) s x x' n,
@@ -194,51 +132,58 @@ Proof using.
 Qed.
 
 (* Expansion Laws *)
-Theorem expand_AG {state}: forall (R: relation state) s P, R@s ⊨ AG P <--> P ∧ AX (AG P).
+Theorem expand_AG {state}: forall (R: relation state) s P, R@s ⊨ AG P ⟷ P ∧ AX (AG P).
 Proof.
   intros R s P.
   split; intro H.
   - split.
-    + eapply H.
+    + etapply H.
       repeat econstructor.
-    + intros s' Hstep n p x Hin.
+    + rewrite rew_AX.
+      setoid_rewrite rew_AG.
+      intros s' Hstep n p x Hin.
       etapply H.
+      (* changes path type from `path R n s' to `path R (S n) s` *)
       eapply (path_step_rev_preserves_in _ _ _ Hstep).
       eassumption.
   - destruct H as [H1 H2].
+    rewrite rew_AG.
     intros n p s' Hin.
     destruct exists p s''.
-    inv_rewc Hin.
+    invc Hin.
     induction H3; try assumption.
     eapply rtcT_idx_path_step__rtcT_idx_path_step_rev in p;
       [|eassumption]; clear r.
     destruct exists p s'.
-    etapply H2.
+    (* Note: unfold_AX in H2; unfold_AG in H2 doesn't seem to work here. Problem with binder? *)
+    (* It works now, but only because I added manual rewrites *)
+    etapplyc H2.
     + eassumption.
     + apply (in_path_last _ _ _ _ r).
 Qed.
 
-Theorem expand_EG {state}: forall (R: relation state) s P, R@s ⊨ EG P <--> P ∧ EX (EG P).
+Theorem expand_EG {state}: forall (R: relation state) s P, R@s ⊨ EG P ⟷ P ∧ EX (EG P).
 Admitted.
 
-Theorem expand_AF {state}: forall (R: relation state) s P, R@s ⊨ AF P <--> P ∧ AX (AF P).
+Theorem expand_AF {state}: forall (R: relation state) s P, R@s ⊨ AF P ⟷ P ∧ AX (AF P).
 Admitted.
 
-Theorem expand_EF {state}: forall (R: relation state) s P, R@s ⊨ EF P <--> P ∧ EX (EF P).
+Theorem expand_EF {state}: forall (R: relation state) s P, R@s ⊨ EF P ⟷ P ∧ EX (EF P).
 Admitted.
 
 (* De Morgan's Laws *)
-Theorem AF_EG {state}: forall R (s: state) P, R@s ⊨ AF (¬P) --> ¬EG P.
+Theorem AF_EG {state}: forall R (s: state) P, R@s ⊨ AF (¬P) ⟶ ¬EG P.
 Proof.
-  intros R s P H H2.
-  simpl in H, H2.
-  destruct exists H n.
-  tspecialize H2 n.
+  intros.
+  tintros H1 H2.
+  tsimpl in *.
+  destruct exists H1 n.
+  specialize (H2 n).
   destruct exists H2 p.
-  tspecialize H p.
-  destruct exists H s'.
-  tspecialize H2 s'.
-  destruct H; auto.
+  specialize (H1 p).
+  destruct exists H1 s'.
+  specialize (H2 s').
+  destruct H1; auto.
 Qed.
 
 (* Needs classical axioms *)
@@ -270,33 +215,166 @@ Proof.
 Abort.
 *)
 
-Theorem EG_AF {state}: forall R (s: state) P, R@s ⊨ EG (¬P) --> ¬AF P.
+Theorem EG_AF {state}: forall R (s: state) P, R@s ⊨ EG (¬P) ⟶ ¬AF P.
 Proof.
-  intros R s P H H2.
-  simpl in H, H2.
+  intros R s P.
+  tintros H1 H2.
+  tsimpl in *.
   destruct exists H2 n.
-  tspecialize H n.
-  destruct exists H p.
-  tspecialize H2 p.
+  specialize (H1 n).
+  destruct exists H1 p.
+  specialize (H2 p).
   destruct exists H2 s'.
-  tspecialize H s'.
+  specialize (H1 s').
   destruct H2.
-  apply H; assumption.
+  apply H1; assumption.
 Qed.
 
-Theorem AG_EF {state}: forall R (s: state) P, R@s ⊨ AG (¬P) --> ¬EF P.
-  intros R s P H H2.
-  simpl in H, H2.
+Theorem AG_EF {state}: forall R (s: state) P, R@s ⊨ AG (¬P) ⟶ ¬EF P.
+  intros R s P.
+  tintros H1 H2.
+  tsimpl in *.
   destruct exists H2 n p s'.
-  tspecialize H n p s'.
-  tapply H; destruct H2; assumption.
+  specialize (H1 n p s').
+  apply H1; destruct H2; assumption.
 Qed.
 
-Theorem EF_AG {state}: forall R (s: state) P, R@s ⊨ EF (¬P) --> ¬AG P.
+Theorem EF_AG {state}: forall R (s: state) P, R@s ⊨ EF (¬P) ⟶ ¬AG P.
 Admitted.
 
-Theorem AX_EX {state}: forall R (s: state) P, R@s ⊨ AX (¬P) --> ¬EX P.
+Theorem AX_EX {state}: forall R (s: state) P, R@s ⊨ AX (¬P) ⟶ ¬EX P.
 Admitted.
 
-Theorem EX_AX {state}: forall R (s: state) P, R@s ⊨ EX (¬P) --> ¬AX P.
+Theorem EX_AX {state}: forall R (s: state) P, R@s ⊨ EX (¬P) ⟶ ¬AX P.
 Admitted.
+
+(* in_path_before operator well_founded? *)
+
+(* How I want to prove R @s ⊨ A[P W Q]:
+    - At first state, either P or Q
+    - for some path from the start, we assume P has held.
+      Now we prove that for some additional step, either P holds 
+      or Q holds
+ *)
+
+Theorem AW_ind {state}: forall (R: relation state) s P Q,
+  R @s ⊨ P ∨ Q ->
+  (forall s' (Rss': R^* s s'),
+    (forall x, in_rtcT x Rss' -> R @x ⊨ P ∧ ¬ Q) ->
+    forall s'', R s' s'' ->
+    R @s'' ⊨ P ∨ Q) -> 
+  R @s ⊨ A[P W Q].
+Proof using.
+  intros R s P Q Hinit Hstep.
+  rewrite rew_AW.
+  intros n p y i Hin Hbefore.
+  invc Hin.
+  induction H.
+  - assumption.
+  - specialize (Hstep x (rtcT_idx_to_rtcT p)).
+    applyc Hstep; [|eassumption].
+    intros x0 Hin.
+    applyc Hbefore.
+
+    clear - Hin.
+    (* Obvious from Hin *)
+    todo.
+  - apply IHin_rtcT_idx_at.
+    intros x0 Hbefore2.
+    applyc Hbefore.
+    (* Obvious from Hbefore2 *)
+    todo.
+Admitted.
+
+(* Theorem AU_from_AW {state}: forall (R: relation state) s P Q,
+  R @s ⊨ A[P W Q] ∧ AF Q ->
+  R @s ⊨ A[P U Q].
+Proof using. *)
+
+(* Exposes the earliest witness of AF *)
+Theorem AF_earliest {state}: forall (R: relation state) s P,
+  R @s ⊨ AF P ->
+  exists n, forall p: path R n s, exists y i,
+    in_path_at y i p /\ R @y ⊨ P /\ 
+    forall x, in_path_before x i p -> R @x ⊭ P.
+Proof using.
+  intros R s P H.
+  tsimpl in H.
+  destruct exists H n.
+  exists n.
+  intro p.
+  specialize (H p).
+  (* induct over in_path. At each step, use classical reasoning to 
+     destruct cases of P is satisfied. If so, end early and prove ealiest.
+     Else, continue.
+   *)
+
+Theorem AW_AF__AU {state}: forall (R: relation state) s P Q,
+  (* R @s ⊨ A[P W Q] ∧ AF Q ⟶ A[P U Q]. *)
+  R @s ⊨ A[P W Q] ⟶ AF Q ⟶ A[P U Q].
+Proof using.
+  intros.
+  (* tintro H.
+  destruct H as [H1 H2]. *)
+  tintros HAW HAF.
+  (* tsimpl. *)
+  rewrite rew_AU.
+  rewrite rew_AF in HAF.
+  destruct exists HAF n.
+  exists n.
+  intro p.
+  specialize (HAF p).
+  (* Problem: need to get *earliest* s' satisfying HAF *)
+  destruct HAF as [s' [Hin Hs'Q]].
+  exists s'.
+  apply in_path__in_path_at in Hin.
+  destruct Hin as [i [iLt Hin]].
+  exists i.
+  max split; try assumption.
+  intros sP Hbefore.
+  rewrite rew_AW in HAW.
+  specialize (HAW n p s' i Hin).
+  (* Might need to induct on Hbefore? *)
+
+
+
+(* How I want to prove R @s ⊨ A[P U Q]:
+ *)
+
+Theorem EU_rtcT {state}: forall (R: relation state) s P Q,
+  (exists s' n (r: R^# n s s') s'', 
+    R s' s'' /\
+    R @s'' ⊨ Q /\ 
+    forall x, in_rtcT_idx x r -> R @x ⊨ P)
+  -> R @s ⊨ E[P U Q].
+Proof using.
+  intros.
+  destruct exists H s' n r s''.
+  destruct H as [H1 [H2 H3]].
+  expand_tEntails.
+  exists (S n).
+  copy r r1.
+  eapply rtcT_idx_step in r1; [|eassumption]; clear H1.
+  exists (rtcT_idx_to_path r1) s'' n.
+  max split.
+  - (* in_rtcT_idx_at_last *)
+    admit.
+  - assumption.
+  - 
+ 
+
+Theorem EU_rtcT {state}: forall (R: relation state) s P Q,
+  (exists s' (r: R^* s s') s'', 
+    R s' s'' /\
+    R @s'' ⊨ Q /\ 
+    forall x, in_rtcT x r -> R @x ⊨ P)
+  -> R @s ⊨ E[P U Q].
+Proof using.
+  intros.
+  destruct exists H s' r s''.
+  destruct H as [H1 [H2 H3]].
+  expand_tEntails.
+  apply rtcT_to_rtcT_idx in r.
+  exists 
+
+  *)

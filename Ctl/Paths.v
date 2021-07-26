@@ -4,6 +4,7 @@ Require Import BinaryRelations.
 
 Require Import Coq.Program.Equality.
 Require Import Tactics.General.
+Require Import Tactics.Construct.
 
 Definition path {state} (R: relation state) (n: nat) (s: state) :=
   {s' & R^# n s s'}.
@@ -192,12 +193,15 @@ Proof using.
     eassumption.
 Qed.
 
+(* Ltac my_eapply c := eapply c. *)
+Tactic Notation "my_eapply" uconstr(c) := eapply c.
+
 Theorem in_path__rtc {state}: forall (R:relation state) n s (p: path R n s) s',
-  in_path s' p ->
-  inhabited (R^* s s').
+  in_path s' p ~>
+  R^* s s'.
 Proof using.
   intros R n s p s' H.
   invc H.
-  eapply in_rtcT_idx__prefix'.
+  econstruct in_rtcT_idx__prefix'.
   eassumption.
 Qed.

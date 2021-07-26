@@ -1,11 +1,16 @@
 -R . Attarch
 
+Classical.v
+
 Tactics/General.v
+Tactics/Construct.v
 Tactics/Misc.v
+
 BinaryRelations.v
 
 Ctl/Paths.v
 Ctl/Definition.v
+Ctl/Basic.v
 Ctl/Tactics.v
 Ctl/Properties.v
 

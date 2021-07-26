@@ -1,3 +1,6 @@
+Require Import Coq.Init.Logic.
+Import EqNotations.
+
 (* Modified from the `StructTact` library definition:
    https://github.com/uwplse/StructTact/blob/a0f4aa3491edf27cf70ea5be3190b7efa8899971/theories/StructTactics.v#L17
  *)
@@ -198,11 +201,14 @@ https://github.com/charguer/tlc/blob/c6c9b344f36df70d600756fe20f2017730e48604/sr
   Likely much simpler, this tactic `intros` all the dependent hypotheses
   (bound by a `forall`), then `intros` based on identifer list argument
  *)
-Tactic Notation "introv" :=
-  repeat match goal with 
+
+Tactic Notation "introv1" :=
+  match goal with 
   (* Note, this only works because `intro x` fail for implications *)
   | |- forall x, _ => intro x
   end.
+
+Tactic Notation "introv" := repeat introv1.
 
 Tactic Notation "introv" ident_list(il) :=
   introv; intros il.
@@ -218,20 +224,27 @@ Ltac reflexive :=
         ]
   end.
 
+(* Ltac inv_rew H :=
+  inversion H;
+  inversion_sigma;
+  subst;
+  (* Look for equalities we can destruct into eq_refl *)
+  repeat match goal with
+  | H: ?x = ?x |- _ => destruct H
+  end;
+  repeat change (rew [_] eq_refl in ?x) with x in *. *)
 
-(* inverts an inhabits hypothesis *)
-Ltac uninhabit H := 
-  let i := fresh in
-  inversion H as [i];
-  clear H;
-  rename i into H.
+Ltac inv_rew H :=
+  inversion H;
+  inversion_sigma;
+  subst;
+  repeat match goal with 
+  | H: context[rew [_] ?eq in _] |- _ => destruct eq
+  | |- context[rew [_] ?eq in _] => destruct eq
+  end;
+  repeat change (rew [_] eq_refl in ?x) with x in *;
+  subst.
 
-(* Applies an inhabits proposition and immediately inverts *)
-Tactic Notation "inhabit" uconstr(c) "in" hyp(H) :=
-  eapply c in H;
-  uninhabit H.
+Ltac inv_rewc H := inv_rew H; clear H.
 
-Tactic Notation "inhabitc" hyp(c) "in" hyp(H) :=
-  inhabit c in H;
-  clear c.
-
+Ltac inv H ::= inv_rew H.

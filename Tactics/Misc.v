@@ -101,7 +101,7 @@ Ltac break_context :=
 
 (* intros do revert *)
 
-Ltac n_times tac x n :=
+(* Ltac n_times tac x n :=
   match constr:(n) with
   | 0 => idtac
   | S ?n' => tac x; n_times tac x n'
@@ -113,8 +113,9 @@ Ltac revert_n n :=
     | H :_ |- _ => revert H
     end
   ) tt n.
+*)
 
-Ltac _intros_do_revert_aux tac n :=
+(* Ltac _intros_do_revert_aux tac n :=
   match goal with
   | |- forall _,_ =>
       intro;
@@ -122,9 +123,78 @@ Ltac _intros_do_revert_aux tac n :=
   | _ =>
     tac;
     revert_n n
+  end. *)
+
+(* Repeats some ltac, then calls the 
+continutation with the number of invocations *)
+Ltac repeat_count_then_aux tac cont n :=
+  first [ tac; repeat_count_then_aux tac cont (S n)
+        | cont n].
+
+(* Ltac repeat_count_then tac cont :=  *)
+Tactic Notation "repeat_count" tactic(tac) "then" tactic(cont) := 
+  repeat_count_then_aux tac cont 0.
+
+(* Definition taken from Chargueraud TLC library *)
+Inductive Box : Type :=
+  | box : forall {A: Type}, A -> Box.
+
+Ltac _do_u n tac :=
+  match n with 
+  | box (S ?n') => tac; _do_u (box n') tac
+  | _ => idtac 
   end.
 
-Tactic Notation "intros_do_revert" tactic(tac) := _intros_do_revert_aux tac 0.
+(* This is precisely the do tactic, but it avoids typing the number *)
+Tactic Notation "do_u" uconstr(n) tactic(tac) :=
+  (* idtac "do_u"; *)
+  _do_u (box n) tac.
+
+(* Ltac intros_do_revert tac := *)
+(* Tactic Notation "intros_do_revert" tactic(tac) :=
+  repeat_count introv1 then (fun n =>
+    tac; 
+    do_u n (
+      (* idtac;  *)
+      match goal with 
+      | H :_ |- _ => idtac "hi"; revert H
+      end
+    )
+  ). *)
+
+(* Somehow inserting an idtac/semicolon delays execution *)
+Tactic Notation "just" tactic(tac) := idtac; tac.
+
+Tactic Notation "intros_do_revert" tactic(tac) :=
+  repeat_count introv1 then (fun n =>
+    tac; 
+    do_u n (just 
+    (* do_u n ( *)
+      match goal with 
+      | H :_ |- _ => idtac "hi"; revert H
+      end)
+  ).
 
 (* NOTE: this only brings the front-most binders into the context *)
 Tactic Notation "deep" "rewrite" uconstr(c) := intros_do_revert (rewrite c).
+
+(* Example *)
+Goal (forall x, x + 0 = x) -> forall y z, (y + 0) + z = y + z.
+  intro H.
+  (* Fail (rewrite H). *)
+
+  deep rewrite H.
+
+  (* I realized setoid_rewrite can do this *)
+  Restart.
+  intro H.
+  setoid_rewrite H.
+Abort.
+
+
+Goal (forall x, x + 0 = x) -> forall y z, (y + 0) + z = y + z.
+  intro H.
+  Fail (rewrite H).
+  setoid_rewrite H.
+  reflexivity.
+Qed.

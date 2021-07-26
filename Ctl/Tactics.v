@@ -1,51 +1,269 @@
 Require Import Ctl.Paths.
 Require Import Ctl.Definition.
+Require Import Ctl.Basic.
+Open Scope tprop_scope.
 
 Require Import Tactics.General.
 Require Import Tactics.Misc.
 
+(*
+Tactic Notation "unfold_timpl" :=
+  progress change_no_check (?R @?s ⊨ ?p ⟶ ?q) with (R @s ⊨ p -> R @s ⊨ q).
+Tactic Notation "unfold_timpl" "in" hyp(H) :=
+  progress change_no_check (?R @?s ⊨ ?p ⟶ ?q) with (R @s ⊨ p -> R @s ⊨ q) in H.
+
+Tactic Notation "unfold_tnot" := 
+  progress change_no_check (?R @?s ⊨ ¬?P) with (R @s ⊭ P).
+Tactic Notation "unfold_tnot" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ ¬?P) with (R @s ⊭ P) in H.
+
+Tactic Notation "unfold_tconj" := 
+  progress change_no_check (?R @?s ⊨ ?P ∧ ?Q) with (R @s ⊨ P /\ R @s ⊨ Q).
+Tactic Notation "unfold_tconj" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ ?P ∧ ?Q) with (R @s ⊨ P /\ R @s ⊨ Q) in H.
+
+Tactic Notation "unfold_tbiimpl" := 
+  progress change_no_check (?R @?s ⊨ ?P ⟷ ?Q) with (R @s ⊨ P <-> R @s ⊨ Q).
+Tactic Notation "unfold_tbiimpl" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ ?P ⟷ ?Q) with (R @s ⊨ P <-> R @s ⊨ Q) in H.
+
+Tactic Notation "unfold_AX" := 
+  progress change_no_check (?R @?s ⊨ AX ?P) with (forall s', R s s' -> R @s' ⊨ P).
+Tactic Notation "unfold_AX" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ AX ?P) with (forall s', R s s' -> R @s' ⊨ P) in H.
+
+Tactic Notation "unfold_AG" := 
+  progress change_no_check (?R @?s ⊨ AG ?P) with 
+    (forall n (p: path R n s) s', in_path s' p -> R @s' ⊨ P).
+Tactic Notation "unfold_AG" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ AG ?P) with 
+    (forall n (p: path R n s) s', in_path s' p -> R @s' ⊨ P) in H.
+*)
+
+Tactic Notation "unfold_timpl" :=
+  progress change_no_check (?R @?s ⊨ ?p ⟶ ?q) with (R @s ⊨ p -> R @s ⊨ q) +
+  rewrite rew_timpl +
+  setoid_rewrite rew_timpl.
+Tactic Notation "unfold_timpl" "in" hyp(H) :=
+  progress change_no_check (?R @?s ⊨ ?p ⟶ ?q) with (R @s ⊨ p -> R @s ⊨ q) in H +
+  rewrite rew_timpl in H +
+  setoid_rewrite rew_timpl in H.
+
+Tactic Notation "unfold_tnot" :=
+  progress change_no_check (?R @?s ⊨ ¬?P) with (R @s ⊭ P) +
+  rewrite rew_tnot +
+  setoid_rewrite rew_tnot.
+Tactic Notation "unfold_tnot" "in" hyp(H) :=
+  progress change_no_check (?R @?s ⊨ ¬?P) with (R @s ⊭ P) in H +
+  rewrite rew_tnot in H +
+  setoid_rewrite rew_tnot in H.
+
+Tactic Notation "unfold_tconj" := 
+  progress change_no_check (?R @?s ⊨ ?P ∧ ?Q) with (R @s ⊨ P /\ R @s ⊨ Q) +
+  rewrite rew_tconj +
+  setoid_rewrite rew_tconj.
+Tactic Notation "unfold_tconj" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ ?P ∧ ?Q) with (R @s ⊨ P /\ R @s ⊨ Q) in H +
+  rewrite rew_tconj in H +
+  setoid_rewrite rew_tconj in H.
+
+Tactic Notation "unfold_tdisj" := 
+  progress change_no_check (?R @?s ⊨ ?P ∨ ?Q) with (R @s ⊨ P \/ R @s ⊨ Q) +
+  rewrite rew_tdisj +
+  setoid_rewrite rew_tdisj.
+Tactic Notation "unfold_tdisj" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ ?P ∨ ?Q) with (R @s ⊨ P ∨ R @s ⊨ Q) in H +
+  rewrite rew_tdisj in H +
+  setoid_rewrite rew_tdisj in H.
+
+Tactic Notation "unfold_tbiimpl" := 
+  progress change_no_check (?R @?s ⊨ ?P ⟷ ?Q) with (R @s ⊨ P <-> R @s ⊨ Q) +
+  rewrite rew_tbiimpl +
+  setoid_rewrite rew_tbiimpl.
+Tactic Notation "unfold_tbiimpl" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ ?P ⟷ ?Q) with (R @s ⊨ P <-> R @s ⊨ Q) in H +
+  rewrite rew_tbiimpl in H +
+  setoid_rewrite rew_tbiimpl in H.
+
+Tactic Notation "unfold_AX" := 
+  progress change_no_check (?R @?s ⊨ AX ?P) with (forall s', R s s' -> R @s' ⊨ P) +
+  rewrite rew_AX +
+  setoid_rewrite rew_AX.
+Tactic Notation "unfold_AX" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ AX ?P) with (forall s', R s s' -> R @s' ⊨ P) in H +
+  rewrite rew_AX in H +
+  setoid_rewrite rew_AX in H.
+
+Tactic Notation "unfold_EX" := 
+  progress change_no_check (?R @?s ⊨ EX ?P) with (exists s', R s s' -> R @s' ⊨ P) +
+  rewrite rew_EX +
+  setoid_rewrite rew_EX.
+Tactic Notation "unfold_EX" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ EX ?P) with (exists s', R s s' -> R @s' ⊨ P) in H +
+  rewrite rew_EX in H +
+  setoid_rewrite rew_EX in H.
+
+Tactic Notation "unfold_AG" := 
+  progress change_no_check (?R @?s ⊨ AG ?P) with 
+    (forall n (p: path R n s) s', in_path s' p -> R @s' ⊨ P) +
+  rewrite rew_AG +
+  setoid_rewrite rew_AG.
+Tactic Notation "unfold_AG" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ AG ?P) with 
+    (forall n (p: path R n s) s', in_path s' p -> R @s' ⊨ P) in H +
+  rewrite rew_AG in H +
+  setoid_rewrite rew_AG in H.
+
+Tactic Notation "unfold_EG" := 
+  progress change_no_check (?R @?s ⊨ EG ?P) with 
+    (forall n, exists p: path R n s, forall s', in_path s' p -> R @s' ⊨ P) +
+  rewrite rew_EG +
+  setoid_rewrite rew_EG.
+Tactic Notation "unfold_EG" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ EG ?P) with 
+    (forall n, exists p: path R n s, forall s', in_path s' p -> R @s' ⊨ P) in H +
+  rewrite rew_EG in H +
+  setoid_rewrite rew_EG in H.
+
+Tactic Notation "unfold_AF" := 
+  progress change_no_check (?R @?s ⊨ AF ?P) with 
+    (exists n, forall p: path R n s, exists s', in_path s' p /\ R @s' ⊨ P) +
+  rewrite rew_AF +
+  setoid_rewrite rew_AF.
+Tactic Notation "unfold_AF" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ AF ?P) with 
+    (exists n, forall p: path R n s, exists s', in_path s' p /\ R @s' ⊨ P) in H +
+  rewrite rew_AF in H +
+  setoid_rewrite rew_AF in H.
+
+Tactic Notation "unfold_EF" := 
+  progress change_no_check (?R @?s ⊨ EF ?P) with 
+    (exists n (p: path R n s) s', in_path s' p /\ R @s' ⊨ P) +
+  rewrite rew_EF +
+  setoid_rewrite rew_EF.
+Tactic Notation "unfold_EF" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ EF ?P) with 
+    (exists n (p: path R n s) s', in_path s' p /\ R @s' ⊨ P) in H +
+  rewrite rew_EF in H +
+  setoid_rewrite rew_EF in H.
+
+(* tintro - intro a timpl *)
+
+Tactic Notation "tintro" := 
+  match goal with
+  | |- _ @_ ⊨ ¬ _ => unfold_tnot; intro
+  | |- _ @_ ⊨ _ ⟶ _ => unfold_timpl; intro
+  end.
+
+Tactic Notation "tintro" ident(x) := 
+  match goal with
+  | |- _ @_ ⊨ ¬ _ => unfold_tnot; intro x
+  | |- _ @_ ⊨ _ ⟶ _ => unfold_timpl; intro x
+  end.
+
+Tactic Notation "tintros" :=
+  repeat tintro.
+Tactic Notation "tintros" ident(x1) :=
+  tintro x1.
+Tactic Notation "tintros" ident(x1) ident(x2) :=
+  tintro x1; tintros x2.
+Tactic Notation "tintros" ident(x1) ident(x2) ident(x3) :=
+  tintro x1; tintros x2 x3.
+Tactic Notation "tintros" ident(x1) ident(x2) ident(x3) ident(x4) :=
+  tintro x1; tintros x2 x3 x4.
+Tactic Notation "tintros" ident(x1) ident(x2) ident(x3) ident(x4) ident(x5) :=
+  tintro x1; tintros x2 x3 x4 x5.
+Tactic Notation "tintros" ident(x1) ident(x2) ident(x3) ident(x4) ident(x6) :=
+  tintro x1; tintros x2 x3 x4 x5 x6.
+
+
+(* tsimpl - simple a tprop *)
+
+Tactic Notation "tsimpl_step" :=
+  unfold_timpl +
+  unfold_tbiimpl +
+  unfold_tnot +
+  unfold_AX +
+  unfold_EX +
+  unfold_AG +
+  unfold_EG +
+  unfold_AF +
+  unfold_EF.
+
+Tactic Notation "tsimpl_step" "in" hyp(H) :=
+  unfold_timpl in H +
+  unfold_tbiimpl in H +
+  unfold_tnot in H +
+  unfold_AX in H +
+  unfold_EX in H +
+  unfold_AG in H +
+  unfold_EG in H +
+  unfold_AF in H +
+  unfold_EF in H.
+
+Tactic Notation "tsimpl" := repeat tsimpl_step.
+Tactic Notation "tsimpl" "in" hyp(H) := repeat tsimpl_step in H.
+Tactic Notation "tsimpl" "in" "*" :=
+  repeat match goal with 
+  | H: _ @_ ⊨ _ |- _ => tsimpl in H
+  end.
+
 (* tapply: carefully unfolds TProp hypothesis just enough to use apply *)
 
-Tactic Notation "unfold_TImpl" :=
-  change_no_check (?R@?s ⊨ ?p --> ?q) with (R@s ⊨ p -> R@s ⊨ q).
-Tactic Notation "unfold_TImpl" "in" hyp(H) :=
-  change_no_check (?R@?s ⊨ ?p --> ?q) with (R@s ⊨ p -> R@s ⊨ q) in H.
+Ltac _tapply_unfold_step H :=
+  match type of H with 
+  | _ @_ ⊨ _ ⟶ _ => 
+      unfold_timpl in H
+  | _ @_ ⊨ ¬ _ =>
+      unfold_tnot in H
+  | _ @_ ⊨ _ ⟷ _ =>
+      unfold_tbiimpl in H
+  | _ @_ ⊨ AX _ =>
+      unfold_AX in H
+  | _ @_ ⊨ AG _ => 
+      unfold_AG in H
+  end + 
+  unfold_timpl in H +
+  unfold_tnot in H +
+  unfold_tbiimpl in H +
+  unfold_AX in H +
+  unfold_AG in H.
 
-Tactic Notation "unfold_TNot" := 
-  change_no_check (?R@?s ⊨ ¬?P) with (R@s ⊭ P).
-Tactic Notation "unfold_TNot" "in" hyp(H) := 
-  change_no_check (?R@?s ⊨ ¬?P) with (R@s ⊭ P) in H.
+Ltac _tapply_aux H :=
+  apply H + (_tapply_unfold_step H; _tapply_aux H).
 
-Ltac tapply_normalize H :=
-  repeat unfold_TImpl in H;
-  unfold_TNot in H.
+Ltac _tapply_aux_in H H2 :=
+  apply H in H2 + (_tapply_unfold_step H; _tapply_aux_in H H2).
+
+Ltac _etapply_aux H :=
+  eapply H + (_tapply_unfold_step H; _etapply_aux H).
+
+Ltac _etapply_aux_in H H2 :=
+  eapply H in H2 + (_tapply_unfold_step H; _etapply_aux_in H H2).
+
 
 Tactic Notation "tapply" uconstr(c) :=
   let Htemp := fresh in 
   eset (Htemp := c);
-  tapply_normalize Htemp;
-  apply Htemp;
+  _tapply_aux Htemp;
   clear Htemp.
 
 Tactic Notation "tapply" uconstr(c) "in" hyp(H) :=
   let Htemp := fresh in 
   eset (Htemp := c);
-  tapply_normalize Htemp;
-  apply Htemp in H;
+  _tapply_aux_in Htemp H;
   clear Htemp.
 
 Tactic Notation "etapply" uconstr(c) :=
   let Htemp := fresh in 
   eset (Htemp := c);
-  tapply_normalize Htemp;
-  eapply Htemp;
+  _etapply_aux Htemp;
   clear Htemp.
 
 Tactic Notation "etapply" uconstr(c) "in" hyp(H) :=
   let Htemp := fresh in 
   eset (Htemp := c);
-  tapply_normalize Htemp;
-  eapply Htemp in H;
+  _etapply_aux_in Htemp H;
   clear Htemp.
 
 Tactic Notation "tapplyc" hyp(H) :=
@@ -56,181 +274,3 @@ Tactic Notation "etapplyc" hyp(H) :=
   etapply H; clear H.
 Tactic Notation "etapplyc" hyp(H) "in" hyp(H2) :=
   etapply H in H2; clear H.
-
-(* Folds to roll-back over-reduction *)
-
-Tactic Notation "fold_TNot" :=
-  match goal with 
-  | |- context[?R@?s ⊭ ?P] =>
-      unfold tEntails; fold (R@s ⊨ ¬P)
-  end.
-Tactic Notation "fold_TNot" "in" hyp(H) :=
-  match type of H with 
-  | context[?R@?s ⊭ ?P] =>
-      unfold tEntails in H; fold (R@s ⊨ ¬P) in H
-  end.
-
-Tactic Notation "fold_TConj" :=
-  match goal with 
-  | |- context[?R@?s ⊨ ?P /\ ?R@?s ⊨ ?Q] =>
-      unfold tEntails; fold (R@s ⊨ P ∧ Q)
-  end.
-Tactic Notation "fold_TConj" "in" hyp(H) :=
-  match type of H with 
-  | context[?R@?s ⊨ ?P /\ ?R@?s ⊨ ?Q] =>
-      unfold tEntails in H; fold (R@s ⊨ P ∧ Q) in H
-  end.
-
-Tactic Notation "fold_TDisj" :=
-  match goal with 
-  | |- context[?R@?s ⊨ ?P \/ ?R@?s ⊨ ?Q] =>
-      unfold tEntails; fold (R@s ⊨ P ∨ Q)
-  end.
-Tactic Notation "fold_TDisj" "in" hyp(H) :=
-  match type of H with 
-  | context[?R@?s ⊨ ?P \/ ?R@?s ⊨ ?Q] =>
-      unfold tEntails in H; fold (R@s ⊨ P ∨ Q) in H
-  end.
-
-Tactic Notation "fold_TImpl" :=
-  match goal with 
-  | |- context[?R@?s ⊨ ?P -> ?R@?s ⊨ ?Q] =>
-      unfold tEntails; fold (R@s ⊨ P --> Q)
-  end.
-Tactic Notation "fold_TImpl" "in" hyp(H) :=
-  match type of H with 
-  | context[?R@?s ⊨ ?P -> ?R@?s ⊨ ?Q] =>
-      unfold tEntails in H; fold (R@s ⊨ P --> Q) in H
-  end.
-
-Tactic Notation "fold_AX" :=
-  match goal with 
-  | |- context[forall s', ?R ?s s' -> ?R@s' ⊨ ?P] =>
-      unfold tEntails; fold (R@s ⊨ AX P)
-  end.
-Tactic Notation "fold_AX" "in" hyp(H) :=
-  match type of H with 
-  | context[forall s', ?R ?s s' -> ?R@s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R@s ⊨ AX P) in H
-  end.
-
-Tactic Notation "fold_EX" :=
-  match goal with 
-  | |- context[exists s', ?R ?s s' -> ?R@s' ⊨ ?P] =>
-      unfold tEntails; fold (R@s ⊨ EX P)
-  end.
-Tactic Notation "fold_EX" "in" hyp(H) :=
-  match type of H with 
-  | context[exists s', ?R ?s s' -> ?R@s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R@s ⊨ EX P) in H
-  end.
-
-Tactic Notation "fold_AG" :=
-  match goal with 
-  | |- context[forall n (p: path ?R ?s n) s', in_path s' p -> ?R@s' ⊨ ?P] =>
-      unfold tEntails; fold (R@s ⊨ AG P)
-  end.
-Tactic Notation "fold_AG" "in" hyp(H) :=
-  match type of H with 
-  | context[forall n (p: path ?R ?s n) s', in_path s' p -> ?R@s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R@s ⊨ AG P) in H
-  end.
-
-Tactic Notation "fold_EG" :=
-  match goal with 
-  | |- context[forall n, exists p: path ?R ?s n, forall s', in_path s' p -> ?R@s' ⊨ ?P] =>
-      unfold tEntails; fold (R@s ⊨ EG P)
-  end.
-Tactic Notation "fold_EG" "in" hyp(H) :=
-  match type of H with 
-  | context[forall n, exists p: path ?R ?s n, forall s', in_path s' p -> ?R@s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R@s ⊨ EG P) in H
-  end.
-
-Tactic Notation "fold_AF" :=
-  match goal with 
-  | |- context[exists n, forall p: path ?R ?s n, exists s', in_path s' p /\ ?R@s' ⊨ ?P] =>
-      unfold tEntails; fold (R@s ⊨ AF P)
-  end.
-Tactic Notation "fold_AF" "in" hyp(H) :=
-  match type of H with 
-  | context[exists n, forall p: path ?R ?s n, exists s', in_path s' p /\ ?R@s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R@s ⊨ AF P) in H
-  end.
-  
-Tactic Notation "fold_EF" :=
-  match goal with 
-  | |- context[exists n (p: path ?R ?s n) s', in_path s' p /\ ?R@s' ⊨ ?P] =>
-      unfold tEntails; fold (R@s ⊨ EF P)
-  end.
-Tactic Notation "fold_EF" "in" hyp(H) :=
-  match type of H with 
-  | context[exists n (p: path ?R ?s n) s', in_path s' p /\ ?R@s' ⊨ ?P] =>
-      unfold tEntails in H; fold (R@s ⊨ EF P) in H
-  end.
-
-Tactic Notation "fold_tEntails" :=
-  match goal with 
-  | |- context[(fix f _ _ _ tp {struct tp} := _) ?state] =>
-      fold (@tEntails state)
-  end.
-
-Tactic Notation "fold_tEntails" "in" hyp(H) :=
-  match goal with 
-  | |- context[(fix f _ _ _ tp {struct tp} := _) ?state] =>
-      fold (@tEntails state) in H
-  end.
-
-Tactic Notation "fold_TProp" := intros_do_revert (
-  fold_TNot +
-  fold_TConj +
-  fold_TDisj +
-  fold_TImpl +
-  fold_AX +
-  fold_EX +
-  fold_AG +
-  fold_EG +
-  fold_AF +
-  fold_EF +
-  fold_tEntails
-).
-
-(* TODO: consider application of intros_do_revert to a hypothesis *)
-Tactic Notation "fold_TProp" "in" hyp(H) :=
-  fold_TNot in H +
-  fold_TConj in H +
-  fold_TDisj in H +
-  fold_TImpl in H +
-  fold_AX in H +
-  fold_EX in H +
-  fold_AG in H +
-  fold_EG in H +
-  fold_AF in H +
-  fold_EF in H +
-  fold_tEntails in H.
-
-Tactic Notation "expand_tEntails" :=
-  unfold tEntails; 
-  fold_tEntails.
-
-Tactic Notation "expand_tEntails" "in" hyp(H) :=
-  unfold tEntails in H; 
-  fold_tEntails in H.
-
-(* tspecialize: like specialize, but rolls-back over-reduction of TProps *)
-(* TODO: rewrite to just unfold 1-step if no forall-binder *)
-
-(* If simpl isn't called before specialize, and specializable binder isn't visible,
-   then specialize will over-evaluate before specializing *)
-Tactic Notation "tspecialize" hyp(H) uconstr(a) :=
-  (* simpl in H; specialize (H a). *)
-  simpl in H; specialize (H a); repeat fold_TProp in H.
-Tactic Notation "tspecialize" hyp(H) uconstr(a) uconstr(b) :=
-  tspecialize H a;
-  tspecialize H b.
-Tactic Notation "tspecialize" hyp(H) uconstr(a) uconstr(b) uconstr(c) :=
-  tspecialize H a b;
-  tspecialize H c.
-Tactic Notation "tspecialize" hyp(H) uconstr(a) uconstr(b) uconstr(c) uconstr(d) :=
-  tspecialize H a b c;
-  tspecialize H d.
