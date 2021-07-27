@@ -1,8 +1,7 @@
 Require Import Ctl.Paths.
 Require Import Ctl.Definition.
+Require Import BinaryRelations.
 Open Scope tprop_scope.
-
-Require Import Coq.Relations.Relation_Definitions.
 
 
 Theorem tentails_ttop {state}: forall (R: relation state) s,

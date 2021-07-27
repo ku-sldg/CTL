@@ -1,5 +1,3 @@
-Require Import Coq.Relations.Relation_Definitions.
-Require Import Coq.Relations.Relation_Operators.
 Require Import BinaryRelations.
 
 Require Import Coq.Program.Equality.
@@ -7,7 +5,7 @@ Require Import Tactics.General.
 Require Import Tactics.Construct.
 
 Definition path {state} (R: relation state) (n: nat) (s: state) :=
-  {s' & R^# n s s'}.
+  {s' & R# n s s'}.
 
 Theorem path_refl {state}: forall (R: relation state) s,
   path R 0 s.
@@ -19,7 +17,7 @@ Qed.
 
 Theorem path_step {state}: forall (R: relation state) n s x x',
   R x x' ->
-  R^# n s x ->
+  R#n s x ->
   path R (S n) s.
 Proof using.
   intros.
@@ -27,21 +25,21 @@ Proof using.
   econstructor; eassumption.
 Qed.
 
-Definition rtcT_idx_to_path {state} {R: relation state} {n s s'}
-  (r: R^# n s s') : path R n s :=
+Definition nseq_to_path {state} {R: relation state} {n s s'}
+  (r: R#n s s') : path R n s :=
   existT _ s' r.
 
 Inductive in_path_at {state} {R: relation state} {n s} 
   : state -> nat -> path R n s -> Prop :=
-  | in_path_at_rule : forall x m s' (r: R^# n s s'),
-      in_rtcT_idx_at x m r ->
-      in_path_at x m (rtcT_idx_to_path r).
+  | in_path_at_rule : forall x m s' (r: R#n s s'),
+      in_nseq_at x m r ->
+      in_path_at x m (nseq_to_path r).
 
 Inductive in_path {state} {R: relation state} {n s} 
   : state -> path R n s -> Prop :=
-  | in_path_rule : forall x s' (r: R^# n s s'),
-      in_rtcT_idx x r ->
-      in_path x (rtcT_idx_to_path r).
+  | in_path_rule : forall x s' (r: R#n s s'),
+      in_nseq x r ->
+      in_path x (nseq_to_path r).
 
 Theorem in_path__in_path_at {state} {R: relation state} {n s}:
   forall x (p: path R n s), 
@@ -50,7 +48,7 @@ Theorem in_path__in_path_at {state} {R: relation state} {n s}:
 Proof.
   intros x p H.
   invc H.
-  apply in_rtcT_idx__in_rtcT_idx_at in H0.
+  apply in_nseq__in_nseq_at in H0.
   destruct exists H0 m.
   exists m.
   destruct H0.
@@ -68,17 +66,30 @@ Proof.
   intros x i p H.
   invc H.
   constructor.
-  eapply in_rtcT_idx_at__in_rtcT_idx.
+  eapply in_nseq_at__in_nseq.
   eassumption.
 Qed.
 
 Definition in_path_before {state} {R: relation state} {n s} x i (p: path R n s) := 
-  exists j, j < i /\ in_path_at x i p.
+  exists j, j < i /\ in_path_at x j p.
+
+Lemma in_nseq_before__in_path_before {A}:
+  forall (R: relation A) n a b (r: R#n a b) x i,
+    in_nseq_before x i r ->
+    in_path_before x i (nseq_to_path r).
+Proof using.
+  intros.
+  destruct H as [x0 [Hlt H]].
+  exists x0.
+  split; [exact Hlt|]; clear Hlt.
+  constructor.
+  assumption.
+Qed.
 
 (* A single-step path *)
 Definition path_singleton {state} {R: relation state} {x y} (r: R x y)
   : path R 1 x :=
-  rtcT_idx_to_path (rtcT_idx_singleton r).
+  nseq_to_path (nseq_singleton r).
 
 Theorem path_step_rev {state}: forall (R: relation state) n s s',
   R s s' ->
@@ -87,14 +98,28 @@ Theorem path_step_rev {state}: forall (R: relation state) n s s',
 Proof using.
   intros R n s s' Hstep Hpath.
   destruct exists Hpath x.
-  eapply rtcT_idx_to_path.
-  eapply rtcT_idx_step_rev; eassumption.
+  eapply nseq_to_path.
+  eapply nseq_step_rev; eassumption.
 Defined.
+
+Lemma path_step_rev_preserves_in {state}: 
+  forall (R: relation state) s s' (r: R s s') n (p: path R n s') x,
+    in_path x p ->
+    in_path x (path_step_rev R n s s' r p).
+Proof using.
+  introv H.
+  invc H.
+  induction H0; simpl; repeat constructor.
+  simpl in IHin_nseq.
+  dependent induction IHin_nseq.
+  assumption.
+Qed.
+
 
 (* This would require in_path be switched from `Prop` to `Type` *)
 Theorem in_path_impl_rtc {state}:
   forall (R: relation state) n s s' (p: path R n s),
-    in_path s' p -> R^* s s'.
+    in_path s' p -> R#* s s'.
 Proof.
 (* intros R n s s' p Hin.
   invc Hin.
@@ -109,27 +134,27 @@ Qed.
 *)
 Abort.
 
-Theorem in_rtcT_idx_first {state}:
-  forall (R: relation state) n s s' (r: R^# n s s'),
-    in_rtcT_idx s r.
+Theorem in_nseq_first {state}:
+  forall (R: relation state) n s s' (r: R#n s s'),
+    in_nseq s r.
 Proof using.
   intros.
   induction r; constructor.
   assumption. 
 Qed.
 
-Theorem in_rtcT_idx_last {state}:
-  forall n (R: relation state) s s' (r: R^# n s s'),
-    in_rtcT_idx s' r.
+Theorem in_nseq_last {state}:
+  forall n (R: relation state) s s' (r: R#n s s'),
+    in_nseq s' r.
 Proof using.
   intros.
   destruct r; constructor.
 Qed.
 
-Theorem in_rtcT_idx__in_path {state}:
-  forall n (R: relation state) x s s' (r: R^# n s s'),
-    in_rtcT_idx x r ->
-    in_path x (rtcT_idx_to_path r).
+Theorem in_nseq__in_path {state}:
+  forall n (R: relation state) x s s' (r: R#n s s'),
+    in_nseq x r ->
+    in_path x (nseq_to_path r).
 Proof using.
   introv H.
   destruct H; repeat constructor.
@@ -137,31 +162,31 @@ Proof using.
 Qed.
 
 Theorem in_path_last {state}:
-  forall n (R: relation state) s s' (r: R^# n s s'),
-    in_path s' (rtcT_idx_to_path r).
+  forall n (R: relation state) s s' (r: R#n s s'),
+    in_path s' (nseq_to_path r).
 Proof using.
   intros.
-  eapply in_rtcT_idx__in_path.
-  apply in_rtcT_idx_last.
+  eapply in_nseq__in_path.
+  apply in_nseq_last.
 Qed.
 
 Theorem in_path_first {state}:
-  forall n (R: relation state) s s' (r: R^# n s s'),
-    in_path s (rtcT_idx_to_path r).
+  forall n (R: relation state) s s' (r: R#n s s'),
+    in_path s (nseq_to_path r).
 Proof using.
   intros.
-  eapply in_rtcT_idx__in_path.
-  apply in_rtcT_idx_first.
+  eapply in_nseq__in_path.
+  apply in_nseq_first.
 Qed.
 
 Lemma rtc__in_some_path {state}: forall (R: relation state) s s',
-  R^* s s' -> exists n (p: path R n s), in_path s' p.
+  R#* s s' -> exists n (p: path R n s), in_path s' p.
 Proof using.
   (* Why does `introv` intro x? *)
   intros R s s' r.
-  apply rtcT_to_rtcT_idx in r.
+  apply seq_to_nseq in r.
   destruct exists r n.
-  exists n (rtcT_idx_to_path r).
+  exists n (nseq_to_path r).
   apply in_path_last.
 Qed.
 
@@ -178,30 +203,101 @@ Proof using.
   - eexists.
     exists pa.
     assumption.
-  - eapply rtcT_idx_step in p; [|eassumption]; clear r.
+  - eapply nseq_step in p; [|eassumption]; clear r.
     invc x0.
     induction H.
-    + exists (S n) (rtcT_idx_to_path p).
+    + exists (S n) (nseq_to_path p).
       apply in_path_last.
-    + eapply rtcT_idx_step in p0; [|eassumption]; clear r.
-      eapply rtcT_idx_combine in p; [|eassumption]; clear p0.
-      exists (S n0 + S n) (rtcT_idx_to_path p).
+    + eapply nseq_step in p0; [|eassumption]; clear r.
+      eapply nseq_combine in p; [|eassumption]; clear p0.
+      exists (S n0 + S n) (nseq_to_path p).
       apply in_path_last.
-    + applyc IHin_rtcT_idx.
+    + applyc IHin_nseq.
       assumption.
-  - eapply IHin_rtcT_idx.
+  - eapply IHin_nseq.
     eassumption.
 Qed.
 
-(* Ltac my_eapply c := eapply c. *)
-Tactic Notation "my_eapply" uconstr(c) := eapply c.
-
-Theorem in_path__rtc {state}: forall (R:relation state) n s (p: path R n s) s',
+Theorem in_path___get_prefix_seq {state}: forall (R:relation state) n s (p: path R n s) s',
   in_path s' p ~>
-  R^* s s'.
+  R#* s s'.
 Proof using.
   intros R n s p s' H.
   invc H.
-  econstruct in_rtcT_idx__prefix'.
+  econstruct in_nseq__get_prefix'.
   eassumption.
+Qed.
+
+Inductive path_prefix {A} {R: relation A} {a}
+  : forall {n m}, path R n a -> path R m a -> Prop :=
+  | path_prefix_rule :
+      forall n b (Rab: R#n a b) m c (Rac: R#m a c),
+        nseq_prefix Rab Rac ->
+        path_prefix (nseq_to_path Rab) (nseq_to_path Rac).
+
+Theorem path_prefix_trans {A}: forall {R: relation A} {a n1 n2 n3},
+  forall (p1: path R n1 a) (p2: path R n2 a) (p3: path R n3 a),
+    path_prefix p1 p2 ->
+    path_prefix p2 p3 ->
+    path_prefix p1 p3.
+Proof using. 
+  intros R a n1 n2 n3 p1 p2 p3 H12 H23.
+  dependent destruction H12.
+  dependent destruction H23.
+  constructor.
+  eapply nseq_prefix_trans; eassumption.
+Qed.
+
+Theorem in_path_at_prefix {A}:
+  forall (R: relation A) a n1 (p1: path R n1 a) n2 (p2: path R n2 a) x i,
+    path_prefix p1 p2 ->
+    in_path_at x i p1 ->
+    in_path_at x i p2.
+Proof using.
+  intros R a n1 p1 n2 p2 x i Hpre Hin.
+  dependent destruction Hpre.
+  invc Hin.
+  constructor.
+  eapply in_nseq_at_prefix; eassumption.
+Qed.
+
+Lemma path_prefix_before {A}:
+  forall (R: relation A) a n1 (p1: path R n1 a) n2 (p2: path R n2 a) x,
+    path_prefix p1 p2 ->
+    in_path x p1 ->
+    in_path_before x (S n1) p2.
+Proof using.
+  intros R a n1 p1 n2 p2 x Hpre Hin.
+  dependent destruction Hpre.
+  invc Hin.
+  apply in_nseq_before__in_path_before.
+  eapply nseq_prefix_before; eassumption.
+Qed.
+
+Theorem in_path_at__get_prefix {A}:
+  forall (R: relation A) x i n a (p: path R n a),
+    in_path_at x i p ->
+    exists p': path R i a, path_prefix p' p.
+Proof using.
+  intros.
+  invc H.
+  apply in_nseq_at__get_prefix in H0.
+  destruct exists H0 r'.
+  exists (nseq_to_path r').
+  constructor.
+  assumption.
+Qed. 
+
+Theorem in_path__get_prefix {A}: 
+  forall (R: relation A) x n a (p: path R n a),
+    in_path x p ->
+    exists m (p': path R m a), path_prefix p' p.
+Proof using.
+  intros.
+  invc H.
+  apply in_nseq__get_prefix in H0.
+  destruct exists H0 m r'.
+  exists m (nseq_to_path r').
+  constructor.
+  assumption.
 Qed.

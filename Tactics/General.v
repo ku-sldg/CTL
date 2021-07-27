@@ -1,3 +1,4 @@
+Require Import Coq.Program.Equality.
 Require Import Coq.Init.Logic.
 Import EqNotations.
 
@@ -224,27 +225,29 @@ Ltac reflexive :=
         ]
   end.
 
-(* Ltac inv_rew H :=
-  inversion H;
-  inversion_sigma;
-  subst;
-  (* Look for equalities we can destruct into eq_refl *)
-  repeat match goal with
-  | H: ?x = ?x |- _ => destruct H
-  end;
-  repeat change (rew [_] eq_refl in ?x) with x in *. *)
-
-Ltac inv_rew H :=
-  inversion H;
+Ltac rew_sigma :=
   inversion_sigma;
   subst;
   repeat match goal with 
-  | H: context[rew [_] ?eq in _] |- _ => destruct eq
-  | |- context[rew [_] ?eq in _] => destruct eq
+  | H: context[rew [_] ?eq in _] |- _ => dependent destruction eq
+  | |- context[rew [_] ?eq in _] => dependent destruction eq
   end;
   repeat change (rew [_] eq_refl in ?x) with x in *;
   subst.
 
+Ltac inv_rew H :=
+  inversion H;
+  rew_sigma.
+
 Ltac inv_rewc H := inv_rew H; clear H.
 
 Ltac inv H ::= inv_rew H.
+
+(* Taken from StructTact 
+https://github.com/uwplse/StructTact/blob/a0f4aa3491edf27cf70ea5be3190b7efa8899971/theories/StructTactics.v#L309
+ *)
+Ltac break_let :=
+  match goal with
+    | [ H : context [ (let (_,_) := ?X in _) ] |- _ ] => destruct X eqn:?
+    | [ |- context [ (let (_,_) := ?X in _) ] ] => destruct X eqn:?
+  end.

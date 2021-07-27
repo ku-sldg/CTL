@@ -1,4 +1,4 @@
-Require Import Coq.Relations.Relation_Definitions.
+Require Import BinaryRelations.
 
 (* Record state A B := mkState {global : A; local : B}.
 Definition transition A B := relation (state A B). *)

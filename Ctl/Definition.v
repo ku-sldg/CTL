@@ -1,7 +1,5 @@
 Require Import Ctl.Paths.
-Require Import Coq.Relations.Relation_Definitions.
-
-(* A very shallow CTL embedding *)
+Require Import BinaryRelations.
 
 
 Definition tprop state := relation state -> state -> Prop.

@@ -1,17 +1,14 @@
 Require Import Ctl.Paths.
 Require Import Ctl.Definition.
 Require Import Ctl.Basic.
-Open Scope tprop_scope.
-
-Require Import Coq.Relations.Relation_Definitions.
-Require Import Coq.Relations.Relation_Operators.
 Require Import BinaryRelations.
+Open Scope tprop_scope.
 
 Require Import Coq.Program.Equality.
 Require Import Ctl.Tactics.
 Require Import Tactics.General.
+Require Import Tactics.Construct.
 
-(* Require Import Setoid. *)
 
 Theorem timpl_refl {state}: forall R (s: state) a,
   R @s ⊨ a ⟶ a.
@@ -97,39 +94,6 @@ Proof.
   (* intros n'. *)
 Admitted.
 
-Lemma path_step_rev_preserves_in {state}: 
-  forall (R: relation state) s s' (r: R s s') n (p: path R n s') x,
-    in_path x p ->
-    in_path x (path_step_rev R n s s' r p).
-Proof using.
-  introv H.
-  invc H.
-  induction H0; simpl; repeat constructor.
-  simpl in IHin_rtcT_idx.
-  dependent induction IHin_rtcT_idx.
-  assumption.
-Qed.
-
-Lemma rtcT_idx_path_step__rtcT_idx_path_step_rev {X}:
-  forall (R: relation X) s x x' n,
-    R x x' ->
-    R^# n s x ->
-    {s' &
-      R s s' &
-      R^# n s' x'}.
-Proof using.
-  introv Rxx' Rsx.
-  revert x' Rxx'.
-  induction Rsx; intros.
-  - exists x'.
-    + assumption. 
-    + constructor.
-  - applyc IHRsx in r.
-    destruct exists r s'.
-    exists s'.
-    + assumption.
-    + econstructor; eassumption.
-Qed.
 
 (* Expansion Laws *)
 Theorem expand_AG {state}: forall (R: relation state) s P, R@s ⊨ AG P ⟷ P ∧ AX (AG P).
@@ -150,9 +114,10 @@ Proof.
     rewrite rew_AG.
     intros n p s' Hin.
     destruct exists p s''.
+    (* dependent destruction Hin. *)
     invc Hin.
     induction H3; try assumption.
-    eapply rtcT_idx_path_step__rtcT_idx_path_step_rev in p;
+    eapply nseq_path_step__nseq_path_step_rev in p;
       [|eassumption]; clear r.
     destruct exists p s'.
     (* Note: unfold_AX in H2; unfold_AG in H2 doesn't seem to work here. Problem with binder? *)
@@ -259,8 +224,8 @@ Admitted.
 
 Theorem AW_ind {state}: forall (R: relation state) s P Q,
   R @s ⊨ P ∨ Q ->
-  (forall s' (Rss': R^* s s'),
-    (forall x, in_rtcT x Rss' -> R @x ⊨ P ∧ ¬ Q) ->
+  (forall s' (Rss': R#* s s'),
+    (forall x, in_seq x Rss' -> R @x ⊨ P ∧ ¬ Q) ->
     forall s'', R s' s'' ->
     R @s'' ⊨ P ∨ Q) -> 
   R @s ⊨ A[P W Q].
@@ -269,21 +234,62 @@ Proof using.
   rewrite rew_AW.
   intros n p y i Hin Hbefore.
   invc Hin.
+  apply in_nseq_at__get_prefix in H.
+  destruct exists H r'.
+  induction r'.
+  - assumption.
+  - specialize (IHr' Hinit Hstep r).
+    (* Here is the time for the classical reasoning.
+       If R @y ⊨ P ∧ ¬ Q, then apply IHr'.
+       else, goal is true by right.
+     *)
+    Require Import Classical.
+    destruct classic Hclass: (R @y ⊨ P ∧ ¬ Q).
+    + admit.
+    + 
+      clear - Hclass.
+      (* apply tentails_tdisj_r. *)
+      rewrite <- rew_tnot in Hclass.
+      assert (tconj_demorgans:
+        forall state (R: relation state) s (P Q: tprop state),
+          R @s ⊨ ¬ (P ∧ Q) ⟷ ¬ P ∨ ¬ Q).
+      { clear.
+        intros.
+        rewrite rew_tbiimpl.
+        split; intro H.
+        - rewrite rew_tdisj.
+          repeat rewrite rew_tnot.
+          apply not_and_or.
+          setoid_rewrite <- rew_tconj.
+          rewrite <- rew_tnot.
+          assumption.
+        - rewrite rew_tnot.
+          rewrite rew_tconj.
+          apply or_not_and.
+          repeat rewrite <- rew_tnot.
+          rewrite <- rew_tdisj.
+          assumption.
+      }
+      applyc tconj_demorgans in Hclass.
+
+(*
   induction H.
   - assumption.
-  - specialize (Hstep x (rtcT_idx_to_rtcT p)).
+  - specialize (Hstep x (nseq_to_seq p)).
     applyc Hstep; [|eassumption].
     intros x0 Hin.
     applyc Hbefore.
+    econstructor.
 
     clear - Hin.
     (* Obvious from Hin *)
     todo.
-  - apply IHin_rtcT_idx_at.
+  - apply IHin_nseq_at.
     intros x0 Hbefore2.
     applyc Hbefore.
     (* Obvious from Hbefore2 *)
     todo.
+*)
 Admitted.
 
 (* Theorem AU_from_AW {state}: forall (R: relation state) s P Q,
@@ -291,6 +297,176 @@ Admitted.
   R @s ⊨ A[P U Q].
 Proof using. *)
 
+Lemma not_before_0 {state}: forall (R: relation state) n s (p: path R n s) x,
+  ~ in_path_before x 0 p.
+Proof using.
+  intros.
+  let H := fresh in 
+    intro H; destruct H as [? [H _]]; inv H.
+Qed. 
+
+Definition seq_to_path {state} {R: relation state} {x y} (r: R^* x y): {n & path R n x}.
+  apply seq_to_nseq in r.
+  destruct exists r n.
+  exists n.
+  econstructor.
+  eassumption.
+Defined.
+
+Lemma in_path_ind : forall (state: Type) (R: relation state) n x (p: path R n x),
+  forall P: state -> Prop,
+  P x ->
+  (forall y z, R y z -> R^* x y -> P y -> P z) ->
+  forall y, in_path y p -> P y.
+Proof using.
+  intros state R n x p P Hinit Hstep y Hin.
+  construct in_path__seq in Hin.
+  induction Hin.
+  - assumption.
+  - eapply Hstep; eassumption.
+Qed.
+
+Print nseq.
+Print nseq_to_path.
+Lemma in_path_ind' : forall (state: Type) (R: relation state) x,
+  forall P: state -> forall n, path R n x -> Prop,
+  P x 0 (nseq_to_path (nseq_refl R x)) ->
+  (forall n y z (Ryz: R y z) (Rxy: R^#n x y),
+    P y n (nseq_to_path Rxy) ->
+    P z (S n) (nseq_to_path (nseq_step R n x y z Ryz Rxy))) ->
+  forall n (p: path R n x) y, in_path y p -> P y n p.
+Proof using.
+  intros state R x P Hinit Hstep n p y Hin.
+  construct in_path__seq in Hin.
+  apply seq_to_nseq in Hin.
+  destruct exists Hin m.
+  (* Need to know that Hin is a prefix of p *)
+  induction Hin.
+  - (* n should be 0 *)
+    assert (n = 0) by admit; subst.
+    destruct p.
+    dependent destruction r.
+    eapply Hinit.
+  - 
+Admitted.
+
+
+Theorem in_nseq_at_first {state}:
+  forall (R: relation state) n s s' (r: R^# n s s'),
+    in_nseq_at s 0 r.
+Proof using.
+  intros.
+  induction r; constructor.
+  assumption. 
+Qed.
+
+Theorem in_path_at_first {state}: forall (R: relation state) n s (p: path R n s),
+  in_path_at s 0 p.
+Proof using.
+  intros.
+  destruct p.
+  constructor.
+  apply in_nseq_at_first.
+Qed.
+
+(*
+(* This is essentially well-founded induction *)
+Lemma in_path_before_ind {state}: forall (R: relation state) n s (p: path R n s),
+  forall P : state -> Prop,
+  (forall i y,
+    in_path_at y i p ->
+    (forall x, in_path_before x i p -> P x) ->
+    P y) ->
+  forall s', in_path s' p -> P s'.
+Proof using.
+  intros R n s p P H s' Hin.
+  eapply in_path_ind; [| |apply Hin].
+  - eapply H.
+    + apply in_path_at_first.
+    + intros x Hbefore.
+      contradict Hbefore.
+      apply not_before_0.
+  - intros y z Ryz Rsy Py.
+    (* apply in_path__in_path_at in Hin.
+    destruct Hin as [m [_ Hin]]. *)
+    eapply H.
+    + eassumption.
+
+  induction Hin using in_path_ind.
+  destruct Hin.
+  apply in_nseq__in_nseq_at in H0.
+  destruct H0 as [m [mLtn Hin]].
+
+  induction Hin.
+  - eapplyc H.
+    + repeat constructor.
+    + intros x Hbefore.
+      contradict Hbefore.
+      apply not_before_0.
+  - eapplyc H.
+    + repeat constructor.
+    + intros x0 Hbefore.
+      
+      unfold nseq_to_path in Hbefore.
+      simpl in Hbefore.
+
+  apply in_path__in_path_at in Hin.
+  destruct Hin as [? [_ Hin]].
+  eapplyc H.
+  - eassumption.
+  - intros x0 Hbefore.
+*)
+
+(* Todo, change notation R^#n to R^n *)
+Inductive nseq_prefix {X} {R: relation X}
+  : forall {n m a b c}, R^#n a b -> R^# m a c -> Prop :=
+  | nseq_prefix_trivial :
+      forall n a b (Rab: R^# n a b),
+        nseq_prefix Rab Rab
+  | nseq_prefix_step :
+      forall n a b (Rab: R^#n a b) m c (Rac: R^#m a c) d (Rcd: R c d),
+        nseq_prefix Rab Rac ->
+        nseq_prefix Rab (nseq_step R m a c d Rcd Rac).
+
+Theorem nseq_prefix_trans {X}: forall {R: relation X} {nx ny nz a x y z},
+  forall (rx: R^#nx a x) (ry: R^#ny a y) (rz: R^#nz a z),
+    nseq_prefix rx ry ->
+    nseq_prefix ry rz ->
+    nseq_prefix rx rz.
+Proof using. 
+  intros R nx nyz nz a x y z rx ry rz Hxy Hyz.
+  revert nx x rx Hxy.
+  induction Hyz; intros.
+  - assumption.
+  - constructor.
+    apply IHHyz.
+    assumption.
+Qed.
+
+Lemma nseq_prefix_before {X}:
+  forall (R: relation X) a nb b (Rab: R^#nb a b) nc c (Rbc: R^#nc a c) x,
+    nseq_prefix Rab Rac ->
+    in_nseq x Rab ->
+    in_nseq_before x
+
+
+Theorem in_nseq_at__nseq {X}:
+  forall (R: relation X) x i n a b (r: R^#n a b),
+    in_nseq_at x i r ->
+    exists m (r': R^#m a x), nseq_prefix r' r.
+Proof using.
+  intros.
+  induction H.
+  - repeat eexists. constructor.
+  - repeat eexists. constructor.
+  - destruct exists IHin_nseq_at m' r'.
+    exists m' r'.
+    constructor.
+    assumption.
+Qed.
+
+(* Check in_nseq_at_ind. *)
+Require Import Classical.
 (* Exposes the earliest witness of AF *)
 Theorem AF_earliest {state}: forall (R: relation state) s P,
   R @s ⊨ AF P ->
@@ -308,6 +484,24 @@ Proof using.
      destruct cases of P is satisfied. If so, end early and prove ealiest.
      Else, continue.
    *)
+  (* Actually, induct over in_path_before s' *)
+  destruct H as [s' [Hin Hs']].
+  invc Hin.
+  induction H.
+  - exists s 0.
+    max split.
+    + constructor.
+    + assumption.
+    + intros x Hbefore.
+      contradict Hbefore.
+      apply not_before_0.
+  - exists x' n.
+    max split.
+    + constructor.
+    + assumption.
+    + intros x0 Hbefore.
+    admit.
+  - specialize (IHin_nseq Hs').
 
 Theorem AW_AF__AU {state}: forall (R: relation state) s P Q,
   (* R @s ⊨ A[P W Q] ∧ AF Q ⟶ A[P U Q]. *)
@@ -341,11 +535,11 @@ Proof using.
 (* How I want to prove R @s ⊨ A[P U Q]:
  *)
 
-Theorem EU_rtcT {state}: forall (R: relation state) s P Q,
+Theorem EU_seq {state}: forall (R: relation state) s P Q,
   (exists s' n (r: R^# n s s') s'', 
     R s' s'' /\
     R @s'' ⊨ Q /\ 
-    forall x, in_rtcT_idx x r -> R @x ⊨ P)
+    forall x, in_nseq x r -> R @x ⊨ P)
   -> R @s ⊨ E[P U Q].
 Proof using.
   intros.
@@ -354,27 +548,27 @@ Proof using.
   expand_tEntails.
   exists (S n).
   copy r r1.
-  eapply rtcT_idx_step in r1; [|eassumption]; clear H1.
-  exists (rtcT_idx_to_path r1) s'' n.
+  eapply nseq_step in r1; [|eassumption]; clear H1.
+  exists (nseq_to_path r1) s'' n.
   max split.
-  - (* in_rtcT_idx_at_last *)
+  - (* in_nseq_at_last *)
     admit.
   - assumption.
   - 
  
 
-Theorem EU_rtcT {state}: forall (R: relation state) s P Q,
+Theorem EU_seq {state}: forall (R: relation state) s P Q,
   (exists s' (r: R^* s s') s'', 
     R s' s'' /\
     R @s'' ⊨ Q /\ 
-    forall x, in_rtcT x r -> R @x ⊨ P)
+    forall x, in_seq x r -> R @x ⊨ P)
   -> R @s ⊨ E[P U Q].
 Proof using.
   intros.
   destruct exists H s' r s''.
   destruct H as [H1 [H2 H3]].
   expand_tEntails.
-  apply rtcT_to_rtcT_idx in r.
+  apply seq_to_nseq in r.
   exists 
 
   *)
