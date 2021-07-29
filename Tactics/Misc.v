@@ -150,23 +150,11 @@ Tactic Notation "do_u" uconstr(n) tactic(tac) :=
   (* idtac "do_u"; *)
   _do_u (box n) tac.
 
-(* Ltac intros_do_revert tac := *)
-(* Tactic Notation "intros_do_revert" tactic(tac) :=
-  repeat_count introv1 then (fun n =>
-    tac; 
-    do_u n (
-      (* idtac;  *)
-      match goal with 
-      | H :_ |- _ => idtac "hi"; revert H
-      end
-    )
-  ). *)
-
 (* Somehow inserting an idtac/semicolon delays execution *)
 Tactic Notation "just" tactic(tac) := idtac; tac.
 
 Tactic Notation "intros_do_revert" tactic(tac) :=
-  repeat_count introv1 then (fun n =>
+  repeat_count intro then (fun n =>
     tac; 
     do_u n (just 
     (* do_u n ( *)

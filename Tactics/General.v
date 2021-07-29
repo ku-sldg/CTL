@@ -160,6 +160,17 @@ Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
   "in" "*" "by" tactic(tac) :=
   gen I := l to P in *; [solve [tac]|].
 
+(* `gen eq` variant uses equality as the relation and solves the contraint 
+   automatically by reflexivity *)
+Tactic Notation "gen" "eq" ident(i) ":=" uconstr(u) :=
+  gen i := u to (eq u) by reflexivity.
+
+Tactic Notation "gen" "eq" ident(i) ":=" uconstr(u) "in" hyp(H) :=
+  gen i := u to (eq u) in H by reflexivity.
+
+Tactic Notation "gen" "eq" ident(i) ":=" uconstr(u) "in" "*" :=
+  gen i := u to (eq u) in * by reflexivity.
+
 
 (* A sylistic alias for `admit`. Used to distinguish admitted goals
    which you know how to solve and that you plan come back to once the 
@@ -196,25 +207,6 @@ Tactic Notation "max" "cuth" hyp(H) := _max_cuth.
 Ltac _max_cuth_by H tac := try (cuth H; [tac|_max_cuth]).
 Tactic Notation "max" "cuth" hyp(H) "by" tactic(tac) := _max_cuth_by H tac.
 
-
-(* Inspired by the TLC tactic of the same name
-https://github.com/charguer/tlc/blob/c6c9b344f36df70d600756fe20f2017730e48604/src/LibTactics.v#L1702
-  Likely much simpler, this tactic `intros` all the dependent hypotheses
-  (bound by a `forall`), then `intros` based on identifer list argument
- *)
-
-Tactic Notation "introv1" :=
-  match goal with 
-  (* Note, this only works because `intro x` fail for implications *)
-  | |- forall x, _ => intro x
-  end.
-
-Tactic Notation "introv" := repeat introv1.
-
-Tactic Notation "introv" ident_list(il) :=
-  introv; intros il.
-
-
 (* Solve a (registered) reflexive relation by proving the arguments equal *)
 Ltac reflexive := 
   match goal with 
@@ -225,23 +217,26 @@ Ltac reflexive :=
         ]
   end.
 
-Ltac rew_sigma :=
-  inversion_sigma;
-  subst;
+
+(* Dependent inv
+   Sometime, inversion leaves behind equalities of existT terms. This tactic 
+   uses dependent destruction to break these into further equalities.
+   (Note, this leverages axioms about equality)
+ *)
+
+Ltac dep_destr_sigma :=
   repeat match goal with 
-  | H: context[rew [_] ?eq in _] |- _ => dependent destruction eq
-  | |- context[rew [_] ?eq in _] => dependent destruction eq
-  end;
-  repeat change (rew [_] eq_refl in ?x) with x in *;
-  subst.
+  | H: existT _ _ _ = existT _ _ _ |- _ => dependent destruction H
+  end.
 
-Ltac inv_rew H :=
-  inversion H;
-  rew_sigma.
+Tactic Notation "dependent" "inv" hyp(H) :=
+  inv H;
+  dep_destr_sigma.
 
-Ltac inv_rewc H := inv_rew H; clear H.
+Tactic Notation "dependent" "invc" hyp(H) :=
+  invc H;
+  dep_destr_sigma.
 
-Ltac inv H ::= inv_rew H.
 
 (* Taken from StructTact 
 https://github.com/uwplse/StructTact/blob/a0f4aa3491edf27cf70ea5be3190b7efa8899971/theories/StructTactics.v#L309

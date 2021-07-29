@@ -149,7 +149,7 @@ Lemma nseq_step__nseq_step_rev {X}:
       R s s' &
       R#n s' x'}.
 Proof using.
-  introv Rxx' Rsx.
+  intros * Rxx' Rsx.
   revert x' Rxx'.
   induction Rsx; intros.
   - exists x'.
@@ -182,7 +182,7 @@ Theorem nseq_to_seq {A n} {R: relation A} {x y}:
   R#n x y ->
   R#* x y.
 Proof using.
-  introv H.
+  intros * H.
   induction H.
   - constructor.
   - econstructor; eassumption.
@@ -192,7 +192,7 @@ Theorem seq_to_nseq {A} {R: relation A} {x y}:
   R#* x y ->
   {n & R#n x y}.
 Proof using.
-  introv H.
+  intros * H.
   induction H.
   - eexists. constructor.
   - destruct exists IHseq n.
@@ -225,7 +225,7 @@ Theorem in_nseq_at__in_nseq {A}:
     in_nseq_at x m r ->
     in_nseq x r.
 Proof using.
-  introv H.
+  intros * H.
   induction H; constructor.
   assumption.
 Qed.
@@ -235,7 +235,7 @@ Theorem in_nseq__in_nseq_at {A}:
     in_nseq x r ->
     exists m, m <= n /\ in_nseq_at x m r.
 Proof using.
-  introv H.
+  intros * H.
   induction H.
   - eexists.
     split; [|constructor].
@@ -272,7 +272,7 @@ Theorem in_nseq__in_seq {A}:
     in_nseq x r ->
     in_seq x (nseq_to_seq r).
 Proof using.
-  introv H.
+  intros * H.
   induction H. 
   - constructor.
   - constructor.
@@ -280,6 +280,33 @@ Proof using.
     constructor.
     assumption.
 Qed.
+
+Theorem in_nseq_at_first {state}:
+  forall (R: relation state) n s s' (r: R# n s s'),
+    in_nseq_at s 0 r.
+Proof using.
+  intros.
+  induction r; constructor.
+  assumption. 
+Qed.
+
+Theorem in_nseq_first {state}:
+  forall (R: relation state) n s s' (r: R#n s s'),
+    in_nseq s r.
+Proof using.
+  intros.
+  induction r; constructor.
+  assumption. 
+Qed.
+
+Theorem in_nseq_last {state}:
+  forall n (R: relation state) s s' (r: R#n s s'),
+    in_nseq s' r.
+Proof using.
+  intros.
+  destruct r; constructor.
+Qed.
+
 
 Definition in_nseq_before {state} {R: relation state} {n s s'}
   x i (r: R#n s s') := 
@@ -371,7 +398,7 @@ Theorem in_nseq__get_prefix' {state}:
     in_nseq y Rxz ~>
     R#* x y.
 Proof using.
-  introv H.
+  intros * H.
   dependent induction H.
   - construct. constructor. 
   - construct.

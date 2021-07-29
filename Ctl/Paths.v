@@ -107,7 +107,7 @@ Lemma path_step_rev_preserves_in {state}:
     in_path x p ->
     in_path x (path_step_rev R n s s' r p).
 Proof using.
-  introv H.
+  intros * H.
   invc H.
   induction H0; simpl; repeat constructor.
   simpl in IHin_nseq.
@@ -115,50 +115,45 @@ Proof using.
   assumption.
 Qed.
 
-
-(* This would require in_path be switched from `Prop` to `Type` *)
-Theorem in_path_impl_rtc {state}:
-  forall (R: relation state) n s s' (p: path R n s),
-    in_path s' p -> R#* s s'.
-Proof.
-(* intros R n s s' p Hin.
-  invc Hin.
-  induction H.
-  - constructor.
-  - econstructor.
-    + eassumption.
-    + eapply path_to_impl_rtc.
-      eassumption.
-  - assumption.
-Qed.
-*)
-Abort.
-
-Theorem in_nseq_first {state}:
-  forall (R: relation state) n s s' (r: R#n s s'),
-    in_nseq s r.
-Proof using.
-  intros.
-  induction r; constructor.
-  assumption. 
-Qed.
-
-Theorem in_nseq_last {state}:
-  forall n (R: relation state) s s' (r: R#n s s'),
-    in_nseq s' r.
-Proof using.
-  intros.
-  destruct r; constructor.
-Qed.
-
 Theorem in_nseq__in_path {state}:
   forall n (R: relation state) x s s' (r: R#n s s'),
     in_nseq x r ->
     in_path x (nseq_to_path r).
 Proof using.
-  introv H.
+  intros * H.
   destruct H; repeat constructor.
   assumption.
+Qed.
+
+Theorem in_path_at_first {state}: forall (R: relation state) n s (p: path R n s),
+  in_path_at s 0 p.
+Proof using.
+  intros.
+  destruct p.
+  constructor.
+  apply in_nseq_at_first.
+Qed.
+
+Theorem in_path_at_first_inv {state}:
+  forall (R: relation state) n s (p: path R n s) x,
+    in_path_at x 0 p ->
+    x = s.
+Proof using.
+  intros.
+  invc H.
+  dependent induction H0.
+  - reflexivity.
+  - apply IHin_nseq_at.
+    reflexivity.
+Qed. 
+
+Theorem in_path_first {state}:
+  forall n (R: relation state) s s' (r: R#n s s'),
+    in_path s (nseq_to_path r).
+Proof using.
+  intros.
+  eapply in_nseq__in_path.
+  apply in_nseq_first.
 Qed.
 
 Theorem in_path_last {state}:
@@ -170,20 +165,10 @@ Proof using.
   apply in_nseq_last.
 Qed.
 
-Theorem in_path_first {state}:
-  forall n (R: relation state) s s' (r: R#n s s'),
-    in_path s (nseq_to_path r).
-Proof using.
-  intros.
-  eapply in_nseq__in_path.
-  apply in_nseq_first.
-Qed.
-
-Lemma rtc__in_some_path {state}: forall (R: relation state) s s',
+Lemma seq__in_some_path {state}: forall (R: relation state) s s',
   R#* s s' -> exists n (p: path R n s), in_path s' p.
 Proof using.
-  (* Why does `introv` intro x? *)
-  intros R s s' r.
+  intros * r.
   apply seq_to_nseq in r.
   destruct exists r n.
   exists n (nseq_to_path r).
@@ -196,29 +181,29 @@ Theorem in_path_combine {A}:
     in_path c pb ->
     exists l (p: path R l a), in_path c p.
 Proof using.
-  introv H.
-  revert n a pa x.
-  invc H.
-  induction H0; intros.
+  intros * Hin_pa Hin_pb.
+  revert n a pa Hin_pa.
+  destruct Hin_pb as [c b' r Hin].
+  induction Hin; intros.
   - eexists.
     exists pa.
     assumption.
   - eapply nseq_step in p; [|eassumption]; clear r.
-    invc x0.
+    invc Hin_pa.
     induction H.
     + exists (S n) (nseq_to_path p).
       apply in_path_last.
     + eapply nseq_step in p0; [|eassumption]; clear r.
-      eapply nseq_combine in p; [|eassumption]; clear p0.
+      eapply nseq_trans in p; [|eassumption]; clear p0.
       exists (S n0 + S n) (nseq_to_path p).
       apply in_path_last.
     + applyc IHin_nseq.
       assumption.
-  - eapply IHin_nseq.
+  - eapply IHHin.
     eassumption.
 Qed.
 
-Theorem in_path___get_prefix_seq {state}: forall (R:relation state) n s (p: path R n s) s',
+Theorem in_path__get_prefix_seq {state}: forall (R:relation state) n s (p: path R n s) s',
   in_path s' p ~>
   R#* s s'.
 Proof using.
@@ -256,7 +241,7 @@ Theorem in_path_at_prefix {A}:
 Proof using.
   intros R a n1 p1 n2 p2 x i Hpre Hin.
   dependent destruction Hpre.
-  invc Hin.
+  dependent invc Hin.
   constructor.
   eapply in_nseq_at_prefix; eassumption.
 Qed.
@@ -269,7 +254,7 @@ Lemma path_prefix_before {A}:
 Proof using.
   intros R a n1 p1 n2 p2 x Hpre Hin.
   dependent destruction Hpre.
-  invc Hin.
+  dependent invc Hin.
   apply in_nseq_before__in_path_before.
   eapply nseq_prefix_before; eassumption.
 Qed.
