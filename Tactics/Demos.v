@@ -17,18 +17,50 @@ induct H.
 Abort.
 
 
-(* max induct demo *)
+(* induct demo *)
 
-Goal forall A (x y z: list A), 
-  x ++ y ++ z = (x ++ y) ++ z.
-intros *.
-induction y.
-- admit.
-- (* Note non-generalized IH *)
+Lemma not_perm_cons_nil {A}: forall (x: A) (y: list A),
+  ~ Permutation (x :: y) [].
+Proof using.
+  intros * H.
+  induct H.
+  apply IHPermutation1.
+  clear - H0.
+  induct H0.
+  - reflexivity.
+  - etransitivity; eassumption.
+
+(* We could use max induct, although in this case it is actually
+   more work
+ *)
 Restart.
-intros *.
-max induct y.
-(* `max induction y` also works *)
-- admit.
-- (* This IH is generalized *)
-Abort.
+  intros * H.
+  max induct H.
+  eapply IHPermutation1. reflexivity.
+  clear - H0.
+  max induct H0.
+  - reflexivity.
+  - etransitivity; eassumption.
+Qed.
+
+Inductive loverlap {A}: list A -> list A -> Prop :=
+  | loverlap_hd : forall a l1 l2,
+      loverlap (a :: l1) (a :: l2)
+  | loverlap_perm : forall l1 l1' l2 l2',
+      Permutation l1 l1' ->
+      Permutation l2 l2' ->
+      loverlap l1 l2 ->
+      loverlap l1' l2'.
+
+Lemma not_loverlap_empty {A}: forall l: list A,
+  ~ loverlap l [].
+Proof using.
+  intros l H.
+  induct H.
+  applyc IHloverlap.
+  clear - H0.
+  induct H0.
+  - reflexivity.
+  - transitivity l'; assumption.
+Qed.
+

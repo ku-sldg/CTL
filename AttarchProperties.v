@@ -19,7 +19,7 @@ Proof.
   intros n p s' Hin.
   construct in_path__get_prefix_seq in Hin.
   clear p n.
-  (* dependent induction Hin *)
+  (* max induct Hin. *)
   induct Hin.
   - tentails. discriminate.
   - invc r; try (apply IHHin; reflexivity).

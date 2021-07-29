@@ -52,15 +52,16 @@ Ltac _max_induction_by H inductStep :=
       ifnot delay hyp_eq H H' then
       revert H'
   end then fun n =>
-    inductStep H; do_u (S n) intro
+    inductStep H; do_u n intro
   end.
 
 Tactic Notation "max" "induction" hyp(H) :=
-  _max_induction_by H ltac:(fun hyp => induction H).
+  _max_induction_by H ltac:(fun hyp => induction hyp).
 
 Tactic Notation "max" "induction" hyp(H) "using" constr(c) :=
-  _max_induction_by H ltac:(fun hyp => induction H using c).
+  _max_induction_by H ltac:(fun hyp => induction hyp using c).
 
+(* Can't call this? *)
 Tactic Notation "max" "dependent" "induction" hyp(H) :=
   _max_induction_by H ltac:(fun hyp => dependent induction hyp).
 
