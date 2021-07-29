@@ -2,9 +2,13 @@
 
 Classical.v
 
+Tactics/Combinators.v
 Tactics/General.v
+Tactics/Gen.v
+Tactics/Induct.v
 Tactics/Construct.v
 Tactics/Misc.v
+Tactics/Tactics.v
 
 BinaryRelations.v
 
@@ -13,6 +17,7 @@ Ctl/Definition.v
 Ctl/Basic.v
 Ctl/Tactics.v
 Ctl/Properties.v
+Ctl/Ctl.v
 
 TransitionSystems.v
 Privilege.v

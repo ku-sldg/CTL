@@ -1,8 +1,7 @@
 Require Import BinaryRelations.
 
 Require Import Coq.Program.Equality.
-Require Import Tactics.General.
-Require Import Tactics.Construct.
+Require Import Tactics.Tactics.
 
 Definition path {state} (R: relation state) (n: nat) (s: state) :=
   {s' & R# n s s'}.
@@ -111,7 +110,7 @@ Proof using.
   invc H.
   induction H0; simpl; repeat constructor.
   simpl in IHin_nseq.
-  dependent induction IHin_nseq.
+  dependent destruction IHin_nseq.
   assumption.
 Qed.
 
@@ -141,10 +140,9 @@ Theorem in_path_at_first_inv {state}:
 Proof using.
   intros.
   invc H.
-  dependent induction H0.
+  induct H0.
   - reflexivity.
   - apply IHin_nseq_at.
-    reflexivity.
 Qed. 
 
 Theorem in_path_first {state}:

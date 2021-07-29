@@ -6,6 +6,19 @@ Open Scope tprop_scope.
 Require Import Tactics.General.
 Require Import Tactics.Misc.
 
+
+Ltac tentails :=
+  match goal with 
+  | |- ?R @?s ⊨ ?P => change_no_check (R @s ⊨ P) with (P R s)
+  end.
+
+Tactic Notation "tentails!" :=
+  repeat match goal with 
+  | |- ?R @?s ⊨ ?P => unfold P
+  end;
+  change_no_check (?R @?s ⊨ ?P) with (P R s);
+  cbn.
+
 (*
 Tactic Notation "unfold_timpl" :=
   progress change_no_check (?R @?s ⊨ ?p ⟶ ?q) with (R @s ⊨ p -> R @s ⊨ q).
