@@ -1,13 +1,5 @@
 Require Import Coq.Program.Equality.
-Require Import Coq.Init.Logic.
-Import EqNotations.
-
 Require Import Tactics.Combinators.
-
-(* Modified from the `StructTact` library definition:
-   https://github.com/uwplse/StructTact/blob/a0f4aa3491edf27cf70ea5be3190b7efa8899971/theories/StructTactics.v#L17
- *)
-Ltac inv H := inversion H; subst; try contradiction.
 
 (* Overwrite exists tactic to support multiple instantiations 
    (up to four)
@@ -46,7 +38,6 @@ Tactic Notation "destruct" "or" hyp(H) := destruct H as [H|H].
    after using it.
  *)
 
-Ltac invc H := inv H; clear H.
 Tactic Notation "applyc" hyp(H) := apply H; clear H.
 Tactic Notation "applyc" hyp(H) "in" hyp(H2) := apply H in H2; clear H.
 Tactic Notation "eapplyc" hyp(H) := eapply H; clear H.
@@ -146,26 +137,6 @@ Ltac reflexive :=
   end.
 
 
-(* Dependent inv
-   Sometime, inversion leaves behind equalities of existT terms. This tactic 
-   uses dependent destruction to break these into further equalities.
-   (Note, this leverages axioms about equality)
- *)
-
-Ltac dep_destr_sigma :=
-  repeat match goal with 
-  | H: existT _ _ _ = existT _ _ _ |- _ => dependent destruction H
-  end.
-
-Tactic Notation "dependent" "inv" hyp(H) :=
-  inv H;
-  dep_destr_sigma.
-
-Tactic Notation "dependent" "invc" hyp(H) :=
-  invc H;
-  dep_destr_sigma.
-
-
 (* Taken from StructTact 
 https://github.com/uwplse/StructTact/blob/a0f4aa3491edf27cf70ea5be3190b7efa8899971/theories/StructTactics.v#L309
  *)
@@ -174,3 +145,20 @@ Ltac break_let :=
     | [ H : context [ (let (_,_) := ?X in _) ] |- _ ] => destruct X eqn:?
     | [ |- context [ (let (_,_) := ?X in _) ] ] => destruct X eqn:?
   end.
+
+
+(* Specialize hypothesis with a unification variable *)
+Ltac especialize H := 
+  match type of H with 
+  | forall x : ?T, _ => 
+      let x' := fresh x in
+      evar (x': T);
+      specialize (H x');
+      unfold x' in H;
+      clear x'
+  end.
+
+
+(* repeat one or more times *)
+Tactic Notation "repeat+" tactic(tac) :=
+  tac; repeat tac.

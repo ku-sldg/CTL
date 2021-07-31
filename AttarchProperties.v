@@ -19,15 +19,14 @@ Proof.
   intros n p s' Hin.
   construct in_path__get_prefix_seq in Hin.
   clear p n.
-  (* max induct Hin. *)
-  induct Hin.
+  induct* Hin.
   - tentails. discriminate.
-  - invc r; try (apply IHHin; reflexivity).
+  - invc r; try apply IHHin.
     invc H.
-    + invc H1; try (apply IHHin; reflexivity).
+    + invc H0; try apply IHHin.
       tentails!.
       reflexivity.
-    + invc H1; [|inv H0]; apply IHHin; reflexivity.
+    + invc H0; [|inv H]; apply IHHin.
 Qed.
 (* Print Assumptions useram_key_never_compromised. *)
 
@@ -44,7 +43,7 @@ Proof using.
     copy Hin Hin';
     apply in_path_at__get_prefix in Hin' as [p' Hprefix].
   destruct exists p' curr_state.
-  induct p'.
+  max induct* p'.
   - apply in_path_at_first_inv in Hin as ->.
     apply tentails_tdisj_l.
     tentails.

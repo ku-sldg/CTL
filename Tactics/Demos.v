@@ -36,7 +36,9 @@ Proof using.
 Restart.
   intros * H.
   max induct H.
-  eapply IHPermutation1. reflexivity.
+  find_ecut_eqs.
+  eapply IHPermutation1.
+  (* reflexivity. *)
   clear - H0.
   max induct H0.
   - reflexivity.
@@ -64,3 +66,23 @@ Proof using.
   - transitivity l'; assumption.
 Qed.
 
+
+(* revert_accum demo *)
+
+(* This is the same definition as in Combinators, but for some 
+   reason only works once redefined...
+ *)
+Ltac foreach_bl l tac ::=
+  match l with 
+  | box ?h :: ?t => tac h; foreach_bl t tac
+  | [] => idtac
+  end.
+
+Goal nat -> nat -> nat -> False.
+repeat_accum ([]: list Box) fun a cont =>
+  let H := fresh in
+  if intro H then
+    `cont (box H :: a)
+  else 
+    idtac a;
+    revert_bl a.

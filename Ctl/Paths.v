@@ -46,6 +46,7 @@ Theorem in_path__in_path_at {state} {R: relation state} {n s}:
     exists m, m <= n /\ in_path_at x m p.
 Proof.
   intros x p H.
+  (* inversion H; subst; clear H. *)
   invc H.
   apply in_nseq__in_nseq_at in H0.
   destruct exists H0 m.
@@ -140,9 +141,7 @@ Theorem in_path_at_first_inv {state}:
 Proof using.
   intros.
   invc H.
-  induct H0.
-  - reflexivity.
-  - apply IHin_nseq_at.
+  induct* H0; reflexivity.
 Qed. 
 
 Theorem in_path_first {state}:
@@ -225,7 +224,7 @@ Theorem path_prefix_trans {A}: forall {R: relation A} {a n1 n2 n3},
     path_prefix p1 p3.
 Proof using. 
   intros R a n1 n2 n3 p1 p2 p3 H12 H23.
-  dependent destruction H12.
+  destruction H12.
   dependent destruction H23.
   constructor.
   eapply nseq_prefix_trans; eassumption.
@@ -238,7 +237,7 @@ Theorem in_path_at_prefix {A}:
     in_path_at x i p2.
 Proof using.
   intros R a n1 p1 n2 p2 x i Hpre Hin.
-  dependent destruction Hpre.
+  destruction Hpre.
   dependent invc Hin.
   constructor.
   eapply in_nseq_at_prefix; eassumption.
@@ -251,7 +250,7 @@ Lemma path_prefix_before {A}:
     in_path_before x (S n1) p2.
 Proof using.
   intros R a n1 p1 n2 p2 x Hpre Hin.
-  dependent destruction Hpre.
+  destruction Hpre.
   dependent invc Hin.
   apply in_nseq_before__in_path_before.
   eapply nseq_prefix_before; eassumption.

@@ -6,4 +6,6 @@
 *.vok
 *.vos
 
+Test/*
+
 Makefile.conf

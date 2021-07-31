@@ -6,8 +6,7 @@ Open Scope tprop_scope.
 
 Require Import Coq.Program.Equality.
 Require Import Ctl.Tactics.
-Require Import Tactics.General.
-Require Import Tactics.Construct.
+Require Import Tactics.Tactics.
 
 
 Theorem timpl_refl {state}: forall R (s: state) a,
@@ -115,7 +114,7 @@ Proof.
     intros n p s' Hin.
     destruct exists p s''.
     dependent invc Hin.
-    induction H3; try assumption.
+    induction H; try assumption.
     eapply nseq_step__nseq_step_rev in p;
       [|eassumption]; clear r.
     destruct p as [s' Rss' Rs'x'].
