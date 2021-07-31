@@ -21,6 +21,10 @@ Ltac gen_eq_something H :=
   repeat match type of H with
   | context[_ ?x] => 
       ifnot is_var x then
+      (* Should this be `in H`?
+         Perhaps in any situation where it would matter, we would 
+         want it this general.
+       *)
       gen eq ? := x in *
   end.
 
@@ -48,7 +52,7 @@ Tactic Notation "induct" hyp(H) "using" uconstr(c) :=
 
 (* induct* variant does more work to clean up the context.
    
-   In particular, refulat induct can leaves behind silly hypotheses
+   In particular, regular induct can leaves behind silly hypotheses
    of the form
      H : forall x' ... z', x ... z = x' ... z' -> foo
    induct* will automatically instantiate and cut such hypotheses to
@@ -91,8 +95,7 @@ Ltac find_ecut_eqs :=
 Ltac _induct_star_by H inductStep :=
   repeat_count progress gen_eq_something H
   then fun n => 
-    (* inductStep H; do_u (S n) (intros [=<-] + intro) *)
-    inductStep H; repeat (intros [=<-] + intro)
+    inductStep H; repeat intro_try_rew
   end;
   find_ecut_eqs;
   subst;
