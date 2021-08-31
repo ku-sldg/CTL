@@ -35,6 +35,15 @@ Tactic Notation "econstructc" hyp(c) "in" hyp(H) :=
   econstruct c in H;
   clear c.
 
+Theorem lift_arrow: forall a b,
+  (a -> b) ->
+  (a ~> b).
+Proof using.
+  intros * H Ha.
+  constructor.
+  auto.
+Qed. 
+
 Theorem lift_constructs_l: forall a b,
   (a ~> b) ->
   (~> a) ~> b.

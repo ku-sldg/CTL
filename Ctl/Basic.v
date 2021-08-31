@@ -3,16 +3,21 @@ Require Import Ctl.Definition.
 Require Import BinaryRelations.
 Open Scope tprop_scope.
 
+Section Basic.
 
-Theorem tentails_ttop {state}: forall (R: relation state) s,
+Variable state : Type.
+Variable R: relation state.
+Variable s: state.
+
+Theorem tentails_ttop :
   R @s ⊨ ⊤.
 Proof using. intros; exact I. Qed.
 
-Theorem ntentails_tbot {state}: forall (R: relation state) s,
+Theorem ntentails_tbot :
   R @s ⊭ ⊥.
 Proof using. auto. Qed.
 
-Theorem tentails_tconj {state}: forall (R: relation state) s P Q,
+Theorem tentails_tconj : forall P Q,
   R @s ⊨ P ->
   R @s ⊨ Q ->
   R @s ⊨ P ∧ Q.
@@ -21,12 +26,12 @@ Proof using.
   split; assumption.
 Qed.
 
-Theorem rew_tconj {state}: forall (R: relation state) s P Q,
+Theorem rew_tconj : forall P Q,
   R @s ⊨ P ∧ Q =
   (R @s ⊨ P /\ R @s ⊨ Q).
 Proof using. reflexivity. Qed.
 
-Theorem tentails_tdisj_l {state}: forall (R: relation state) s P Q,
+Theorem tentails_tdisj_l : forall P Q,
   R @s ⊨ P ->
   R @s ⊨ P ∨ Q.
 Proof using.
@@ -35,7 +40,7 @@ Proof using.
   assumption.
 Qed.
 
-Theorem tentails_tdisj_r {state}: forall (R: relation state) s P Q,
+Theorem tentails_tdisj_r : forall P Q,
   R @s ⊨ Q ->
   R @s ⊨ P ∨ Q.
 Proof using.
@@ -44,78 +49,80 @@ Proof using.
   assumption. 
 Qed.
 
-Theorem rew_tdisj {state}: forall (R: relation state) s P Q,
+Theorem rew_tdisj : forall P Q,
   R @s ⊨ P ∨ Q = 
   (R @s ⊨ P \/ R @s ⊨ Q).
 Proof using. reflexivity. Qed.
 
-Theorem rew_timpl {state}: forall (R: relation state) s P Q,
+Theorem rew_timpl : forall P Q,
   R @s ⊨ P ⟶ Q =
   (R @s ⊨ P -> R @s ⊨ Q).
 Proof using. reflexivity. Qed.
 
-Theorem rew_tbiimpl {state}: forall (R: relation state) s P Q,
+Theorem rew_tbiimpl : forall P Q,
   R @s ⊨ P ⟷ Q =
   (R @s ⊨ P <-> R @s ⊨ Q).
 Proof using. reflexivity. Qed.
 
-Theorem rew_tnot {state}: forall (R: relation state) s P,
+Theorem rew_tnot : forall P,
   R @s ⊨ ¬ P =
   (R @s ⊭ P).
 Proof using. reflexivity. Qed.
 
-Theorem rew_AX {state}: forall (R: relation state) s P,
+Theorem rew_tlift : forall P,
+  R @s ⊨ ⟨P⟩ =
+  P s.
+Proof using. reflexivity. Qed.
+
+Theorem rew_AX : forall P,
   R @s ⊨ AX P =
   forall s', R s s' -> R @s' ⊨ P.
 Proof using. reflexivity. Qed. 
 
-Theorem rew_EX {state}: forall (R: relation state) s P,
+Theorem rew_EX : forall P,
   R @s ⊨ EX P =
   exists s', R s s' /\ R @s' ⊨ P.
 Proof using. reflexivity. Qed. 
 
-Theorem rew_AG {state}: forall (R: relation state) s P,
+Theorem rew_AG : forall P,
   R @s ⊨ AG P =
-  forall n (p: path R n s) s', in_path s' p -> R @s' ⊨ P.
+  forall (p: path R s) s', in_path s' p -> R @s' ⊨ P.
 Proof using. reflexivity. Qed.
 
-Theorem rew_EG {state}: forall (R: relation state) s P,
+Theorem rew_EG : forall P,
   R @s ⊨ EG P = 
-  forall n, exists p: path R n s, forall s', in_path s' p -> R @s' ⊨ P.
+  exists p: path R s, forall s', in_path s' p -> R @s' ⊨ P.
 Proof using. reflexivity. Qed.
 
-Theorem rew_AF {state}: forall (R: relation state) s P,
+Theorem rew_AF : forall P,
   R @s ⊨ AF P = 
-  exists n, forall p: path R n s, exists s', in_path s' p /\ R @s' ⊨ P.
+  forall p: path R s, exists s', in_path s' p /\ R @s' ⊨ P.
 Proof using. reflexivity. Qed.
 
-Theorem rew_EF {state}: forall (R: relation state) s P,
+Theorem rew_EF : forall P,
   R @s ⊨ EF P =
-  exists n (p: path R n s) s', in_path s' p /\ R @s' ⊨ P.
+  exists (p: path R s) s', in_path s' p /\ R @s' ⊨ P.
 Proof using. reflexivity. Qed.
 
-Theorem rew_AU {state}: forall (R: relation state) s P Q,
+Theorem rew_AU : forall P Q,
   R @s ⊨ A[P U Q] =  
-  exists n, forall p: path R n s, exists sQ i,
+  forall p: path R s, exists sQ i,
     in_path_at sQ i p /\ 
-    R @sQ ⊨ Q /\
-    forall sP, in_path_before sP i p -> R @sP ⊨ P.
+    (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
+    R @sQ ⊨ Q.
 Proof using. reflexivity. Qed.
 
-Theorem rew_EU {state}: forall (R: relation state) s P Q,
+Theorem rew_EU : forall P Q,
   R @s ⊨ E[P U Q] =
-  exists n (p: path R n s) sQ i,
+  exists (p: path R s) sQ i,
     in_path_at sQ i p /\ 
-    R @sQ ⊨ Q /\
-    forall sP, in_path_before sP i p -> R @sP ⊨ P.
+    (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
+    R @sQ ⊨ Q.
 Proof using. reflexivity. Qed.
 
-Theorem rew_AW {state}: forall (R: relation state) s P Q,
+Theorem rew_AW : forall P Q,
   R @s ⊨ A[P W Q] =
-  forall n (p: path R n s) y i,
-    in_path_at y i p ->
-    (forall x,
-      in_path_before x i p ->
-      R @x ⊨ P ∧ ¬Q) ->
-    R @y ⊨ P ∨ Q.
+  (R @s ⊨ A[P U Q] ∨ ¬AF P).
 Proof using. reflexivity. Qed.
+
+End Basic.

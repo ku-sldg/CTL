@@ -3,20 +3,20 @@ Require Import Ctl.Definition.
 Require Import Ctl.Basic.
 Open Scope tprop_scope.
 
-Require Import Tactics.General.
-Require Import Tactics.Misc.
-
+Require Import Setoid.
+Require Import Tactics.Tactics.
 
 Ltac tentails :=
   match goal with 
-  | |- ?R @?s ⊨ ?P => change_no_check (R @s ⊨ P) with (P R s)
+  | |- ?R @?s ⊨ ⟨?P⟩ => change_no_check (P s)
   end.
 
 Tactic Notation "tentails!" :=
+  cbn;
   repeat match goal with 
   | |- ?R @?s ⊨ ?P => unfold P
   end;
-  change_no_check (?R @?s ⊨ ?P) with (P R s);
+  change_no_check (?R @?s ⊨ ⟨?P⟩) with (P s);
   cbn.
 
 (*
@@ -98,6 +98,15 @@ Tactic Notation "unfold_tbiimpl" "in" hyp(H) :=
   rewrite rew_tbiimpl in H +
   setoid_rewrite rew_tbiimpl in H.
 
+Tactic Notation "unfold_tlift" := 
+  progress change_no_check (?R @?s ⊨ ⟨?P⟩) with (P s) +
+  rewrite rew_tlift +
+  setoid_rewrite rew_tlift.
+Tactic Notation "unfold_tlift" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ ⟨?P⟩) with (P s) in H +
+  rewrite rew_tlift in H +
+  setoid_rewrite rew_tlift in H.
+
 Tactic Notation "unfold_AX" := 
   progress change_no_check (?R @?s ⊨ AX ?P) with (forall s', R s s' -> R @s' ⊨ P) +
   rewrite rew_AX +
@@ -108,55 +117,55 @@ Tactic Notation "unfold_AX" "in" hyp(H) :=
   setoid_rewrite rew_AX in H.
 
 Tactic Notation "unfold_EX" := 
-  progress change_no_check (?R @?s ⊨ EX ?P) with (exists s', R s s' -> R @s' ⊨ P) +
+  progress change_no_check (?R @?s ⊨ EX ?P) with (exists s', R s s' /\ R @s' ⊨ P) +
   rewrite rew_EX +
   setoid_rewrite rew_EX.
 Tactic Notation "unfold_EX" "in" hyp(H) := 
-  progress change_no_check (?R @?s ⊨ EX ?P) with (exists s', R s s' -> R @s' ⊨ P) in H +
+  progress change_no_check (?R @?s ⊨ EX ?P) with (exists s', R s s' /\ R @s' ⊨ P) in H +
   rewrite rew_EX in H +
   setoid_rewrite rew_EX in H.
 
 Tactic Notation "unfold_AG" := 
   progress change_no_check (?R @?s ⊨ AG ?P) with 
-    (forall n (p: path R n s) s', in_path s' p -> R @s' ⊨ P) +
+    (forall (p: path R s) s', in_path s' p -> R @s' ⊨ P) +
   rewrite rew_AG +
   setoid_rewrite rew_AG.
 Tactic Notation "unfold_AG" "in" hyp(H) := 
   progress change_no_check (?R @?s ⊨ AG ?P) with 
-    (forall n (p: path R n s) s', in_path s' p -> R @s' ⊨ P) in H +
+    (forall (p: path R s) s', in_path s' p -> R @s' ⊨ P) in H +
   rewrite rew_AG in H +
   setoid_rewrite rew_AG in H.
 
 Tactic Notation "unfold_EG" := 
   progress change_no_check (?R @?s ⊨ EG ?P) with 
-    (forall n, exists p: path R n s, forall s', in_path s' p -> R @s' ⊨ P) +
+    (exists p: path R s, forall s', in_path s' p -> R @s' ⊨ P) +
   rewrite rew_EG +
   setoid_rewrite rew_EG.
 Tactic Notation "unfold_EG" "in" hyp(H) := 
   progress change_no_check (?R @?s ⊨ EG ?P) with 
-    (forall n, exists p: path R n s, forall s', in_path s' p -> R @s' ⊨ P) in H +
+    (exists p: path R s, forall s', in_path s' p -> R @s' ⊨ P) in H +
   rewrite rew_EG in H +
   setoid_rewrite rew_EG in H.
 
 Tactic Notation "unfold_AF" := 
   progress change_no_check (?R @?s ⊨ AF ?P) with 
-    (exists n, forall p: path R n s, exists s', in_path s' p /\ R @s' ⊨ P) +
+    (forall p: path R s, exists s', in_path s' p /\ R @s' ⊨ P) +
   rewrite rew_AF +
   setoid_rewrite rew_AF.
 Tactic Notation "unfold_AF" "in" hyp(H) := 
   progress change_no_check (?R @?s ⊨ AF ?P) with 
-    (exists n, forall p: path R n s, exists s', in_path s' p /\ R @s' ⊨ P) in H +
+    (forall p: path R s, exists s', in_path s' p /\ R @s' ⊨ P) in H +
   rewrite rew_AF in H +
   setoid_rewrite rew_AF in H.
 
 Tactic Notation "unfold_EF" := 
   progress change_no_check (?R @?s ⊨ EF ?P) with 
-    (exists n (p: path R n s) s', in_path s' p /\ R @s' ⊨ P) +
+    (exists (p: path R s) s', in_path s' p /\ R @s' ⊨ P) +
   rewrite rew_EF +
   setoid_rewrite rew_EF.
 Tactic Notation "unfold_EF" "in" hyp(H) := 
   progress change_no_check (?R @?s ⊨ EF ?P) with 
-    (exists n (p: path R n s) s', in_path s' p /\ R @s' ⊨ P) in H +
+    (exists (p: path R s) s', in_path s' p /\ R @s' ⊨ P) in H +
   rewrite rew_EF in H +
   setoid_rewrite rew_EF in H.
 
@@ -164,13 +173,13 @@ Tactic Notation "unfold_EF" "in" hyp(H) :=
 
 Tactic Notation "tintro" := 
   match goal with
-  | |- _ @_ ⊨ ¬ _ => unfold_tnot; intro
+  | |- _ @_ ⊨ ¬_ => unfold_tnot; intro
   | |- _ @_ ⊨ _ ⟶ _ => unfold_timpl; intro
   end.
 
 Tactic Notation "tintro" ident(x) := 
   match goal with
-  | |- _ @_ ⊨ ¬ _ => unfold_tnot; intro x
+  | |- _ @_ ⊨ ¬_ => unfold_tnot; intro x
   | |- _ @_ ⊨ _ ⟶ _ => unfold_timpl; intro x
   end.
 
@@ -217,6 +226,7 @@ Tactic Notation "tsimpl_step" "in" hyp(H) :=
 Tactic Notation "tsimpl" := repeat tsimpl_step.
 Tactic Notation "tsimpl" "in" hyp(H) := repeat tsimpl_step in H.
 Tactic Notation "tsimpl" "in" "*" :=
+  try tsimpl;
   repeat match goal with 
   | H: _ @_ ⊨ _ |- _ => tsimpl in H
   end.

@@ -4,10 +4,13 @@ Require Import Ctl.Basic.
 Require Import BinaryRelations.
 Open Scope tprop_scope.
 
-Require Import Coq.Program.Equality.
+(* Require Import Coq.Program.Equality. *)
 Require Import Ctl.Tactics.
 Require Import Tactics.Tactics.
+Require Import Classical.
 
+
+(* Properties of implication *)
 
 Theorem timpl_refl {state}: forall R (s: state) a,
   R @s ⊨ a ⟶ a.
@@ -62,6 +65,332 @@ Ltac ettransitivity :=
       simple eapply (timpl_trans' R s a _ b)
   end.
 
+Theorem textensionality {state}: forall (R: relation state) s P Q,
+  R @s ⊨ P ⟷ Q ->
+  (R @s ⊨ P) = (R @s ⊨ Q).
+Proof using.
+  intros.
+  extensionality.
+  assumption.
+Qed.
+
+Lemma tNNPP {state}: forall (R: relation state) s P, 
+(* TODO: fix precedence so parantheses not necessary *)
+  R @s ⊨ (¬¬P) ⟶ P.
+Proof using.
+  intros *.
+  tintro H.
+  now apply NNPP.
+Qed.
+
+Lemma rew_tNNPP {state}: forall (R: relation state) s P, 
+  (R @s ⊨ ¬¬P) = (R @s ⊨ P).
+Proof using.
+  intros *.
+  extensionality.
+  split.
+  - tapply tNNPP.
+  - intro.
+    tintro contra.
+    now tapply contra.
+Qed.
+
+
+(* Properties of CTL path-quantifying formulas *)
+
+Theorem star__AG {state}: forall (R: relation state) s P,
+  (forall s', R^* s s' -> R @s' ⊨ P) ->
+  R @s ⊨ AG P.
+Proof using.
+  intros * H.
+  tsimpl.
+  intros * Hin.
+  applyc H.
+  enow eapply in_path__star.
+Qed.
+
+Theorem AG__star {state}: forall (R: relation state) s P,
+  serial_witness R ->
+  R @s ⊨ AG P ->
+  forall s', R^* s s' -> R @s' ⊨ P.
+Proof using.
+  intros * Hserial H.
+  intros s' Hstar.
+  apply (star__in_path _ _ _ _ Hserial) in Hstar.
+  destruct exists Hstar p.
+  enow etapply H.
+Qed.
+
+Theorem rew_AG_star {state}: forall (R: relation state) s P,
+  serial_witness R ->
+  R @s ⊨ AG P =
+    forall s', R^* s s' -> R @s' ⊨ P.
+Proof using.
+  intros * Hserial.
+  extensionality.
+  split.
+  - now apply AG__star.
+  - apply star__AG.
+Qed.
+
+(* Lemma in_path_combine {state}: forall (R: relation state),
+  forall s (p: path R s) s' (p': path R s') s'',
+    in_path s' p ->
+    in_path s'' p' ->
+    in_path s'' p.
+Proof using.
+  intros * Hin Hin'.
+  induct Hin.
+  - 
+  - apply in_tail.
+    find eapplyc.
+    find eapplyc. *)
+
+(* TODO: demorgans tactic which uses an extensible hint database for rewriting? *)
+
+Theorem AG_idempotent {state}: forall (R: relation state) s P,
+  R @s ⊨ AG P ⟶ AG (AG P).
+Proof using.
+  intros *.
+  tintro H.
+  tsimpl.
+  intros * Hin * Hin'.
+  etapply H.
+Admitted.
+
+
+(* De Morgan's Laws *)
+
+Theorem AF_EG {state}: forall R (s: state) P,
+  R @s ⊨ AF (¬P) ⟶ ¬EG P.
+Proof using.
+  intros *.
+  tintros H Hcontra.
+  tsimpl in *.
+  destruct exists Hcontra p.
+  specialize (H p).
+  destruct exists H s'.
+  destruct H; auto.
+Qed.
+
+Theorem AF_EG' {state}: forall R (s: state) P,
+  R @s ⊨ ¬AF P ⟶ EG (¬P).
+Proof using.
+  intros *.
+  tintro H.
+  tsimpl in *.
+  overwrite H (not_all_ex_not _ _ H); simpl in H.
+  destruct exists H p.
+  exists p.
+  intros s' Hin contra.
+  overwrite H (not_ex_all_not _ _ H); simpl in H.
+  enow eapply H.
+Qed.
+
+Theorem EG_AF {state}: forall R (s: state) P,
+  R @s ⊨ EG (¬P) ⟶ ¬AF P.
+Proof using.
+  intros *.
+  tintros H Hcontra.
+  tsimpl in *.
+  destruct exists H p.
+  specialize (Hcontra p).
+  destruct exists Hcontra s'.
+  destruct Hcontra.
+  enow etapply H.
+Qed.
+
+Theorem EG_AF' {state}: forall R (s: state) P,
+  R @s ⊨ ¬EG P ⟶ AF (¬P).
+Proof using.
+  intros *.
+  tintro H.
+  tsimpl in *.
+  intros p.
+  overwrite H (not_ex_all_not _ _ H); simpl in H.
+  specialize (H p).
+  overwrite H (not_all_ex_not _ _ H); simpl in H.
+  destruct exists H s'.
+  exists s'.
+  split.
+  - enow eapply not_imply_elim.
+  - enow eapply not_imply_elim2.
+Qed.
+
+Theorem rew_AF_EG {state}: forall R (s: state) P,
+  (R @s ⊨ AF (¬P)) = (R @s ⊨ ¬EG P).
+Proof using.
+  intros.
+  apply textensionality.
+  split.
+  - tapply AF_EG.
+  - tapply EG_AF'.
+Qed.
+
+Theorem rew_EG_AF {state}: forall R (s: state) P,
+  (R @s ⊨ EG (¬P)) = (R @s ⊨ ¬AF P).
+Proof using.
+  intros.
+  apply textensionality.
+  split.
+  - tapply EG_AF.
+  - tapply AF_EG'.
+Qed.
+
+
+Theorem AG_EF {state}: forall R (s: state) P,
+  R @s ⊨ AG (¬P) ⟶ ¬EF P.
+Proof using.
+  intros *.
+  tintros H Hcontra.
+  tsimpl in *.
+  destruct exists Hcontra p s'.
+  specialize (H p s').
+  now destruct H.
+Qed.
+
+Theorem AG_EF' {state}: forall R (s: state) P,
+  R @s ⊨ ¬AG P ⟶ EF (¬P).
+Proof using.
+  intros *.
+  tintro H.
+  tsimpl in *.
+  overwrite H (not_all_ex_not _ _ H); simpl in H.
+  destruct exists H p.
+  overwrite H (not_all_ex_not _ _ H); simpl in H.
+  destruct exists H s'.
+  exists p s'.
+  split.
+  - enow eapply not_imply_elim.
+  - enow eapply not_imply_elim2.
+Qed.
+
+Theorem EF_AG {state}: forall R (s: state) P,
+  R @s ⊨ EF (¬P) ⟶ ¬AG P.
+Proof using.
+  intros *.
+  tintros H Hcontra.
+  tsimpl in *.
+  destruct exists H p s'.
+  specialize (Hcontra p s').
+  destruct H as [H1 H2].
+  enow etapply H2.
+Qed.
+
+Theorem EF_AG' {state}: forall R (s: state) P,
+  R @s ⊨ ¬EF P ⟶ AG (¬P).
+Proof using.
+  intros *.
+  tintro H.
+  tsimpl in *.
+  intros p s' Hin contra.
+  overwrite H (not_ex_all_not _ _ H); simpl in H.
+  specialize (H p).
+  overwrite H (not_ex_all_not _ _ H); simpl in H.
+  enow eapply H.
+Qed.
+
+Theorem rew_AG_EF {state}: forall R (s: state) P,
+  (R @s ⊨ AG (¬P)) = (R @s ⊨ ¬EF P).
+Proof using.
+  intros.
+  apply textensionality.
+  split.
+  - tapply AG_EF.
+  - tapply EF_AG'.
+Qed.
+
+Theorem rew_EF_AG {state}: forall R (s: state) P,
+  (R @s ⊨ EF (¬P)) = (R @s ⊨ ¬AG P).
+Proof using.
+  intros.
+  apply textensionality.
+  split.
+  - tapply EF_AG.
+  - tapply AG_EF'.
+Qed.
+
+
+Theorem AX_EX {state}: forall R (s: state) P,
+  R @s ⊨ AX (¬P) ⟶ ¬EX P.
+Proof using.
+  intros *.
+  tintros H Hcontra.
+  tsimpl in *.
+  destruct exists Hcontra s'.
+  specialize (H s').
+  destruct Hcontra.
+  now apply H.
+Qed.
+
+Theorem AX_EX' {state}: forall R (s: state) P,
+  R @s ⊨ ¬AX P ⟶ EX (¬P).
+Proof using.
+  intros *.
+  tintro H.
+  tsimpl in *.
+  overwrite H (not_all_ex_not _ _ H); simpl in H.
+  destruct exists H s'.
+  exists s'.
+  split.
+  - enow eapply not_imply_elim.
+  - enow eapply not_imply_elim2.
+Qed.
+
+Theorem EX_AX {state}: forall R (s: state) P,
+  R @s ⊨ EX (¬P) ⟶ ¬AX P.
+Proof using.
+  intros *.
+  tintros H Hcontra.
+  tsimpl in *.
+  destruct exists H s'.
+  specialize (Hcontra s').
+  destruct H as [H1 H2].
+  enow etapply H2.
+Qed.
+
+Theorem EX_AX' {state}: forall R (s: state) P,
+  R @s ⊨ ¬EX P ⟶ AX (¬P).
+Proof using.
+  intros *.
+  tintro H.
+  tsimpl in *.
+  intros s' Hin contra.
+  overwrite H (not_ex_all_not _ _ H); simpl in H.
+  specialize (H s').
+  enow eapply H.
+Qed.
+
+Theorem rew_AX_EX {state}: forall R (s: state) P,
+  (R @s ⊨ AX (¬P)) = (R @s ⊨ ¬EX P).
+Proof using.
+  intros.
+  apply textensionality.
+  split.
+  - tapply AX_EX.
+  - tapply EX_AX'.
+Qed.
+
+Theorem rew_EX_AX {state}: forall R (s: state) P,
+  (R @s ⊨ EX (¬P)) = (R @s ⊨ ¬AX P).
+Proof using.
+  intros.
+  apply textensionality.
+  split.
+  - tapply EX_AX.
+  - tapply AX_EX'.
+Qed.
+
+
+(* Expansion Laws *)
+
+Theorem expand_AG {state}: forall (R: relation state) s P,
+  R @s ⊨ AG P ⟷ P ∧ AX (AG P).
+Proof.
+ 
+
+(* ----------------------------------------------------------------- *)
+
 Lemma AG_idempotent {state}:
   forall (R: relation state) s P, R@s ⊨ AG P -> R@s ⊨ AG (AG P).
 Proof.
@@ -92,7 +421,6 @@ Proof.
   (* induction Hin; [assumption|assumption|]. *)
   (* intros n'. *)
 Abort.
-
 
 (* Expansion Laws *)
 Theorem expand_AG {state}: forall (R: relation state) s P, R@s ⊨ AG P ⟷ P ∧ AX (AG P).

@@ -85,6 +85,14 @@ Tactic Notation "copy" hyp(H) :=
 
 Tactic Notation "copy" hyp(H) ident(I) := pose proof H as I.
 
+
+(* Overwrite a hypothesis *)
+Ltac overwrite H c := 
+  let temp := fresh in
+  pose proof c as temp;
+  clear H;
+  rename temp into H.
+
 (* When `unset x` is invoked with hypothesis `x := t` (commonly introduced by 
    tactic `set`), replaces all instances of `x` with `t`, and clears `x`.
  *)
@@ -162,3 +170,49 @@ Ltac especialize H :=
 (* repeat one or more times *)
 Tactic Notation "repeat+" tactic(tac) :=
   tac; repeat tac.
+
+
+(* `now` tactic with support for easy goals with existentials *)
+Tactic Notation "enow" tactic(tac) :=
+  (now tac) + (tac; solve [eassumption + eauto]).
+
+
+(* Find a hypothesis to apply the tactic to. Fails on non-progress. *)
+Tactic Notation "find" tactic(tac) :=
+  match goal with 
+  | H : _ |- _ => progress tac H
+  end.
+
+Tactic Notation "find" "apply" :=
+  find (fun H => apply H).
+Tactic Notation "find" "applyc" :=
+  find (fun H => applyc H).
+
+Tactic Notation "find" "eapply" :=
+  find (fun H => eapply H).
+Tactic Notation "find" "eapplyc" :=
+  find (fun H => eapplyc H).
+
+Tactic Notation "find" "rewrite" "->" :=
+  find (fun H => rewrite -> H).
+Tactic Notation "find" "rewrite" "->" uconstr(u) "in" :=
+  find (fun H => rewrite -> u in H).
+
+Tactic Notation "find" "rewrite" "<-" :=
+  find (fun H => rewrite <- H).
+Tactic Notation "find" "rewrite" "<-" uconstr(u) "in" :=
+  find (fun H => rewrite <- u in H).
+
+Tactic Notation "find" "rewrite" :=
+  find rewrite -> + find rewrite <-.
+Tactic Notation "find" "rewrite" uconstr(u) "in" :=
+  find rewrite -> u in + find rewrite <- u in.
+
+Tactic Notation "find" "specialize" uconstr(u1) :=
+  find (fun H => specialize (H u1)).
+Tactic Notation "find" "specialize" uconstr(u1) uconstr(u2) :=
+  find (fun H => specialize (H u1 u2)).
+Tactic Notation "find" "specialize" uconstr(u1) uconstr(u2) uconstr(u3) :=
+  find (fun H => specialize (H u1 u2 u3)).
+Tactic Notation "find" "specialize" uconstr(u1) uconstr(u2) uconstr(u3) uconstr(u4) :=
+  find (fun H => specialize (H u1 u2 u3 u4)).

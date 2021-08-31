@@ -10,6 +10,7 @@ Tactics/Construct.v
 Tactics/Misc.v
 Tactics/Tactics.v
 
+Isomorphisms.v
 BinaryRelations.v
 
 Ctl/Paths.v
