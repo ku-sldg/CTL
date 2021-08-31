@@ -1,3 +1,4 @@
+Require Import Notation.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Program.Basics.
@@ -8,16 +9,6 @@ Require Import Tactics.Tactics.
 
 Open Scope program_scope.
 
-
-Notation "'sigma' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p)) ..))
-  (at level 200, x binder, right associativity,
-   format "'[' 'sigma' '/ ' x .. y , '/ ' p ']'")
-  : type_scope.
-
-Notation "'Σ' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p)) ..))
-  (at level 200, x binder, right associativity,
-   format "'[' 'Σ'  '/ ' x .. y , '/ ' p ']'")
-  : type_scope.
 
 Definition iso (A B: Type) :=
   exists (f: A -> B) (g: B -> A), 

@@ -19,8 +19,8 @@ Open Scope tprop_scope.
 Definition tentails {state} (R: relation state) {t: transition R}
   (s: state) (P: tprop state) :=
   P R t s.
-Notation "R @ s ⊨ P" := (tentails R s P)   (at level 70, format "R  @ s  ⊨  P") : tprop_scope.
-Notation "R @ s ⊭ P" := (~ tentails R s P) (at level 70, format "R  @ s  ⊭  P") : tprop_scope.
+Notation "R @ s ⊨ P" := (tentails R s P)   (at level 69, format "R  @ s  ⊨  P") : tprop_scope.
+Notation "R @ s ⊭ P" := (~ tentails R s P) (at level 69, format "R  @ s  ⊭  P") : tprop_scope.
 
 
 (* State props *)

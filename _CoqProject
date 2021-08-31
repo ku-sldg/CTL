@@ -1,5 +1,6 @@
 -R . Attarch
 
+Notation.v
 Classical.v
 
 Tactics/Combinators.v
