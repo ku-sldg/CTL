@@ -7,6 +7,7 @@ Section Basic.
 
 Variable state : Type.
 Variable R: relation state.
+Context {T: transition R}.
 Variable s: state.
 
 Theorem tentails_ttop :

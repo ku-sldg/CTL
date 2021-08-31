@@ -9,10 +9,15 @@ Require Import Ctl.Tactics.
 Require Import Tactics.Tactics.
 Require Import Classical.
 
+Section Properties.
+
+Context {state: Type}.
+Variable R: relation state.
+Context {t: transition R}.
 
 (* Properties of implication *)
 
-Theorem timpl_refl {state}: forall R (s: state) a,
+Theorem timpl_refl : forall (s: state) a,
   R @s ⊨ a ⟶ a.
 Proof using.
   intros.
@@ -20,22 +25,22 @@ Proof using.
   assumption.
 Qed.
 
-Theorem timpl_trans {state}: forall R (s: state) a b c,
+Theorem timpl_trans : forall (s: state) a b c,
   R @s ⊨ (a ⟶ b) ⟶ (b ⟶ c) ⟶ a ⟶ c.
 Proof using.
-  intros R s a b c.
+  intros s a b c.
   tintros Hab Hbc Ha.
   tapplyc Hbc.
   tapplyc Hab. 
   assumption.
 Qed.
 
-Theorem timpl_trans' {state}: forall R (s: state) a b c,
+Theorem timpl_trans' : forall (s: state) a b c,
   R @s ⊨ a ⟶ b ->
   R @s ⊨ b ⟶ c -> 
   R @s ⊨ a ⟶ c.
 Proof using.
-  intros R s a b c Hab Hbc.
+  intros s a b c Hab Hbc.
   tintros Ha.
   tapplyc Hbc.
   tapplyc Hab. 
@@ -65,7 +70,7 @@ Ltac ettransitivity :=
       simple eapply (timpl_trans' R s a _ b)
   end.
 
-Theorem textensionality {state}: forall (R: relation state) s P Q,
+Theorem textensionality : forall s P Q,
   R @s ⊨ P ⟷ Q ->
   (R @s ⊨ P) = (R @s ⊨ Q).
 Proof using.
@@ -74,7 +79,7 @@ Proof using.
   assumption.
 Qed.
 
-Lemma tNNPP {state}: forall (R: relation state) s P, 
+Lemma tNNPP : forall s P, 
 (* TODO: fix precedence so parantheses not necessary *)
   R @s ⊨ (¬¬P) ⟶ P.
 Proof using.
@@ -83,7 +88,7 @@ Proof using.
   now apply NNPP.
 Qed.
 
-Lemma rew_tNNPP {state}: forall (R: relation state) s P, 
+Lemma rew_tNNPP : forall s P, 
   (R @s ⊨ ¬¬P) = (R @s ⊨ P).
 Proof using.
   intros *.
@@ -98,7 +103,7 @@ Qed.
 
 (* Properties of CTL path-quantifying formulas *)
 
-Theorem star__AG {state}: forall (R: relation state) s P,
+Theorem star__AG : forall s P,
   (forall s', R^* s s' -> R @s' ⊨ P) ->
   R @s ⊨ AG P.
 Proof using.
@@ -109,24 +114,23 @@ Proof using.
   enow eapply in_path__star.
 Qed.
 
-Theorem AG__star {state}: forall (R: relation state) s P,
-  serial_witness R ->
+Theorem AG__star : forall s P,
   R @s ⊨ AG P ->
   forall s', R^* s s' -> R @s' ⊨ P.
 Proof using.
-  intros * Hserial H.
+  intros * H.
+  Check (trans_serial R).
   intros s' Hstar.
-  apply (star__in_path _ _ _ _ Hserial) in Hstar.
+  apply (star__in_path _ _ _ _ trans_serial) in Hstar.
   destruct exists Hstar p.
   enow etapply H.
 Qed.
 
-Theorem rew_AG_star {state}: forall (R: relation state) s P,
-  serial_witness R ->
+Theorem rew_AG_star : forall s P,
   R @s ⊨ AG P =
     forall s', R^* s s' -> R @s' ⊨ P.
 Proof using.
-  intros * Hserial.
+  intros *.
   extensionality.
   split.
   - now apply AG__star.
@@ -148,7 +152,7 @@ Proof using.
 
 (* TODO: demorgans tactic which uses an extensible hint database for rewriting? *)
 
-Theorem AG_idempotent {state}: forall (R: relation state) s P,
+Theorem AG_idempotent : forall s P,
   R @s ⊨ AG P ⟶ AG (AG P).
 Proof using.
   intros *.
@@ -161,7 +165,7 @@ Admitted.
 
 (* De Morgan's Laws *)
 
-Theorem AF_EG {state}: forall R (s: state) P,
+Theorem AF_EG : forall s P,
   R @s ⊨ AF (¬P) ⟶ ¬EG P.
 Proof using.
   intros *.
@@ -173,7 +177,7 @@ Proof using.
   destruct H; auto.
 Qed.
 
-Theorem AF_EG' {state}: forall R (s: state) P,
+Theorem AF_EG' : forall s P,
   R @s ⊨ ¬AF P ⟶ EG (¬P).
 Proof using.
   intros *.
@@ -187,7 +191,7 @@ Proof using.
   enow eapply H.
 Qed.
 
-Theorem EG_AF {state}: forall R (s: state) P,
+Theorem EG_AF : forall s P,
   R @s ⊨ EG (¬P) ⟶ ¬AF P.
 Proof using.
   intros *.
@@ -200,7 +204,7 @@ Proof using.
   enow etapply H.
 Qed.
 
-Theorem EG_AF' {state}: forall R (s: state) P,
+Theorem EG_AF' : forall s P,
   R @s ⊨ ¬EG P ⟶ AF (¬P).
 Proof using.
   intros *.
@@ -217,7 +221,7 @@ Proof using.
   - enow eapply not_imply_elim2.
 Qed.
 
-Theorem rew_AF_EG {state}: forall R (s: state) P,
+Theorem rew_AF_EG : forall s P,
   (R @s ⊨ AF (¬P)) = (R @s ⊨ ¬EG P).
 Proof using.
   intros.
@@ -227,7 +231,7 @@ Proof using.
   - tapply EG_AF'.
 Qed.
 
-Theorem rew_EG_AF {state}: forall R (s: state) P,
+Theorem rew_EG_AF : forall s P,
   (R @s ⊨ EG (¬P)) = (R @s ⊨ ¬AF P).
 Proof using.
   intros.
@@ -238,7 +242,7 @@ Proof using.
 Qed.
 
 
-Theorem AG_EF {state}: forall R (s: state) P,
+Theorem AG_EF : forall s P,
   R @s ⊨ AG (¬P) ⟶ ¬EF P.
 Proof using.
   intros *.
@@ -249,7 +253,7 @@ Proof using.
   now destruct H.
 Qed.
 
-Theorem AG_EF' {state}: forall R (s: state) P,
+Theorem AG_EF' : forall s P,
   R @s ⊨ ¬AG P ⟶ EF (¬P).
 Proof using.
   intros *.
@@ -265,7 +269,7 @@ Proof using.
   - enow eapply not_imply_elim2.
 Qed.
 
-Theorem EF_AG {state}: forall R (s: state) P,
+Theorem EF_AG : forall s P,
   R @s ⊨ EF (¬P) ⟶ ¬AG P.
 Proof using.
   intros *.
@@ -277,7 +281,7 @@ Proof using.
   enow etapply H2.
 Qed.
 
-Theorem EF_AG' {state}: forall R (s: state) P,
+Theorem EF_AG' : forall s P,
   R @s ⊨ ¬EF P ⟶ AG (¬P).
 Proof using.
   intros *.
@@ -290,7 +294,7 @@ Proof using.
   enow eapply H.
 Qed.
 
-Theorem rew_AG_EF {state}: forall R (s: state) P,
+Theorem rew_AG_EF : forall s P,
   (R @s ⊨ AG (¬P)) = (R @s ⊨ ¬EF P).
 Proof using.
   intros.
@@ -300,7 +304,7 @@ Proof using.
   - tapply EF_AG'.
 Qed.
 
-Theorem rew_EF_AG {state}: forall R (s: state) P,
+Theorem rew_EF_AG : forall s P,
   (R @s ⊨ EF (¬P)) = (R @s ⊨ ¬AG P).
 Proof using.
   intros.
@@ -311,7 +315,7 @@ Proof using.
 Qed.
 
 
-Theorem AX_EX {state}: forall R (s: state) P,
+Theorem AX_EX : forall s P,
   R @s ⊨ AX (¬P) ⟶ ¬EX P.
 Proof using.
   intros *.
@@ -323,7 +327,7 @@ Proof using.
   now apply H.
 Qed.
 
-Theorem AX_EX' {state}: forall R (s: state) P,
+Theorem AX_EX' : forall s P,
   R @s ⊨ ¬AX P ⟶ EX (¬P).
 Proof using.
   intros *.
@@ -337,7 +341,7 @@ Proof using.
   - enow eapply not_imply_elim2.
 Qed.
 
-Theorem EX_AX {state}: forall R (s: state) P,
+Theorem EX_AX : forall s P,
   R @s ⊨ EX (¬P) ⟶ ¬AX P.
 Proof using.
   intros *.
@@ -349,7 +353,7 @@ Proof using.
   enow etapply H2.
 Qed.
 
-Theorem EX_AX' {state}: forall R (s: state) P,
+Theorem EX_AX' : forall s P,
   R @s ⊨ ¬EX P ⟶ AX (¬P).
 Proof using.
   intros *.
@@ -361,7 +365,7 @@ Proof using.
   enow eapply H.
 Qed.
 
-Theorem rew_AX_EX {state}: forall R (s: state) P,
+Theorem rew_AX_EX : forall s P,
   (R @s ⊨ AX (¬P)) = (R @s ⊨ ¬EX P).
 Proof using.
   intros.
@@ -371,7 +375,7 @@ Proof using.
   - tapply EX_AX'.
 Qed.
 
-Theorem rew_EX_AX {state}: forall R (s: state) P,
+Theorem rew_EX_AX : forall s P,
   (R @s ⊨ EX (¬P)) = (R @s ⊨ ¬AX P).
 Proof using.
   intros.
@@ -384,12 +388,29 @@ Qed.
 
 (* Expansion Laws *)
 
-Theorem expand_AG {state}: forall (R: relation state) s P,
-  R @s ⊨ AG P ⟷ P ∧ AX (AG P).
+Theorem expand_AG : forall s P,
+  R @s ⊨ AG P ⟶ P ∧ AX (AG P).
 Proof.
- 
+  intros *.
+  tintro H.
+  rewrite rew_AG_star in H.
+  split.
+  - apply H.
+    reflexivity.
+  - unfold_AX.
+    intros * Hstep.
+    rewrite rew_AG_star.
+    intros * Hstar.
+    apply H.
+    etransitivity; [|eassumption].
+    econstructor.
+    + eassumption.
+    + constructor.
+Qed.
 
-(* ----------------------------------------------------------------- *)
+
+End Properties.
+(* ------------------------ old stuff --------------------------- *)
 
 Lemma AG_idempotent {state}:
   forall (R: relation state) s P, R@s ⊨ AG P -> R@s ⊨ AG (AG P).
