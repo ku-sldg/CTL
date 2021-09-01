@@ -1,4 +1,5 @@
 Require Import Ctl.Definition.
+Require Import BinaryRelations.
 Require Import TransitionSystems.
 Require Import Privilege.
 
@@ -74,7 +75,7 @@ Inductive useram_state : Set :=
   | useram_making_request
   | useram_sending_response.
 
-Inductive useram_trans : transition attarch_global useram_state :=
+Inductive useram_trans : state_trans attarch_global useram_state :=
   | useram_get_key : forall st,
       acc_at (useram_key st) useram read ->
       useram_trans 
@@ -99,7 +100,7 @@ Definition acquire_key boot_ev :=
   | bad_boot_ev => bad_platam_key
   end.
 
-Inductive platam_trans : transition attarch_global platam_state :=
+Inductive platam_trans : state_trans attarch_global platam_state :=
   | platam_acquire_key : forall st boot_ev_val,
       acc_at (boot_ev st) platam read ->
       val_at (boot_ev st) = Some boot_ev_val ->
@@ -127,7 +128,7 @@ Inductive vm_state : Set :=
   | vm_init
   | vm_run : useram_state -> vm_state.
 
-Inductive vm_trans : transition attarch_global vm_state :=
+Inductive vm_trans : state_trans attarch_global vm_state :=
   | vm_boot : forall st,
       vm_trans 
         (st, vm_init)
@@ -140,9 +141,10 @@ Inductive vm_trans : transition attarch_global vm_state :=
 
 Inductive attarch_state : Set :=
   | boot
-  | sel4_run : platam_state * vm_state -> attarch_state.
+  | sel4_run : platam_state * vm_state -> attarch_state
+  | attarch_bot.
 
-Inductive attarch_trans : transition attarch_global attarch_state :=
+Inductive attarch_trans : state_trans attarch_global attarch_state :=
   (* TODO: add some boolean "good seL4 image" field to global state to determine boot? *)
   | good_boot : forall st,
       attarch_trans 
@@ -156,6 +158,21 @@ Inductive attarch_trans : transition attarch_global attarch_state :=
       (platam_trans ⊔ vm_trans) (g,s) (g',s') ->
       attarch_trans 
         (g, sel4_run s)
-        (g', sel4_run s').
+        (g', sel4_run s')
+  | diverge : forall x y,
+      attarch_trans (x, y) (x, attarch_bot).
 
 Definition initial_state_good := (initial_global_state_good, boot).
+
+Lemma attarch_trans_serial : 
+  serial_witness attarch_trans.
+Proof using.
+  unfold serial_witness.
+  intros a.
+  destruct a as [global local].
+  exists (global, attarch_bot).
+  constructor.
+Defined.
+
+Instance transition__attarch_trans : transition attarch_trans :=
+  { trans_serial := attarch_trans_serial }.

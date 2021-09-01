@@ -8,28 +8,26 @@ Require Import Coq.Program.Equality.
 Require Import Tactics.Tactics.
 
 Definition useram_key_secure : tprop (attarch_global * attarch_state) := 
-  fun _ st =>
+  ⟨fun st =>
     val_at (useram_key (fst st)) = Some good_useram_key -> 
-    acc_at (useram_key (fst st)) = useram_key_acc. 
+    acc_at (useram_key (fst st)) = useram_key_acc⟩. 
 
 Theorem useram_key_never_compromised:
   attarch_trans @initial_state_good ⊨ AG useram_key_secure.
 Proof.
-  tsimpl.
-  intros n p s' Hin.
-  construct in_path__get_prefix_seq in Hin.
-  clear p n.
-  induct* Hin.
-  - tentails. discriminate.
-  - invc r; try apply IHHin.
-    invc H.
-    + invc H0; try apply IHHin.
-      tentails!.
-      reflexivity.
-    + invc H0; [|inv H]; apply IHHin.
+  rewrite rew_AG_star.
+  intros * Hstar.
+  induct! Hstar.
+  - tentails!. discriminate.
+  - invc H; try assumption!.
+    invc H0.
+    + invc H; try assumption!.
+      now tentails!.
+    + invc H; [|inv H0]; assumption!.
 Qed.
-(* Print Assumptions useram_key_never_compromised. *)
+Print Assumptions useram_key_never_compromised.
 
+(*
 Definition setup_done : tprop (attarch_global * attarch_state) := 
   fun _ st =>
     snd st = sel4_run (platam_run, vm_run useram_waiting_request). 
@@ -50,3 +48,4 @@ Proof using.
     discriminate.
   -
 Abort.
+*)

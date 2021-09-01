@@ -4,7 +4,7 @@ Require Import Tactics.Tactics.
 
 Section Paths.
 
-Variable state : Type.
+Context {state : Type}.
 Variable R : relation state.
 
 CoInductive path (s: state) : Type := 
@@ -100,7 +100,6 @@ Qed.
 
 End Paths.
 
-Arguments path {state}.
-Arguments in_path {state R s}.
-Arguments in_path_at {state R s}.
+Arguments in_path        {state R s}.
+Arguments in_path_at     {state R s}.
 Arguments in_path_before {state R s}.

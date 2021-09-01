@@ -4,7 +4,6 @@ Require Import Ctl.Basic.
 Require Import BinaryRelations.
 Open Scope tprop_scope.
 
-(* Require Import Coq.Program.Equality. *)
 Require Import Ctl.Tactics.
 Require Import Tactics.Tactics.
 Require Import Classical.
@@ -120,7 +119,7 @@ Theorem AG__star : forall s P,
 Proof using.
   intros * H.
   intros s' Hstar.
-  apply (star__in_path _ _ _ _ trans_serial) in Hstar.
+  apply (star__in_path _ _ _ trans_serial) in Hstar.
   destruct exists Hstar p.
   enow etapply H.
 Qed.
@@ -134,6 +133,42 @@ Proof using.
   split.
   - now apply AG__star.
   - apply star__AG.
+Qed.
+
+Theorem star__EF : forall s P,
+  (exists s', R^* s s' /\ R @s' ⊨ P) ->
+  R @s ⊨ EF P.
+Proof using.
+  intros * H.
+  tsimpl.
+  destruct H as (s' & Hstar & H).
+  apply (star__in_path _ _ _ trans_serial) in Hstar.
+  destruct exists Hstar p.
+  now exists p s'.
+Qed.
+
+Theorem EF__star : forall s P,
+  R @s ⊨ EF P ->
+  exists s', R^* s s' /\ R @s' ⊨ P.
+Proof using.
+  intros * H.
+  tsimpl in *.
+  destruct H as (p & s' & Hin & H).
+  exists s'.
+  split.
+  - enow eapply in_path__star.
+  - assumption.
+Qed.
+
+Theorem rew_EF_star : forall s P,
+  R @s ⊨ EF P =
+    exists s', R^* s s' /\ R @s' ⊨ P.
+Proof using.
+  intros *.
+  extensionality.
+  split.
+  - now apply EF__star.
+  - apply star__EF.
 Qed.
 
 (* Lemma in_path_combine {state}: forall (R: relation state),

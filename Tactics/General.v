@@ -216,3 +216,9 @@ Tactic Notation "find" "specialize" uconstr(u1) uconstr(u2) uconstr(u3) :=
   find (fun H => specialize (H u1 u2 u3)).
 Tactic Notation "find" "specialize" uconstr(u1) uconstr(u2) uconstr(u3) uconstr(u4) :=
   find (fun H => specialize (H u1 u2 u3 u4)).
+
+(* Like assumption, but instead of finding a hypothesis to solve by exact, it 
+   finds one to solve by `apply`
+ *)
+Tactic Notation "assumption!" :=
+  solve [find apply].

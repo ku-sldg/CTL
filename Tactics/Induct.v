@@ -103,10 +103,10 @@ Ltac _induct_star_by H inductStep :=
   | H: ?x = ?x |- _ => clear H
   end.
 
-Tactic Notation "induct*" hyp(H) :=
+Tactic Notation "induct!" hyp(H) :=
   _induct_star_by H ltac:(fun hyp => induction hyp).
 
-Tactic Notation "induct*" hyp(H) "using" uconstr(c) :=
+Tactic Notation "induct!" hyp(H) "using" uconstr(c) :=
   _induct_star_by H ltac:(fun hyp => induction hyp using c).
 
 Ltac hyp_eq H H' :=
