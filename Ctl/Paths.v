@@ -1,6 +1,8 @@
+Require Import Notation.
 Require Import BinaryRelations.
+Require Import Isomorphisms.
 Require Import Tactics.Tactics.
-(* Require Import Classical. *)
+
 
 Section Paths.
 
@@ -96,6 +98,55 @@ Proof using.
   - destruct exists IHHstar p.
     exists (step x y H p).
     now apply in_tail.
+Qed.
+
+Inductive prefix_rev {s}: forall {s'}, seq_rev R s s' -> path s -> Prop :=
+  | prefix_rev_trivial : forall (p: path s),
+      prefix_rev (seq_rev_refl R s) p
+  | prefix_rev_step : forall x y (seqr: seq_rev R x y) (p: path x) (r: R s x),
+      prefix_rev seqr p ->
+      prefix_rev (seq_rev_step R s x y r seqr) (step s x r p).
+    
+Definition prefix {s s'} (r: R#* s s') : path s -> Prop :=
+  prefix_rev (ϕ_seq__seq_rev r).
+
+Theorem seq_prefix : forall s s',
+  serial_witness R ->
+  forall seq: R#* s s',
+    Σ p: path s, prefix seq p.
+Proof using.
+  intros * Hserial *.
+  iso ϕ_seq__seq_rev seq.
+  induction seq.
+  - exists (serial_witness__path Hserial x).
+    constructor.
+  - destruct exists IHseq p.
+    exists (step x y r p).
+    unfold prefix in *.
+    rewrite iso_cancel_inv.
+    rewrite iso_cancel_inv in IHseq.
+    now constructor.
+Defined.
+
+Theorem in_prefix: forall x (p: path x) z (seq: R#* x z) y,
+  prefix seq p ->
+  in_seq y seq ->
+  in_path y p.
+Proof using.
+  intros *.
+  iso ϕ_seq__seq_rev seq.
+  intros Hprefix Hin.
+  unfold prefix in Hprefix.
+  rewrite iso_cancel_inv in Hprefix.
+  rewrite <- in_seq_iso_in_seq_rev_flip in Hin.
+  induction Hprefix.
+  - invc Hin.
+    destruct p.
+    constructor.
+  - dependent invc Hin.
+    + constructor.
+    + constructor.
+      now find apply.
 Qed.
 
 End Paths.

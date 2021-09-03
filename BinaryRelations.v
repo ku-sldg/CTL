@@ -5,9 +5,9 @@ Require Import Coq.Lists.List.
 
 Require Import Setoid.
 Require Import Lia.
-(* Require Import Coq.Program.Equality. *)
 Require Import Isomorphisms.
 Require Import Tactics.Tactics.
+Require Import Classical.
 
 Require Export Coq.Relations.Relation_Definitions.
 Require Export Coq.Relations.Relation_Operators.
@@ -86,15 +86,20 @@ Definition rel_singleton {A} (x y : A): relation A :=
   fun x' y' => x' = x /\ y' = y -> True.
 
 
+Section BinaryRelationsProperties.
+
+Context {A: Type}.
+Variable R : relation A.
+
 (* star properties *)
 
-Theorem star_refl : forall A (R: relation A),
+Theorem star_refl :
   reflexive A R^*.
 Proof using.
   constructor.
 Qed.
 
-Theorem star_trans : forall A (R: relation A),
+Theorem star_trans : 
   transitive A R^*.
 Proof using.
   unfold transitive.
@@ -104,12 +109,17 @@ Proof using.
   - enow econstructor.
 Qed.
 
-Add Parametric Relation (A: Type) (R: relation A) : A (@star A R)
-  reflexivity  proved by (star_refl A R)
-  transitivity proved by (star_trans A R)
-  as star_rel.
+Lemma star_lift : forall x y, 
+  R x y ->
+  R^* x y.
+Proof using.
+  intros * H.
+  econstructor.
+  - eassumption.
+  - constructor.
+Qed.
 
-Theorem rt1n_star : forall A (R: relation A) x y,
+Theorem rt1n_star : forall x y,
   clos_refl_trans_1n A R x y -> star R x y.
 Proof.
   intros * ?.
@@ -117,7 +127,7 @@ Proof.
   now apply clos_rt1n_rt.
 Qed.
 
-Theorem star_rt1n : forall A (R: relation A) x y,
+Theorem star_rt1n : forall x y,
   star R x y -> clos_refl_trans_1n A R x y.
 Proof.
   intros * ?.
@@ -125,7 +135,7 @@ Proof.
   now apply clos_rtn1_rt.
 Qed.
 
-Theorem star_rt1n_trans : forall A (R: relation A) x y z,
+Theorem star_rt1n_trans : forall x y z,
   R x y ->
   R^* y z ->
   R^* x z.
@@ -140,7 +150,7 @@ Qed.
 
 (* seq properties *)
 
-Theorem seq__star {A}: forall (R: relation A) x y,
+Theorem seq__star : forall x y,
   R#* x y ->
   R^* x y.
 Proof using.
@@ -150,7 +160,7 @@ Proof using.
   - enow econstructor.
 Qed.
 
-Theorem star__seq {A}: forall (R: relation A) x y,
+Theorem star__seq : forall x y,
   R^* x y ~>
   R#* x y.
 Proof using.
@@ -162,12 +172,19 @@ Proof using.
     enow econstructor.
 Qed.
 
-Definition seq_singleton {A} {R: relation A} {x y} (r: R x y)
+Definition seq_singleton {x y} (r: R x y)
   : R#* x y :=
   seq_step R x x y r (seq_refl R x).
 
+Theorem in_seq_last : forall x y (r: R#* x y),
+  in_seq y r.
+Proof using.
+  intros *.
+  destruct r; constructor.
+Qed.
+
 (* Note equivalence to transitivity under Curry-Howard reflection to star *)
-Definition seq_concat {A} {R: relation A} {x y z} (Rxy: R#* x y) (Ryz: R#* y z)
+Definition seq_concat {x y z} (Rxy: R#* x y) (Ryz: R#* y z)
   : R#* x z.
 Proof using.
   induction Ryz.
@@ -178,7 +195,7 @@ Proof using.
       assumption.
 Defined.
 
-Theorem seq_concat_refl {A}: forall (R: relation A) x y (r: R#* x y),
+Theorem seq_concat_refl : forall x y (r: R#* x y),
   seq_concat (seq_refl R x) r = r.
 Proof using.
   intros *.
@@ -188,7 +205,7 @@ Proof using.
     now find rewrite.
 Qed.  
 
-Theorem seq_concat_assoc {A}: forall (R: relation A) w x y z,
+Theorem seq_concat_assoc : forall w x y z,
   forall (a: R#* w x) (b: R#* x y) (c: R#* y z),
     seq_concat (seq_concat a b) c =
     seq_concat a (seq_concat b c).
@@ -200,18 +217,62 @@ Proof using.
     now find rewrite.
 Qed.
 
+Theorem in_seq__concat {x y z}: forall (a: R#* x y) (b: R#* y z) n,
+  in_seq n (seq_concat a b) <-> in_seq n a \/ in_seq n b.
+Proof using.
+  intros *.
+  split; intro H. 
+  - induction b.
+    + simpl in H.
+      now left.
+    + simpl in *.
+      dependent invc H.
+      * right. constructor.
+      * specialize (IHb a H3); clear H3.
+        destruct IHb.
+       -- now left.
+       -- right. constructor. assumption.
+  - destruct H.
+    + induction b.
+      * assumption.
+      * simpl.
+        constructor.
+        now find apply.
+    + induction b.
+      * simpl.
+        inversion H; subst.
+        apply in_seq_last.
+      * simpl.
+        dependent invc H.
+       -- constructor.
+       -- constructor.
+          now find apply.
+Qed.
+
+Definition seq_prepend (x y z: A):
+  R x y ->
+  R#* y z ->
+  R#* x z.
+Proof using.
+  intros ? Ryz.
+  induction Ryz.
+  - now apply seq_singleton.
+  - econstructor.
+    + eassumption.
+    + now find apply.
+Defined.
 
 (* Isomorphic to seq. Sometimes, this reversed structure is more convenient *)
-Inductive seq_rev {A} (R: relation A) : A -> A -> Type :=
+Inductive seq_rev : A -> A -> Type :=
   | seq_rev_refl : forall x,
-      seq_rev R x x
+      seq_rev x x
   | seq_rev_step : forall x y z,
       R x y ->
-      seq_rev R y z ->
-      seq_rev R x z.
+      seq_rev y z ->
+      seq_rev x z.
 
-Definition seq_rev_concat {A} {R: relation A} {x y z} (Rxy: seq_rev R x y) (Ryz: seq_rev R y z)
-  : seq_rev R x z.
+Definition seq_rev_concat {x y z} (Rxy: seq_rev x y) (Ryz: seq_rev y z)
+  : seq_rev x z.
 Proof using.
   induction Rxy.
   - assumption.
@@ -221,7 +282,7 @@ Proof using.
       assumption.
 Defined.
 
-Definition seq__seq_rev {A} {R: relation A} {x y} (seq: R#* x y): seq_rev R x y.
+Definition seq__seq_rev {x y} (seq: R#* x y): seq_rev x y.
   induction seq.
   - constructor.
   - eapply seq_rev_concat; [eassumption|].
@@ -230,7 +291,7 @@ Definition seq__seq_rev {A} {R: relation A} {x y} (seq: R#* x y): seq_rev R x y.
     + constructor.
 Defined.
 
-Definition seq_rev__seq {A} {R: relation A} {x y} (seqr: seq_rev R x y): R#* x y.
+Definition seq_rev__seq {x y} (seqr: seq_rev x y): R#* x y.
   induction seqr.
   - constructor.
   - eapply seq_concat; [|eassumption].
@@ -239,8 +300,8 @@ Definition seq_rev__seq {A} {R: relation A} {x y} (seqr: seq_rev R x y): R#* x y
     + constructor.
 Defined.
 
-Theorem seq_rev_concat_refl {A}: forall (R: relation A) x y (r: seq_rev R x y),
-  seq_rev_concat r (seq_rev_refl R y) = r.
+Theorem seq_rev_concat_refl : forall x y (r: seq_rev x y),
+  seq_rev_concat r (seq_rev_refl y) = r.
 Proof using.
   intros *.
   induction r.
@@ -249,8 +310,8 @@ Proof using.
     now find rewrite.
 Qed.  
 
-Theorem seq_rev_concat_assoc {A}: forall (R: relation A) w x y z,
-  forall (a: seq_rev R w x) (b: seq_rev R x y) (c: seq_rev R y z),
+Theorem seq_rev_concat_assoc : forall w x y z,
+  forall (a: seq_rev w x) (b: seq_rev x y) (c: seq_rev y z),
     seq_rev_concat (seq_rev_concat a b) c =
     seq_rev_concat a (seq_rev_concat b c).
 Proof using.
@@ -261,7 +322,7 @@ Proof using.
     now find rewrite.
 Qed.
   
-Theorem seq__seq_rev__concat {A x y z}: forall (R: relation A) (a: R#* x y) (b: R#* y z),
+Theorem seq__seq_rev__concat {x y z}: forall (a: R#* x y) (b: R#* y z),
   seq__seq_rev (seq_concat a b) = seq_rev_concat (seq__seq_rev a) (seq__seq_rev b).
 Proof using.
   intros *.
@@ -274,7 +335,7 @@ Proof using.
     reflexivity.
 Qed.
 
-Theorem seq_rev__seq__concat {A x y z}: forall (R: relation A) (a: seq_rev R x y) (b: seq_rev R y z),
+Theorem seq_rev__seq__concat {x y z}: forall (a: seq_rev x y) (b: seq_rev y z),
   seq_rev__seq (seq_rev_concat a b) = seq_concat (seq_rev__seq a) (seq_rev__seq b).
 Proof using.
   intros *.
@@ -287,11 +348,11 @@ Proof using.
     reflexivity.
 Qed.
 
-Definition seq_isoT_seq_rev {A}: forall (R: relation A) x y,
-  isoT (R#* x y) (seq_rev R x y).
+Definition ϕ_seq__seq_rev : forall x y,
+  R#* x y ≅> seq_rev x y.
 Proof using.
   intros *.
-  exists (@seq__seq_rev A R x y) (@seq_rev__seq A R x y).
+  exists (@seq__seq_rev x y) (@seq_rev__seq x y).
   split.
   - intros *.
     induct b.
@@ -309,18 +370,61 @@ Proof using.
       now find rewrite.
 Defined.
 
-Theorem seq_iso_seq_rev {A}: forall (R: relation A) x y,
-  R#* x y ≅ seq_rev R x y.
+Theorem isomorphic_seq__seq_rev : forall x y,
+  R#* x y ≅ seq_rev x y.
 Proof using.
   intros.
-  apply isoT__iso.
-  apply seq_isoT_seq_rev.
+  apply isomorphism__isomorphic.
+  apply ϕ_seq__seq_rev.
+Qed.
+
+(* equivalent to in_seq under the obvious isomorphism *)
+Inductive in_seq_rev {a}
+  : forall {a'}, A -> seq_rev a a' -> Prop :=
+  | in_seq_rev_head_refl :
+      in_seq_rev a (seq_rev_refl a)
+  | in_seq_rev_head_step : forall x x' r p,
+      in_seq_rev a (seq_rev_step a x x' r p)
+  | in_seq_rev_tail : forall x x' y r p,
+      in_seq_rev y p ->
+      in_seq_rev y (seq_rev_step a x x' r p).
+
+Theorem in_seq_iso_in_seq_rev_flip : forall x y z,
+  forall b: seq_rev x y, in_seq_rev z b = in_seq z ((ϕ_seq__seq_rev x y)⁻¹ b).
+Proof using.
+  intros *.
+  induct b; extensionality.
+  - simpl.
+    split; intro; find inversion; subst; constructor.
+  - split; intro H; simpl in *.
+    + apply in_seq__concat.
+      rewrite <- IHb.
+      dependent inv H.
+      * left.
+        repeat constructor.
+      * auto.
+    + apply in_seq__concat in H.
+      rewrite <- IHb in H.
+      destruct H.
+      * dependent inv H.
+       -- destruct b; repeat constructor.
+       -- inversion H3; subst.
+          repeat constructor.
+      * now constructor.
+Qed.
+
+Theorem in_seq_iso_in_seq_rev : forall x y z,
+  iso_equiv (ϕ_seq__seq_rev x y) (@in_seq A R x y z) (@in_seq_rev x y z).
+Proof using.
+  intros *.
+  rewrite iso_equiv_flip.
+  apply in_seq_iso_in_seq_rev_flip.
 Qed.
 
 
 (* nseq properties *)
 
-Definition nseq__seq {A n} {R: relation A} {x y}:
+Definition nseq__seq {n} {x y}:
   R#n x y ->
   R#* x y.
 Proof using.
@@ -330,7 +434,7 @@ Proof using.
   - econstructor; eassumption.
 Defined.
 
-Definition seq__nseq {A} {R: relation A} {x y}:
+Definition seq__nseq {x y}:
   R#* x y ->
   {n & R#n x y}.
 Proof using.
@@ -342,20 +446,18 @@ Proof using.
     econstructor; eassumption.
 Defined.
 
-Theorem in_nseq_at__in_nseq {A}:
-  forall (R: relation A) x a b n m (r: R#n a b),
-    in_nseq_at x m r ->
-    in_nseq x r.
+Theorem in_nseq_at__in_nseq : forall x a b n m (r: R#n a b),
+  in_nseq_at x m r ->
+  in_nseq x r.
 Proof using.
   intros * H.
   induction H; constructor.
   assumption.
 Qed.
 
-Theorem in_nseq__in_nseq_at {A}:
-  forall (R: relation A) x a b n (r: R#n a b),
-    in_nseq x r ->
-    exists m, m <= n /\ in_nseq_at x m r.
+Theorem in_nseq__in_nseq_at : forall x a b n (r: R#n a b),
+  in_nseq x r ->
+  exists m, m <= n /\ in_nseq_at x m r.
 Proof using.
   intros * H.
   induction H.
@@ -374,12 +476,11 @@ Proof using.
       assumption.
 Qed. 
 
-Theorem in_seq__in_nseq {A}:
-  forall (R: relation A) x a b (r: R#* a b),
-    in_seq x r ->
-    in_nseq x (projT2 (seq__nseq r)).
+Theorem in_seq__in_nseq : forall x a b (r: R#* a b),
+  in_seq x r ->
+  in_nseq x (projT2 (seq__nseq r)).
 Proof using.
-  intros R x a b r H.
+  intros x a b r H.
   induction H.
   - simpl. constructor.
   - simpl. break_let. simpl.
@@ -389,10 +490,9 @@ Proof using.
     assumption.
 Qed.
 
-Theorem in_nseq__in_seq {A}:
-  forall (R: relation A) x n a b (r: R#n a b),
-    in_nseq x r ->
-    in_seq x (nseq__seq r).
+Theorem in_nseq__in_seq : forall x n a b (r: R#n a b),
+  in_nseq x r ->
+  in_seq x (nseq__seq r).
 Proof using.
   intros * H.
   induction H. 
@@ -403,37 +503,34 @@ Proof using.
     assumption.
 Qed.
 
-Theorem in_nseq_at_first {state}:
-  forall (R: relation state) n s s' (r: R# n s s'),
-    in_nseq_at s 0 r.
+Theorem in_nseq_at_first : forall n s s' (r: R# n s s'),
+  in_nseq_at s 0 r.
 Proof using.
   intros.
   induction r; constructor.
   assumption. 
 Qed.
 
-Theorem in_nseq_first {state}:
-  forall (R: relation state) n s s' (r: R#n s s'),
-    in_nseq s r.
+Theorem in_nseq_first : forall n s s' (r: R#n s s'),
+  in_nseq s r.
 Proof using.
   intros.
   induction r; constructor.
   assumption. 
 Qed.
 
-Theorem in_nseq_last {state}:
-  forall n (R: relation state) s s' (r: R#n s s'),
-    in_nseq s' r.
+Theorem in_nseq_last : forall n s s' (r: R#n s s'),
+  in_nseq s' r.
 Proof using.
   intros.
   destruct r; constructor.
 Qed.
 
-Definition in_nseq_before {state} {R: relation state} {n s s'}
+Definition in_nseq_before {n s s'}
   x i (r: R#n s s') := 
   exists j, j < i /\ in_nseq_at x j r.
 
-Inductive nseq_prefix {A} {R: relation A} {a}
+Inductive nseq_prefix {a}
   : forall {n m b c}, R#n a b -> R#m a c -> Prop :=
   | nseq_prefix_refl :
       forall n b (Rab: R#n a b),
@@ -443,13 +540,13 @@ Inductive nseq_prefix {A} {R: relation A} {a}
         nseq_prefix Rab Rac ->
         nseq_prefix Rab (nseq_step R m a c d Rcd Rac).
 
-Theorem nseq_prefix_trans {A}: forall {R: relation A} {nx ny nz a x y z},
+Theorem nseq_prefix_trans : forall {nx ny nz a x y z},
   forall (rx: R#nx a x) (ry: R#ny a y) (rz: R#nz a z),
     nseq_prefix rx ry ->
     nseq_prefix ry rz ->
     nseq_prefix rx rz.
 Proof using. 
-  intros R nx nyz nz a x y z rx ry rz Hxy Hyz.
+  intros * Hxy Hyz.
   revert nx x rx Hxy.
   induction Hyz; intros.
   - assumption.
@@ -458,13 +555,13 @@ Proof using.
     assumption.
 Qed.
 
-Theorem in_nseq_at_prefix {A}:
-  forall (R: relation A) a nb b (Rab: R#nb a b) nc c (Rac: R#nc a c) x i,
+Theorem in_nseq_at_prefix :
+  forall a nb b (Rab: R#nb a b) nc c (Rac: R#nc a c) x i,
     nseq_prefix Rab Rac ->
     in_nseq_at x i Rab ->
     in_nseq_at x i Rac.
 Proof using.
-  intros R a nb b Rab nc c Rac x i Hprefix Hin.
+  intros * Hprefix Hin.
   induction Hprefix.
   - assumption.
   - constructor.
@@ -472,13 +569,13 @@ Proof using.
     assumption.
 Qed.
 
-Lemma nseq_prefix_before {A}:
-  forall (R: relation A) a nb b (Rab: R#nb a b) nc c (Rac: R#nc a c) x,
+Lemma nseq_prefix_before :
+  forall a nb b (Rab: R#nb a b) nc c (Rac: R#nc a c) x,
     nseq_prefix Rab Rac ->
     in_nseq x Rab ->
     in_nseq_before x (S nb) Rac.
 Proof using.
-  intros R a nb b Rab nc c Rac x Hprefix Hin.
+  intros * Hprefix Hin.
   apply in_nseq__in_nseq_at in Hin.
   destruct Hin as [m [Hlt Hin]].
   exists m.
@@ -487,8 +584,8 @@ Proof using.
   - eapply in_nseq_at_prefix; eassumption.
 Qed.
 
-Theorem in_nseq_at__get_prefix {A}:
-  forall (R: relation A) x i n a b (r: R#n a b),
+Theorem in_nseq_at__get_prefix:
+  forall x i n a b (r: R#n a b),
     in_nseq_at x i r ->
     exists r': R#i a x, nseq_prefix r' r.
 Proof using.
@@ -502,8 +599,8 @@ Proof using.
     assumption.
 Qed.
 
-Theorem in_nseq__get_prefix {A}: 
-  forall (R: relation A) x n a b (r: R#n a b),
+Theorem in_nseq__get_prefix : 
+  forall x n a b (r: R#n a b),
     in_nseq x r ->
     exists m (r': R#m a x), nseq_prefix r' r.
 Proof using.
@@ -514,8 +611,8 @@ Proof using.
   eassumption.
 Qed.
 
-Theorem in_nseq__get_prefix' {state}: 
-  forall (R: relation state) x y z n (Rxz: R#n x z),
+Theorem in_nseq__get_prefix' : 
+  forall x y z n (Rxz: R#n x z),
     in_nseq y Rxz ~>
     R#* x y.
 Proof using.
@@ -529,3 +626,15 @@ Proof using.
       eassumption.
   - assumption.
 Qed.
+
+End BinaryRelationsProperties.
+
+
+(* These must be declared outside the section to be visisble *)
+
+Add Parametric Relation {A: Type} (R: relation A): A (star R)
+  reflexivity  proved by (star_refl R)
+  transitivity proved by (star_trans R)
+  as star_rel.
+
+Arguments ϕ_seq__seq_rev {A R x y}.

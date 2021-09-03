@@ -123,7 +123,7 @@ Proof using. reflexivity. Qed.
 
 Theorem rew_AW : forall P Q,
   R @s ⊨ A[P W Q] =
-  (R @s ⊨ A[P U Q] ∨ ¬AF P).
+  (R @s ⊨ AG (P ∧ ¬Q) ∨ A[P U Q]).
 Proof using. reflexivity. Qed.
 
 End Basic.

@@ -4,8 +4,8 @@ Require Import TransitionSystems.
 Require Import Privilege.
 Require Import AttarchTrans.
 
-Require Import Coq.Program.Equality.
 Require Import Tactics.Tactics.
+
 
 Definition useram_key_secure : tprop (attarch_global * attarch_state) := 
   ⟨fun st =>
@@ -21,19 +21,20 @@ Proof.
   - tentails!. discriminate.
   - invc H; try assumption!.
     invc H0.
-    + invc H; try assumption!.
+    + invc H1; try assumption!.
       now tentails!.
-    + invc H; [|inv H0]; assumption!.
+    + invc H1; [|inv H0]; assumption!.
 Qed.
 Print Assumptions useram_key_never_compromised.
 
-(*
-Definition setup_done : tprop (attarch_global * attarch_state) := 
-  fun _ st =>
-    snd st = sel4_run (platam_run, vm_run useram_waiting_request). 
 
+Definition setup_done : tprop (attarch_global * attarch_state) := 
+  ⟨fun st =>
+    snd st = sel4_run (platam_run, vm_run useram_waiting_request)⟩. 
+
+(*
 Theorem useram_key_never_compromised_setup:
-  attarch_trans @initial_state_good ⊨ A[useram_key_secure W setup_done].
+  attarch_trans @initial_state_good ⊨ A[useram_key_secure U setup_done].
 Proof using.
   rewrite rew_AW.
   intros n p y i Hin Hprev.

@@ -169,6 +169,52 @@ Tactic Notation "unfold_EF" "in" hyp(H) :=
   rewrite rew_EF in H +
   setoid_rewrite rew_EF in H.
 
+Tactic Notation "unfold_AU" := 
+  progress change_no_check (?R @?s ⊨ A[?P U ?Q]) with 
+    (forall p: path R s, exists sQ i,
+      in_path_at sQ i p /\ 
+      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
+      R @sQ ⊨ Q) +
+  rewrite rew_AU +
+  setoid_rewrite rew_AU.
+Tactic Notation "unfold_AU" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ A[?P U ?Q]) with 
+    (forall p: path R s, exists sQ i,
+      in_path_at sQ i p /\ 
+      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
+      R @sQ ⊨ Q) in H +
+  rewrite rew_AU in H +
+  setoid_rewrite rew_AU in H.
+
+Tactic Notation "unfold_EU" := 
+  progress change_no_check (?R @?s ⊨ E[?P U ?Q]) with 
+    (exists (p: path R s) sQ i,
+      in_path_at sQ i p /\ 
+      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
+      R @sQ ⊨ Q) +
+  rewrite rew_EU +
+  setoid_rewrite rew_EU.
+Tactic Notation "unfold_EU" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ E[?P U ?Q]) with 
+    (exists (p: path R s) sQ i,
+      in_path_at sQ i p /\ 
+      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
+      R @sQ ⊨ Q) in H +
+  rewrite rew_EU in H +
+  setoid_rewrite rew_EU in H.
+
+Tactic Notation "unfold_AW" := 
+  progress change_no_check (?R @?s ⊨ A[?P W ?Q]) with 
+    (R @s ⊨ AG (P ∧ ¬Q) ∨ A[P U Q]) +
+  rewrite rew_AW +
+  setoid_rewrite rew_AW.
+Tactic Notation "unfold_AW" "in" hyp(H) := 
+  progress change_no_check (?R @?s ⊨ A[?P W ?Q]) with 
+    (R @s ⊨ AG (P ∧ ¬Q) ∨ A[P U Q]) in H +
+  rewrite rew_AW in H +
+  setoid_rewrite rew_AW in H.
+ 
+
 (* tintro - intro a timpl *)
 
 Tactic Notation "tintro" := 
@@ -210,7 +256,10 @@ Tactic Notation "tsimpl_step" :=
   unfold_AG +
   unfold_EG +
   unfold_AF +
-  unfold_EF.
+  unfold_EF +
+  unfold_AU + 
+  unfold_EU +
+  unfold_AW.
 
 Tactic Notation "tsimpl_step" "in" hyp(H) :=
   unfold_timpl in H +
@@ -221,7 +270,10 @@ Tactic Notation "tsimpl_step" "in" hyp(H) :=
   unfold_AG in H +
   unfold_EG in H +
   unfold_AF in H +
-  unfold_EF in H.
+  unfold_EF in H +
+  unfold_AU in H +
+  unfold_EU in H + 
+  unfold_AW in H.
 
 Tactic Notation "tsimpl" := repeat tsimpl_step.
 Tactic Notation "tsimpl" "in" hyp(H) := repeat tsimpl_step in H.

@@ -29,33 +29,36 @@ Notation "R @ s ⊨ P" := (tentails R s P)   (at level 69, format "R  @ s  ⊨  
 Notation "R @ s ⊭ P" := (~ tentails R s P) (at level 69, format "R  @ s  ⊭  P") : tprop_scope.
 
 
-(* State props *)
+Section StateProps.
 
-Definition ttop {state}: tprop state :=
+Context {state: Type}.
+
+Definition ttop : tprop state :=
   fun _ _ _ => True.
 
-Definition tbot {state}: tprop state :=
+Definition tbot : tprop state :=
   fun _ _ _ => False.
 
-Definition tconj {state} (P Q: tprop state): tprop state :=
+Definition tconj (P Q: tprop state): tprop state :=
   fun R _ s => R @s ⊨ P /\ R @s ⊨ Q.
 
-Definition tdisj {state} (P Q: tprop state): tprop state := 
+Definition tdisj (P Q: tprop state): tprop state := 
   fun R _ s => R @s ⊨ P \/ R @s ⊨ Q.
 
-Definition timpl {state} (P Q: tprop state): tprop state :=
+Definition timpl (P Q: tprop state): tprop state :=
   fun R _ s => R @s ⊨ P -> R @s ⊨ Q.
 
-Definition tbiimpl {state} (P Q: tprop state): tprop state :=
+Definition tbiimpl (P Q: tprop state): tprop state :=
   fun R _ s => R @s ⊨ P <-> R @s ⊨ Q.
 
-Definition tnot {state} (P: tprop state): tprop state :=
+Definition tnot (P: tprop state): tprop state :=
   fun R _ s => R @s ⊭ P.
 
-Definition tlift {state} (P: state -> Prop): tprop state :=
+Definition tlift (P: state -> Prop): tprop state :=
   fun _ _ s => P s.
 
-(* State prop notations *)
+End StateProps.
+
 Notation "⊤"      := (ttop) : tprop_scope.
 Notation "⊥"      := (tbot) : tprop_scope.
 Notation "P ∧ Q"  := (tconj P Q)   (at level 45, right associativity) : tprop_scope.
@@ -66,44 +69,56 @@ Notation "¬ P"    := (tnot P)      (at level 40, format "¬ P") : tprop_scope.
 Notation "⟨ P ⟩"   := (tlift P)     (format "⟨ P ⟩"): tprop_scope.
 
 
-(* path-quantifying props *)
+Section PathProps.
 
-Definition AX {state} (P: tprop state) : tprop state :=
+Context {state: Type}.
+
+Definition AX (P: tprop state) : tprop state :=
   fun R _ s => forall s', R s s' -> R @s' ⊨ P.
   
-Definition EX {state} (P: tprop state) : tprop state :=
+Definition EX (P: tprop state) : tprop state :=
   fun R _ s => exists s', R s s' /\ R @s' ⊨ P.
 
-Definition AG {state} (P: tprop state) : tprop state :=
+Definition AG (P: tprop state) : tprop state :=
   fun R _ s => forall (p: path R s) s', in_path s' p -> R @s' ⊨ P.
 
-Definition EG {state} (P: tprop state) : tprop state :=
+Definition EG (P: tprop state) : tprop state :=
   fun R _ s => exists p: path R s, forall s', in_path s' p -> R @s' ⊨ P.
 
-Definition AF {state} (P: tprop state) : tprop state :=
+Definition AF (P: tprop state) : tprop state :=
   fun R _ s => forall p: path R s, exists s', in_path s' p /\ R @s' ⊨ P.
   
-Definition EF {state} (P: tprop state) : tprop state :=
+Definition EF (P: tprop state) : tprop state :=
   fun R _ s => exists (p: path R s) s', in_path s' p /\ R @s' ⊨ P.
 
-Definition AU {state} (P Q: tprop state) : tprop state :=
+Definition AU (P Q: tprop state) : tprop state :=
   fun R _ s => forall p: path R s, exists sQ i,
     in_path_at sQ i p /\ 
     (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
     R @sQ ⊨ Q.
 
-Definition EU {state} (P Q: tprop state) : tprop state :=
-  fun R t s => exists (p: path R s) sQ i,
+Definition EU (P Q: tprop state) : tprop state :=
+  fun R _ s => exists (p: path R s) sQ i,
     in_path_at sQ i p /\ 
     (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
     R @sQ ⊨ Q.
 
-(* Path-quantifying prop notations *)
+(* Definition AW {state} (P Q: tprop state) : tprop state :=
+  fun R _ s => forall p: (path R s) y i,
+    in_path_at y i p ->
+    (forall x, in_path_before x i p -> R @s ⊨ P ∧ ¬Q) ->
+    R @y ⊨ P ∨ Q. *)
+
+End PathProps.
+
 Notation "A[ P 'U' Q ]" := (AU P Q) (at level 40, format "A[ P  'U'  Q ]") : tprop_scope.
 Notation "E[ P 'U' Q ]" := (EU P Q) (at level 40, format "E[ P  'U'  Q ]") : tprop_scope.
 
+
+(* Derived formulas *)
+
 Definition AW {state} (P Q: tprop state) : tprop state :=
-  fun R _ s => R @s ⊨ A[P U Q] ∨ ¬AF P.
+  fun R _ s => R @s ⊨ AG (P ∧ ¬Q) ∨ A[P U Q].
   (* fun R s => forall s' (seq: R#* s s'),
     (forall x, in_seq x seq -> R @x ⊨ P ∧ ¬Q) ->
     forall s'', 

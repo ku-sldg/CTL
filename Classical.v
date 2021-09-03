@@ -1,14 +1,10 @@
+Require Import Notation.
 Require Import Coq.Logic.Classical.
+Require Import Coq.Logic.ClassicalFacts.
 
-(* TODO: is there a more cohesive/minimal set of axioms (i.e. deriving proof 
-   irrelevance from propositional extensionality instead of introducing an
-   additional axiom).
- *)
 Require Export Coq.Logic.Classical.
 Require Export Coq.Logic.FunctionalExtensionality.
 Require Export Coq.Logic.PropExtensionality.
-Require Export Coq.Logic.ProofIrrelevance.
-Require Export Coq.Logic.ProofIrrelevanceFacts.
 
 Theorem destruct_impl : forall p q,
   ~p \/ p /\ q <-> (p -> q).
@@ -21,17 +17,16 @@ Proof using.
   - destruct (classic p); auto.
 Qed.
 
-Tactic Notation "destruct" "classic" ident(H) ":" uconstr(c) :=
+Tactic Notation "destruct" "classic" uconstr(c) "as" ident(H) :=
   destruct (classic c) as [H|H].
 
 Tactic Notation "destruct" "classic" uconstr(c) :=
   let x := fresh in
-  destruct classic x : c.
+  destruct classic c as x.
 
 Require Import Coq.Logic.JMeq.
 Require Import Tactics.Tactics.
 
-Notation "x ~= y" := (JMeq x y) (at level 70, no associativity).
 
 Theorem JMeq_same_type : forall (A B: Type) (x: A) (y: B),
   x ~= y ->
@@ -53,8 +48,33 @@ Ltac JMeq_eq H :=
 Ltac classical_contradict H :=
   apply NNPP; contradict H.
 
-(* Extend extensionality tactic from `Coq.Logic.FunctionalExtensionality` *)
-Ltac old_extensionality x := extensionality x.
+
+(* Modified from `Coq.Logic.FunctionalExtensionality` to include propositional
+   extensionality
+ *)
+Tactic Notation "extensionality" :=
+  match goal with
+    [ |- ?X = ?Y ] =>
+    (apply (propositional_extensionality X Y) ||
+     apply (@functional_extensionality _ _ X Y) ||
+     apply (@functional_extensionality_dep _ _ X Y) ||
+     apply forall_extensionalityP ||
+     apply forall_extensionalityS ||
+     apply forall_extensionality)
+  end.
+
+Tactic Notation "extensionality" ident(x) :=
+  match goal with
+    [ |- ?X = ?Y ] =>
+    ((apply (propositional_extensionality X Y); split) ||
+     apply (@functional_extensionality _ _ X Y) ||
+     apply (@functional_extensionality_dep _ _ X Y) ||
+     apply forall_extensionalityP ||
+     apply forall_extensionalityS ||
+     apply forall_extensionality) ; intro x
+  end.
+
+(* Ltac old_extensionality x := extensionality x.
 
 Tactic Notation "extensionality" :=
   match goal with
@@ -73,7 +93,7 @@ Tactic Notation "extensionality" ident(x) :=
       split;
       intro x
   end ||
-  old_extensionality x.
+  old_extensionality x. *)
 
 
 Theorem rew_NNPP: forall P: Prop,
@@ -86,6 +106,7 @@ Proof using.
   - auto.
 Qed.
 
+(* Constructive helpers *)
 Lemma modus_tollens : forall P Q: Prop,
   (P -> Q) ->
   ~Q -> ~P.
@@ -103,3 +124,14 @@ Proof using.
   apply double_neg_intro in Hq.
   apply (modus_tollens P (~Q) Hpq Hq).
 Qed.
+
+
+(* Builds proof irrelevance from excluded middle *)
+Theorem proof_irrelevance : forall (P: Prop) (p1 p2: P),
+  p1 = p2.
+Proof using.
+  intros *.
+  apply proof_irrelevance_cci.
+  exact classic.
+Qed.
+(* Print Assumptions proof_irrelevance. *)

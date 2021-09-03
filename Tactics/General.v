@@ -166,6 +166,19 @@ Ltac especialize H :=
       clear x'
   end.
 
+(* Like especialize, but doesn't lose term definitions *)
+Ltac especialize_term H :=
+  match type of H with 
+  | forall x : ?T, _ => 
+      let x' := fresh x in
+      evar (x': T);
+      let _temp := fresh in 
+      epose (_temp := H x');
+      unfold x' in _temp; clear x';
+      unfold H in _temp; clear H;
+      rename _temp into H
+  end.
+
 
 (* repeat one or more times *)
 Tactic Notation "repeat+" tactic(tac) :=
@@ -192,6 +205,9 @@ Tactic Notation "find" "eapply" :=
   find (fun H => eapply H).
 Tactic Notation "find" "eapplyc" :=
   find (fun H => eapplyc H).
+
+Tactic Notation "find" "inversion" :=
+  find (fun H => inversion H).
 
 Tactic Notation "find" "rewrite" "->" :=
   find (fun H => rewrite -> H).
@@ -222,3 +238,10 @@ Tactic Notation "find" "specialize" uconstr(u1) uconstr(u2) uconstr(u3) uconstr(
  *)
 Tactic Notation "assumption!" :=
   solve [find apply].
+
+
+Tactic Notation "subst!" :=
+  subst;
+  repeat match goal with 
+  | H : ?x = ?x |- _ => clear H
+  end.

@@ -186,10 +186,15 @@ Tactic Notation "destruction" constr(H) "eqn" ":" ident(I) :=
   _induct_by H ltac:(fun hyp => destruct H eqn:I);
   subst.
 
-Ltac inv H :=
+(* For some reason, this doesn't do the same as inversion for some terms *)
+(* Ltac inv H :=
   let H' := fresh H in 
   copy H H';
-  destruction H'.
+  destruction H'. *)
+
+Ltac inv H :=
+  inversion H;
+  subst!.
 
 Ltac invc H :=
   inv H;
