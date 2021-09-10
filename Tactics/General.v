@@ -1,4 +1,3 @@
-Require Import Coq.Program.Equality.
 Require Import Tactics.Combinators.
 
 (* Overwrite exists tactic to support multiple instantiations 
@@ -93,6 +92,17 @@ Ltac overwrite H c :=
   clear H;
   rename temp into H.
 
+Tactic Notation "transform" hyp(H) uconstr(c) :=
+  let _temp := fresh in
+  assert (_temp : c);
+  [|overwrite H _temp; clear _temp].
+
+Tactic Notation "transform" hyp(H) uconstr(c) "by" tactic(tac) :=
+  let _temp := fresh in
+  assert (_temp : c);
+  [tac|overwrite H _temp; clear _temp].
+
+
 (* When `unset x` is invoked with hypothesis `x := t` (commonly introduced by 
    tactic `set`), replaces all instances of `x` with `t`, and clears `x`.
  *)
@@ -106,15 +116,14 @@ Ltac unset x := unfold x in *; clear x.
 Ltac todo := admit.
 
 
-(* `cuth`. Stands for "cut hypothesis" (unfortunately, the standard library alread
-   has a tactic called `cut`). Conduct forward reasoning by eliminating the assumption 
+(* `forward` conducts forward reasoning by eliminating the assumption 
    in an implication. Optionally, you can supply a tactic with the `by` clause.
    E.g.:
-   with hypothesis `H: x = x -> foo`, one can invoke `cuth H by reflexivity`. 
+   with hypothesis `H: x = x -> foo`, one can invoke `forward H by reflexivity`. 
    The hypothesis is then replaced with `H: foo`.
  *)
 
-Tactic Notation "cuth" hyp(H):=
+Tactic Notation "forward" hyp(H):=
   match type of H with
   | ?x -> _ =>
       let H' := fresh in 
@@ -122,17 +131,17 @@ Tactic Notation "cuth" hyp(H):=
         [| specialize (H H'); clear H']
   end.
 
-Tactic Notation "cuth" hyp(H) "by" tactic(tac) :=
-  cuth H; [solve [tac]|].
+Tactic Notation "forward" hyp(H) "by" tactic(tac) :=
+  forward H; [solve [tac]|].
 
 
-(* "max" variant of `cuth`. Invokes cuth on each assumption of a chained implication *)
+(* "max" variant of `forward`. Invokes forward on each assumption of a chained implication *)
 
-Ltac _max_cuth H := try (cuth H; [|_max_cuth]).
-Tactic Notation "max" "cuth" hyp(H) := _max_cuth.
+Ltac _max_forward H := try (forward H; [|_max_forward H]).
+Tactic Notation "max" "forward" hyp(H) := _max_forward H.
 
-Ltac _max_cuth_by H tac := try (cuth H; [tac|_max_cuth]).
-Tactic Notation "max" "cuth" hyp(H) "by" tactic(tac) := _max_cuth_by H tac.
+Ltac _max_forward_by H tac := try (forward H by tac; [|_max_forward_by H tac]).
+Tactic Notation "max" "forward" hyp(H) "by" tactic(tac) := _max_forward_by H tac.
 
 (* Solve a (registered) reflexive relation by proving the arguments equal *)
 Ltac reflexive := 
@@ -178,6 +187,55 @@ Ltac especialize_term H :=
       unfold H in _temp; clear H;
       rename _temp into H
   end.
+
+
+(* More tactic-equivalents which don't lose term definitions *)
+
+(* Like `assert`, but doesn't hide underlying term *)
+Tactic Notation "define" uconstr(c) "as" ident(H) :=
+  unshelve evar (H : c).
+
+Tactic Notation "define" uconstr(c) :=
+  let H := fresh in
+  define c as H.
+
+Ltac specialize_term H x :=
+  let _temp := fresh in 
+  epose (_temp := H x);
+  unfold H in _temp;
+  clear H;
+  rename _temp into H.
+
+Tactic Notation "overwrite_term" hyp(H) uconstr(c) :=
+  let _temp := fresh in
+  epose (_temp := c);
+  unfold H in _temp;
+  clear H;
+  rename _temp into H.
+
+(* Note, this is vastly less powerful than `apply` *)
+Tactic Notation "apply_term" uconstr(c) "in" hyp(H) :=
+  let _temp := fresh in 
+  epose (_temp := c);
+  repeat (overwrite_term H (_temp H) + especialize_term _temp);
+  unfold _temp in H;
+  clear _temp.
+
+(* This will replace the local definition with an equality *)
+Tactic Notation "destruct_term" hyp(H)
+  "as" simple_intropattern(pat) "eqn" ":" ident(i) :=
+  let _temp := fresh in 
+  rename H into _temp;
+  destruct _temp as pat eqn:i;
+  unfold _temp in i;
+  clear _temp.
+
+Tactic Notation "destruct_term" hyp(H) "eqn" ":" ident(i) :=
+  let _temp := fresh in 
+  rename H into _temp;
+  destruct _temp eqn:i;
+  unfold _temp in i;
+  clear _temp.
 
 
 (* repeat one or more times *)
@@ -245,3 +303,31 @@ Tactic Notation "subst!" :=
   repeat match goal with 
   | H : ?x = ?x |- _ => clear H
   end.
+
+
+(* Improved inversion *)
+
+Tactic Notation "inv" hyp(H) :=
+  inversion H;
+  subst!.
+
+Tactic Notation "inv" hyp(H) "as" simple_intropattern(pat) :=
+  inversion H as pat;
+  subst!.
+
+Tactic Notation "invc" hyp(H) :=
+  (* Rename H first to free identifier *)
+  let _temp := fresh "_temp" in
+  rename H into _temp;
+  inv _temp;
+  clear _temp.
+
+Tactic Notation "invc" hyp(H) "as" simple_intropattern(pat) :=
+  let _temp := fresh in 
+  rename H into _temp;
+  inv _temp as pat;
+  clear _temp.
+
+
+Tactic Notation "dependent" "destruction" uconstr(c) :=
+  fail "To use dependent destruction, first [Require Import Coq.Program.Equality]".

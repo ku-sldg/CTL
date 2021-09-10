@@ -43,16 +43,44 @@ Inductive nseq {A} (R: relation A) : nat -> A -> A -> Type :=
 Notation "R # n" := (nseq R n) (at level 5, format "R # n").
 
 
-Inductive in_seq {A} {R: relation A} {a}
+(* Inductive in_seq {A} {R: relation A} {a}
   : forall {a'}, A -> R#* a a' -> Prop :=
   | in_seq_head_refl :
       in_seq a (seq_refl R a)
+  (* | in_seq_head_step : forall x x' r p,
+      in_seq x' (seq_step R a x x' r p) *)
   | in_seq_head_step : forall x x' r p,
-      in_seq x' (seq_step R a x x' r p)
+      in_seq a (seq_step R a x x' r p)
   | in_seq_tail : forall x x' y r p,
       in_seq y p ->
-      in_seq y (seq_step R a x x' r p).
+      in_seq y (seq_step R a x x' r p). *)
 
+Fixpoint seq_length {A} {R: relation A} {a a'} (seq: R#* a a') :=
+  match seq with 
+  | seq_refl _ x => 0
+  | seq_step _ x y z r seq' => S (seq_length seq')
+  end.
+
+Inductive in_seq {A} {R: relation A} {a}
+  : forall {a'}, A -> R#* a a' -> Prop :=
+  | in_seq_head : forall a' (seq: R#* a a'),
+      in_seq a' seq
+  | in_seq_tail : forall x x' y r seq,
+      in_seq y seq ->
+      in_seq y (seq_step R a x x' r seq).
+
+Inductive in_seq_at {A} {R: relation A} {a}
+  : forall {a'}, A -> nat -> R#* a a' -> Prop :=
+  | in_seq_at_head : forall a' (seq: R#* a a'),
+      in_seq_at a' (seq_length seq) seq
+  | in_seq_at_tail : forall n x x' y r seq,
+      in_seq_at y n seq ->
+      in_seq_at y n (seq_step R a x x' r seq).
+
+
+(* This is an old, more complicated definition
+   TODO: rewrite in the style of in_seq
+ *)
 Inductive in_nseq {A} {R: relation A} {a}
   : forall {n a'}, A -> R#n a a' -> Prop :=
   | in_nseq_head_refl :
@@ -176,12 +204,26 @@ Definition seq_singleton {x y} (r: R x y)
   : R#* x y :=
   seq_step R x x y r (seq_refl R x).
 
-Theorem in_seq_last : forall x y (r: R#* x y),
-  in_seq y r.
+Theorem in_seq_first : forall x y (r: R#* x y),
+  in_seq x r.
 Proof using.
   intros *.
-  destruct r; constructor.
+  induction r.
+  - constructor.
+  - now constructor.
 Qed.
+
+Theorem in_seq_at_0 : forall x y (r: R#* x y),
+  in_seq_at x 0 r.
+Proof using.
+  intros *.
+  induction r.
+  - fold (seq_length (seq_refl R x)).
+    constructor.
+  - now constructor.
+Qed.
+
+
 
 (* Note equivalence to transitivity under Curry-Howard reflection to star *)
 Definition seq_concat {x y z} (Rxy: R#* x y) (Ryz: R#* y z)
@@ -226,9 +268,12 @@ Proof using.
     + simpl in H.
       now left.
     + simpl in *.
+      (* inv H. *)
+      (* inversion_sigma. *)
+      (* rewrite <- Eqdep.Eq_rect_eq.eq_rect_eq in H1. *)
       dependent invc H.
       * right. constructor.
-      * specialize (IHb a H3); clear H3.
+      * specialize (IHb a H2); clear H2.
         destruct IHb.
        -- now left.
        -- right. constructor. assumption.
@@ -241,12 +286,57 @@ Proof using.
     + induction b.
       * simpl.
         inversion H; subst.
-        apply in_seq_last.
+        constructor.
       * simpl.
         dependent invc H.
        -- constructor.
        -- constructor.
           now find apply.
+Qed.
+
+Theorem in_seq_at__concat_l {x y z}: forall (a: R#* x y) (b: R#* y z) n i,
+  in_seq_at n i a -> in_seq_at n i (seq_concat a b).
+Proof using.
+  intros * H.
+  induction b.
+  (* max induction b. *)
+  - assumption.
+  - simpl.
+    constructor.
+    now find applyc.
+Qed.
+
+Theorem in_seq_at__concat_r {x y z}: forall (a: R#* x y) (b: R#* y z) n i,
+  in_seq_at n i b -> in_seq_at n (seq_length a + i) (seq_concat a b).
+Proof using.
+  intros * H.
+  induction b.
+  - dependent invc H.
+    simpl.
+    rewrite PeanoNat.Nat.add_0_r.
+    constructor.
+  - simpl.
+    dependent invc H.
+    + clear IHb. 
+      simpl.
+      match goal with 
+      | |- in_seq_at _ ?i ?seq => 
+          replace i with (seq_length seq)
+      end; [constructor|].
+      simpl.
+      rewrite PeanoNat.Nat.add_succ_r.
+      f_equal.
+      clear.
+      induction b; simpl; try find rewrite; lia.
+    + constructor.
+      now find apply.
+Qed.
+
+Lemma seq_length_concat {x y z}: forall (a: R#* x y) (b: R#* y z),
+  seq_length (seq_concat a b) = seq_length a + seq_length b.
+Proof using.
+  intros *.
+  induction b; simpl; try find rewrite; lia.
 Qed.
 
 Definition seq_prepend (x y z: A):
@@ -262,7 +352,9 @@ Proof using.
     + now find apply.
 Defined.
 
-(* Isomorphic to seq. Sometimes, this reversed structure is more convenient *)
+(* Isomorphic to seq. Sometimes, this reversed structure is more convenient
+   (Note the "growth" step prepends rather than appending to the end)
+*)
 Inductive seq_rev : A -> A -> Type :=
   | seq_rev_refl : forall x,
       seq_rev x x
@@ -379,7 +471,24 @@ Proof using.
 Qed.
 
 (* equivalent to in_seq under the obvious isomorphism *)
-Inductive in_seq_rev {a}
+Inductive in_seq_rev {a} 
+  : forall {a'}, A -> seq_rev a a' -> Prop :=
+  | in_seq_rev_head : forall a' (seqr: seq_rev a a'),
+      in_seq_rev a seqr
+  | in_seq_rev_tail : forall x x' y r seqr,
+      in_seq_rev y seqr ->
+      in_seq_rev y (seq_rev_step a x x' r seqr).
+
+Inductive in_seq_rev_at {a} 
+  : forall {a'}, A -> nat -> seq_rev a a' -> Prop :=
+  | in_seq_rev_at_head : forall a' (seqr: seq_rev a a'),
+      in_seq_rev_at a 0 seqr
+  | in_seq_rev_at_tail : forall n x x' y r seqr,
+      in_seq_rev_at y n seqr ->
+      in_seq_rev_at y (S n) (seq_rev_step a x x' r seqr).
+ 
+      
+(* Inductive in_seq_rev {a}
   : forall {a'}, A -> seq_rev a a' -> Prop :=
   | in_seq_rev_head_refl :
       in_seq_rev a (seq_rev_refl a)
@@ -388,6 +497,16 @@ Inductive in_seq_rev {a}
   | in_seq_rev_tail : forall x x' y r p,
       in_seq_rev y p ->
       in_seq_rev y (seq_rev_step a x x' r p).
+Print in_seq_at.
+Inductive in_seq_rev_at {a}
+  : forall {a'}, A -> nat -> seq_rev a a' -> Prop :=
+  | in_seq_rev_head_refl :
+      in_seq_rev a 0 (seq_rev_refl a)
+  | in_seq_rev_head_step : forall n x x' r p,
+      in_seq_rev a (seq_rev_step a x x' r p)
+  | in_seq_rev_tail : forall x x' y r p,
+      in_seq_rev y p ->
+      in_seq_rev y (seq_rev_step a x x' r p). *)
 
 Theorem in_seq_iso_in_seq_rev_flip : forall x y z,
   forall b: seq_rev x y, in_seq_rev z b = in_seq z ((ϕ_seq__seq_rev x y)⁻¹ b).
@@ -419,6 +538,72 @@ Proof using.
   intros *.
   rewrite iso_equiv_flip.
   apply in_seq_iso_in_seq_rev_flip.
+Qed.
+
+
+Lemma in_seq_rev_at_last : forall x y (seqr: seq_rev x y),
+  in_seq_rev_at y (seq_length (seq_rev__seq seqr)) seqr.
+Proof using.
+Admitted.
+
+Theorem in_seq_rev_at__concat_l {x y z}: forall (a: seq_rev x y) (b: seq_rev y z) n i,
+  in_seq_rev_at n i a -> in_seq_rev_at n i (seq_rev_concat a b).
+Proof using.
+  (* intros * H.
+  induction b.
+  (* max induction b. *)
+  - assumption.
+  - simpl.
+    constructor.
+    now find applyc.
+Qed. *)
+Admitted.
+
+Theorem in_seq_at_iso_in_seq_rev_at_flip : forall x y z n,
+  forall b: seq_rev x y, in_seq_rev_at z n b = in_seq_at z n ((ϕ_seq__seq_rev x y)⁻¹ b).
+Proof using.
+  intros *.
+  max induct b; extensionality.
+  - simpl.
+    split; intro H.
+    + invc H.
+      apply in_seq_at_0.
+    + dependent invc H.
+      constructor.
+  - split; intro H; simpl in *.
+    + dependent inv H.
+      * apply in_seq_at_0.
+      * replace (S n0) with 
+          (seq_length (seq_step R x x y r (seq_refl R x)) + n0)
+          by reflexivity.
+        apply in_seq_at__concat_r.
+        now find rewrite.
+    + dependent inv H.
+      * replace (seq_length (seq_concat (seq_step R x x y r (seq_refl R x)) (seq_rev__seq b))) with 
+          (S (seq_length (seq_rev__seq b))).
+          constructor.
+        apply in_seq_rev_at_last.
+        rewrite seq_length_concat.
+        reflexivity.
+      * apply (f_equal seq__seq_rev) in H0.
+        rewrite seq__seq_rev__concat in H0.
+        pose proof (rew := fun x y => iso_cancel_inv (ϕ_seq__seq_rev x y));
+          simpl in rew.
+        rewrite rew in H0; clear rew.
+
+        simpl seq_rev_concat in H0.
+        rewrite <- H0.
+
+        simpl.
+        apply in_seq_rev_at__concat_l.
+Admitted.
+
+Theorem in_seq_at_iso_in_seq_rev_at : forall x y z i,
+  iso_equiv (ϕ_seq__seq_rev x y) (@in_seq_at A R x y z i) (@in_seq_rev_at x y z i).
+Proof using.
+  intros *.
+  rewrite iso_equiv_flip.
+  apply in_seq_at_iso_in_seq_rev_at_flip.
 Qed.
 
 
@@ -476,13 +661,14 @@ Proof using.
       assumption.
 Qed. 
 
+(*
 Theorem in_seq__in_nseq : forall x a b (r: R#* a b),
   in_seq x r ->
   in_nseq x (projT2 (seq__nseq r)).
 Proof using.
   intros x a b r H.
   induction H.
-  - simpl. constructor.
+  - constructor.
   - simpl. break_let. simpl.
     constructor.
   - simpl. break_let. simpl in *.
@@ -626,6 +812,7 @@ Proof using.
       eassumption.
   - assumption.
 Qed.
+*)
 
 End BinaryRelationsProperties.
 

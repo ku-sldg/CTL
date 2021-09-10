@@ -1,12 +1,15 @@
+Require Import Notation.
 Require Import Ctl.Paths.
 Require Import Ctl.Definition.
 Require Import Ctl.Basic.
 Require Import BinaryRelations.
 Open Scope tprop_scope.
 
+Require Import Lia.
 Require Import Ctl.Tactics.
 Require Import Tactics.Tactics.
 Require Import Classical.
+Require Import CpdtTactics.
 
 Section Properties.
 
@@ -186,6 +189,121 @@ Proof using.
   - assumption.
 Qed.
 
+(* Extract the first satisfactory state *)
+Lemma first_state : forall s (p: path R s) P,
+  (exists s', in_path s' p /\ R @s' ⊨ P) ->
+  exists s' i, 
+    in_path_at s' i p /\ 
+    (forall x, in_path_before x i p -> R @x ⊨ ¬P) /\
+    R @s' ⊨ P.
+Proof using.
+  intros * H.
+  destruct H as (s'' & Hin & H).
+  induction Hin.
+  - exists s 0.
+    max split.
+    + constructor.
+    + intros * contra.
+      now inv contra.
+    + assumption.
+  - forward IHHin by assumption.
+    destruct IHHin as (s'0 & i & Hin' & IH1 & IH2).
+    destruct classic (R @s ⊨ P) as case.
+    + exists s 0.
+      max split.
+      * constructor.
+      * intros * contra.
+        now inv contra.
+      * assumption.
+    + exists s'0 (S i).
+      max split.
+      * now constructor.
+      * intros * Hbefore.
+        destruct Hbefore as (m & Hlt & Hin''). 
+        destruct m.
+       -- now inv Hin''.
+       -- apply IH1.
+          dependent invc Hin''.
+          exists m.
+          split.
+         ++ lia.
+         ++ assumption.
+      * assumption.
+Qed.
+
+Theorem seq__AW : forall s P Q,
+  (R @s ⊨ P ∨ Q ->
+  forall s' (seq: R#* s s'),
+    (forall x, in_seq x seq -> R @x ⊨ P ∧ ¬Q) ->
+    forall s'', 
+      R s' s'' ->
+      R @s'' ⊨ P ∨ Q) ->
+  R @s ⊨ A[P W Q].
+Proof using.
+  tsimpl.
+  intros * H *.
+  (* Proceed by classical destruction on whether there exists some 
+     state sQ in p entailing Q.
+   *)
+  destruct classic (
+    exists sQ, in_path sQ p /\ R @sQ ⊨ Q
+  ) as case.
+  - right.
+    (* Need to strengthen case to the *first* such sQ *)
+    apply first_state in case.
+    destruct case as (sQ & i & Hin & Hbefore_entails & HsQ).
+    exists sQ i.
+    max split; try assumption.
+    intros * Hbefore.
+
+    (* Strategy: 
+         get prefix sequence including state before sQ.
+         reflect in_path_before to in_seq
+         Induct over in_seq. apply to H to get P ∨ Q. 
+         Show Q contradicts that sQ is first. Therefore, P
+     *)
+
+    copy Hin _temp;
+      apply in_path_at__seq'' in _temp as [seq Hbefore_seq].
+ 
+    destruct seq as [|s sQ' sQ].
+    { exfalso; clear - Hbefore_seq Hbefore.
+      destruct (path_at R p 1) as [y Hat].
+      specialize (Hbefore_seq y 1).
+      forward Hbefore_seq.
+      - contradict goal.
+        transform contra (i = 0) by lia.
+        now inv Hbefore.
+      - rewrite Hbefore_seq in Hat.
+        dependent invc Hat.
+        discriminate H2.
+    }
+
+    assert (Hbefore': in_seq sP seq) by todo.
+
+    (* Inconvenient induction principle. Should start from the beginning *)
+    (* induction Hbefore'. *)
+    todo.
+  - overwrite case (not_ex_all_not _ _ case); simpl in case.
+    transform case (forall s', in_path s' p -> R @s' ⊨ ¬Q).
+    { clear - case.
+      intros s' Hin.
+      specialize (case s').
+      apply not_and_or in case.
+      now destruct case.
+    }
+    left.
+    intros * Hin.
+    induction Hin.
+    + specialize (case s).
+      forward case by constructor.
+      split; [|assumption].
+      (* specialize (H s (seq_refl R s)).
+      forward H.
+      * intros * contra.
+        dependent invc contra. *)
+Admitted.
+
 (*
 Theorem seq__AW : forall s P Q,
   (forall s' (seq: R#* s s'),
@@ -240,7 +358,7 @@ Proof using.
          solve goal by right.
        *)
       pose proof (in_prefix _ _ _ _ _ s'' prefix) as Hin.
-      cuth Hin by constructor.
+      forward Hin by constructor.
       todo.
       (* contradict H.
       specialize (H' sQ).

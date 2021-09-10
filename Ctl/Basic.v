@@ -123,7 +123,12 @@ Proof using. reflexivity. Qed.
 
 Theorem rew_AW : forall P Q,
   R @s ⊨ A[P W Q] =
-  (R @s ⊨ AG (P ∧ ¬Q) ∨ A[P U Q]).
+  forall p: path R s,
+    (forall s', in_path s' p -> R @s' ⊨ P ∧ ¬Q) \/
+    (exists sQ i,
+      in_path_at sQ i p /\ 
+      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
+      R @sQ ⊨ Q).
 Proof using. reflexivity. Qed.
 
 End Basic.

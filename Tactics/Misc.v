@@ -8,17 +8,17 @@ Require Import Tactics.General.
 
 Ltac my_crush := repeat constructor + easy + lia + assumption. 
 
-Tactic Notation "find_cuth" "by" tactic(tac) := 
+Tactic Notation "find_forward" "by" tactic(tac) := 
   repeat match goal with 
-  | [H : ?x -> _ |- _] => cuth H by tac
+  | [H : ?x -> _ |- _] => forward H by tac
   | [H : ?x <-> _ |- _] => 
       destruct H as [H _];
-      cuth H by tac
+      forward H by tac
   | [H : _ <-> ?x |- _] => 
       destruct H as [_ H];
-      cuth H by tac
+      forward H by tac
   end.
-Tactic Notation "find_cuth" := find_cuth by my_crush.
+Tactic Notation "find_forward" := find_forward by my_crush.
 
 Theorem modus_tollens : forall {a b: Prop}, (a -> b) -> ~b -> ~a.
 Proof. auto. Qed.
@@ -36,7 +36,7 @@ Tactic Notation "cut_modus_tollens" hyp(H) "by" tactic(tac) :=
 Tactic Notation "cut_modus_tollens" hyp(H) := cut_modus_tollens H by my_crush.
 
 Tactic Notation "simplify_implication" hyp(H) "by" tactic(tac) :=
-  cuth H by tac + cut_modus_tollens H by tac.
+  forward H by tac + cut_modus_tollens H by tac.
 Tactic Notation "simplify_implication" hyp(H) :=
   simplify_implication H by my_crush.
 

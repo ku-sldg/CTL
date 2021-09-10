@@ -15,15 +15,16 @@ Definition useram_key_secure : tprop (attarch_global * attarch_state) :=
 Theorem useram_key_never_compromised:
   attarch_trans @initial_state_good ⊨ AG useram_key_secure.
 Proof.
-  rewrite rew_AG_star.
+  (* rewrite rew_AG_star. *)
+  apply star__AG.
   intros * Hstar.
   induct! Hstar.
   - tentails!. discriminate.
   - invc H; try assumption!.
-    invc H0.
-    + invc H1; try assumption!.
+    invc H.
+    + invc H0; try assumption!.
       now tentails!.
-    + invc H1; [|inv H0]; assumption!.
+    + invc H0; [|inv H0]; assumption!.
 Qed.
 Print Assumptions useram_key_never_compromised.
 

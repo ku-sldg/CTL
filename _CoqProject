@@ -1,5 +1,7 @@
 -R . Attarch
 
+CpdtTactics.v
+
 Notation.v
 Classical.v
 

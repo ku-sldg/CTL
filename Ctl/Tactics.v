@@ -205,12 +205,22 @@ Tactic Notation "unfold_EU" "in" hyp(H) :=
 
 Tactic Notation "unfold_AW" := 
   progress change_no_check (?R @?s ⊨ A[?P W ?Q]) with 
-    (R @s ⊨ AG (P ∧ ¬Q) ∨ A[P U Q]) +
+    (forall p: path R s,
+      (forall s', in_path s' p -> R @s' ⊨ P ∧ ¬Q) \/
+      (exists sQ i,
+        in_path_at sQ i p /\ 
+        (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
+        R @sQ ⊨ Q)) +
   rewrite rew_AW +
   setoid_rewrite rew_AW.
 Tactic Notation "unfold_AW" "in" hyp(H) := 
   progress change_no_check (?R @?s ⊨ A[?P W ?Q]) with 
-    (R @s ⊨ AG (P ∧ ¬Q) ∨ A[P U Q]) in H +
+    (forall p: path R s,
+      (forall s', in_path s' p -> R @s' ⊨ P ∧ ¬Q) \/
+      (exists sQ i,
+        in_path_at sQ i p /\ 
+        (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
+        R @sQ ⊨ Q)) in H +
   rewrite rew_AW in H +
   setoid_rewrite rew_AW in H.
  

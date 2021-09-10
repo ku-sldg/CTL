@@ -5,13 +5,15 @@ Require Import Coq.Program.Basics.
 Require Import Coq.Program.Combinators.
 Require Import Setoid.
 
+Require Import Coq.Logic.ClassicalChoice.
+
 Require Import Tactics.Tactics.
 Require Import Classical.
 
 Open Scope program_scope.
 
 
-Definition isomorphic (A B: Type) :=
+Definition isomorphic (A B: Type) : Prop :=
   exists (f: A -> B) (g: B -> A), 
     (forall b, f (g b) = b) /\
     (forall a, g (f a) = a).
@@ -23,10 +25,18 @@ Definition isomorphism (A B: Type) :=
 
 Notation "A ≅ B"  := (isomorphic A B)  (at level 75).
 Notation "A ≅> B" := (isomorphism A B) (at level 75).
+(* Notation "A ≃ B"  := (isomorphic A B)  (at level 75).
+Notation "A ≃> B" := (isomorphism A B) (at level 75). *)
+
 
 (* Could also be called an automorphism *)
 Definition permutation A := A ≅> A.
 
+
+(* Analogous to reflexivity *)
+Definition id_isomorphism A : A ≅> A.
+  now exists id id.
+Defined.
 
 (* Analogous to symmetry *)
 Definition isomorphism_invert {A B} (ϕ: A ≅> B) : B ≅> A.
@@ -186,7 +196,7 @@ Proof using.
   find specialize (ϕ a).
   now find rewrite inv_cancel_iso in.
 Defined.
-
+  
 (* Reflects hypothesis H to its corresponding term under isomorphism ϕ
    (with new name i). If the goal depends on H, the goal will be reflected as well.
 
@@ -242,6 +252,43 @@ Tactic Notation "iso" uconstr(ϕ) hyp(H) ident(i) := _iso ϕ H i.
 Tactic Notation "iso" uconstr(ϕ) hyp(H) := iso ϕ H H.
 
 
+Theorem isomorphism_refl_sig {A B}: forall P: B -> Type,
+  forall ϕ: A ≅> B,
+  (Σ a, P (ϕ a)) ->
+  Σ b, P b.
+Proof using.
+  intros * [a H].
+  now exists (ϕ a).
+Qed.
+
+Theorem isomorphism_refl_sig_inv {A B}: forall P: A -> Type,
+  forall ϕ: A ≅> B,
+  (Σ b, P (ϕ⁻¹ b)) ->
+  Σ a, P a.
+Proof using.
+  intros * [a H].
+  now exists (ϕ⁻¹ a).
+Qed.
+
+Theorem isomorphism_refl_exists {A B}: forall P: B -> Prop,
+  forall ϕ: A ≅> B,
+  (exists a, P (ϕ a)) ->
+  exists b, P b.
+Proof using.
+  intros * [a H].
+  now exists (ϕ a).
+Qed.
+
+Theorem isomorphism_refl_exists_inv {A B}: forall P: A -> Prop,
+  forall ϕ: A ≅> B,
+  (exists b, P (ϕ⁻¹ b)) ->
+  exists a, P a.
+Proof using.
+  intros * [a H].
+  now exists (ϕ⁻¹ a).
+Qed.
+
+
 Definition iso_equiv {A B C} (ϕ: A ≅> B) (fa : A -> C) (fb : B -> C) :=
   forall a, fa a = fb (ϕ a).
 
@@ -262,11 +309,12 @@ Qed.
 (* Images and inverses *)
 
 Definition image {A B} (f: A -> B) :=
-  Σ b, exists a, f a = b.
+  {b | exists a, f a = b}.
 
 Definition image_proj {A B} {f: A -> B} (img: image f) : B.
   now destruct img.
 Defined.
+(* Coercion image_proj : image >-> eq. *)
 
 Definition image_dep {A B} (f: forall a: A, B a) :=
   Σ a (b: B a), f a = b.
@@ -308,6 +356,64 @@ Proof using.
   apply iso_image.
 Qed.
 
+Theorem construct_choice : forall A B,
+  (A ~> B) ~> (A -> B).
+Proof using.
+  intros * H.
+  pose proof (@choice A B (fun _ _ => True)) as choice.
+  forward choice.
+  - clear choice.
+    intro a.
+    construct H in a.
+    now exists a.
+  - destruct exists choice f.
+    now constructor.
+Defined.
+
+
+Definition injective {A B} (f: A -> B) := forall a a', f a = f a' -> a = a'.
+
+Definition f_image {A B} (f: A -> B) : A -> image f.
+  intro a.
+  now exists (f a) a.
+Defined.
+
+(* Dependent on axiomatic classical choice to construct inverse *)
+Theorem inverse_injection : forall A B (f: A -> B),
+  injective f ->
+  exists g: image f -> A, 
+    (forall i, f_image f (g i) = i) /\
+    (forall a, g (f_image f a) = a).
+Proof using.
+  intros * Hinj.
+  transform Hinj (injective (f_image f)).
+  { unfold injective.
+    intros * H.
+    invc H as [H].
+    now apply Hinj in H.
+  }
+  pose proof (choice (fun i a => f_image f a = i)) as g.
+  forward g.
+  { intros (x & y & <-). now exists y. }
+  destruct g as [g H].
+  exists g.
+  split; [assumption|].
+  intros *.
+  specialize (H (f_image f a)).
+  now apply Hinj in H.
+Qed.
+
+(* Dependent on axiomatic classical choice to construct inverse *)
+Theorem f_iso_f_image : forall A B (f: A -> B),
+  injective f ->
+  A ≅ image f.
+Proof using.
+  intros * Hinj.
+  pose proof (inverse_injection A B f Hinj) as [g ?].
+  now exists (f_image f) g.
+Qed. 
+
+
 Theorem iso_prop : forall P Q: Prop,
   P ≅ Q ->
   (P <-> Q).
@@ -328,3 +434,87 @@ Proof using.
   now destruct H as (? & ? & ?).
 Qed.
 
+(* A slightly weaker conclusion than iso_prop_extensionality, which depends on the 
+   weaker assumption of proof irrelevance
+ *)
+Theorem iso_proof_irrelevance : forall P Q: Prop,
+  (forall (P: Prop) (p1 p2: P), p1 = p2) ->
+  (P ≅ Q) <-> (P <-> Q).
+Proof using.
+  intros * proof_irrelevance.
+  split.
+  - intro ϕ.
+    construct isomorphic__isomorphism in ϕ.
+    split; intros ?.
+    + now apply ϕ.
+    + now apply (ϕ⁻¹).
+  - intros [H1 H2].
+    exists H1 H2.
+    split; intros; apply proof_irrelevance.
+Qed.
+
+Theorem iso_proof_irrelevance2 : forall P Q: Prop,
+  (forall (P: Prop) (p1 p2: P), p1 = p2) ->
+  (P ≅ Q) ≅ (P <-> Q).
+Proof using.
+  intros * proof_irrelevance.
+  let _temp := fresh in 
+    pose proof iso_proof_irrelevance as _temp;
+    do 2 especialize _temp;
+    specialize (_temp proof_irrelevance);
+    destruct _temp as [H1 H2].
+  exists H1 H2.
+  split; intros; apply proof_irrelevance.
+Qed. 
+
+(* Ltac assert_exists :=
+  match goal with 
+  | |- @ex ?A _ => 
+      let _temp := fresh in
+      assert (_temp : A)
+      (* [|exists _temp; unfold _temp; clear _temp] *)
+  | |- @sig  ?A _ =>
+      let _temp := fresh in
+      assert (_temp : A);
+      [|exists _temp; unfold _temp; clear _temp]
+  | |- @sigT ?A _ =>
+      let _temp := fresh in
+      assert (_temp : A);
+      [|exists _temp; unfold _temp; clear _temp]
+  | |- context[?f _] => unfold f; assert_exists
+  end. *)
+
+(* Theorem univalence : forall A B,
+  (A = B) ≅ (A ≅ B).
+Proof using.
+  intros *.
+  exists (@eq_rect_r _ B (fun u => u ≅ B) (iso_refl B) A). *)
+
+Definition weak_univalence := forall A B, (A ≅ B) -> A = B.
+
+Definition univalence := forall A B, (A = B) ≅ (A ≅ B).
+
+(* Univalence = weak_univalance + proof irrelevance *)
+Theorem strengthen_univalence : 
+  weak_univalence -> univalence.
+Proof using.
+  unfold weak_univalence, univalence.
+  intros H *.
+  specialize (H A B).
+  exists (@eq_ind_r _ B (fun u => u ≅ B) (iso_refl B) A).
+  exists H.
+  split; intros; apply proof_irrelevance.
+Qed.
+
+Theorem stronger_univalence : 
+  weak_univalence ->
+  forall A B, (A = B) = (A ≅ B).
+Proof using. 
+  intros H *.
+  symmetry.
+  extensionality.
+  apply iso_proof_irrelevance.
+  - apply proof_irrelevance.
+  - symmetry.
+    now apply strengthen_univalence.
+Qed.

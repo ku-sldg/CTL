@@ -1,7 +1,11 @@
 Require Import Notation.
 Require Import BinaryRelations.
 Require Import Isomorphisms.
+
+Require Import Lia.
 Require Import Tactics.Tactics.
+Require Import Classical.
+Require Import CpdtTactics.
 
 
 Section Paths.
@@ -25,6 +29,21 @@ Inductive in_path_at {s}: state -> nat -> path s -> Prop :=
   | in_tail_at : forall s' x n r p,
       in_path_at x n p ->
       in_path_at x (S n) (step s s' r p). 
+
+Fixpoint path_at {s} (p: path s) n : {x | in_path_at x n p}.
+  refine (match p with
+  | step _ s' _ p' => 
+      match n with 
+      | 0 => exist _ s _
+      | S n' => 
+          match @path_at s' p' n' with 
+          | exist _ x prf => exist _ x _
+          end
+      end
+  end).
+  - constructor.
+  - now constructor.
+Defined.
 
 Definition in_path_before {s} x n (p: path s) : Prop :=
   exists m, m < n /\ in_path_at x m p.
@@ -81,6 +100,140 @@ Qed.
 (* If I want to define a similar function to derive a sequence, I'll need to define a
    `Type`-sorted equivalent to `in_path` (`prefix_upto`).
  *)
+
+(* Theorem in_path_at__seq : forall s (p: path s) s' i,
+  in_path_at s' i p ->
+  exists seq: R#* s s',
+    forall x, in_path_before x i p -> in_seq x seq.
+Proof using.
+  intros * Hin.
+  apply isomorphism_refl_exists_inv with (ϕ := ϕ_seq__seq_rev).
+  induction Hin.
+  - exists (seq_rev_refl R s).
+    simpl.
+    intros * contra.
+    now inv contra.
+  - destruct exists IHHin seqr.
+    exists (seq_rev_step R s s' x r seqr).
+    intros * Hbefore.
+    specialize (IHHin x0).
+    rewrite <- in_seq_iso_in_seq_rev_flip in *.
+    destruct Hbefore as (m & Hlt & Hin').
+    dependent invc Hin'.
+    + constructor.
+    + constructor.
+      find applyc.
+      exists n0.
+      split.
+      * lia.
+      * assumption.
+Qed. *)
+
+Theorem in_path_at__seq : forall s (p: path s) s' i,
+  in_path_at s' i p ->
+  exists seq: R#* s s',
+    forall x, in_path_before x (S i) p -> in_seq x seq.
+Proof using.
+  intros * Hin.
+  apply isomorphism_refl_exists_inv with (ϕ := ϕ_seq__seq_rev).
+  induction Hin.
+  - exists (seq_rev_refl R s).
+    simpl.
+    intros * H.
+    destruct H as (i & Hlt & H).
+    replace i with 0 in * by lia; clear Hlt.
+    invc H.
+    constructor.
+  - destruct exists IHHin seqr.
+    exists (seq_rev_step R s s' x r seqr).
+    intros * Hbefore.
+    specialize (IHHin x0).
+    rewrite <- in_seq_iso_in_seq_rev_flip in *.
+    destruct Hbefore as (m & Hlt & Hin').
+    dependent invc Hin'.
+    + constructor.
+    + constructor.
+      find applyc.
+      exists n0.
+      split.
+      * lia.
+      * assumption.
+Qed.
+
+Theorem in_path_at__seq' : forall s (p: path s) s' i,
+  in_path_at s' i p ->
+  exists seq: R#* s s',
+    forall x j, 
+      j <= i ->
+      in_path_at x j p -> in_seq_at x j seq.
+Proof using.
+  intros * Hin.
+  apply isomorphism_refl_exists_inv with (ϕ := ϕ_seq__seq_rev).
+  induction Hin.
+  - exists (seq_rev_refl R s).
+    simpl.
+    intros * Hlt Hin.
+    invc Hlt.
+    invc Hin.
+    apply in_seq_at_0.
+  - destruct exists IHHin seqr.
+    exists (seq_rev_step R s s' x r seqr).
+    intros * Hlt Hin'.
+    specialize (IHHin x0 j).
+
+    (* Need to proof iso equivalence of in_seq_at and in_seq_at_rev *)
+
+    (* rewrite <- in_seq_iso_in_seq_rev_flip.
+    destruct Hbefore as (m & Hlt & Hin').
+    dependent invc Hin'.
+    + constructor.
+    + constructor.
+      find applyc.
+      exists n0.
+      split.
+      * lia.
+      * assumption. *)
+Admitted.
+
+(* Could instead use prefix? *)
+Theorem in_path_at__seq'' : forall s (p: path s) s' i,
+  in_path_at s' i p ->
+  exists seq: R#* s s',
+    forall x j, 
+      j <= i ->
+      in_path_at x j p = in_seq_at x j seq.
+Proof using.
+  intros * Hin.
+  apply isomorphism_refl_exists_inv with (ϕ := ϕ_seq__seq_rev).
+  induction Hin.
+  - exists (seq_rev_refl R s).
+    simpl.
+    intros * Hlt.
+    invc Hlt.
+    extensionality Hin; invc Hin.
+    + apply in_seq_at_0.
+    + rewrite H2. constructor.
+  - destruct exists IHHin seqr.
+    exists (seq_rev_step R s s' x r seqr).
+    intros * Hlt.
+    
+    rewrite <- in_seq_at_iso_in_seq_rev_at_flip.
+    destruct j.
+    + specialize (IHHin x0 0).
+      forward IHHin by lia.
+      extensionality H; inv H; constructor.
+    + specialize (IHHin x0 j).
+(* 
+    specialize (IHHin x0 j).
+    rewrite <- in_seq_at_iso_in_seq_rev_at_flip in *.
+    destruct j.
+
+  - destruct exists IHHin seqr.
+    exists (seq_rev_step R s s' x r seqr).
+    intros * Hlt Hin'.
+    specialize (IHHin x0 j).
+ *)
+Admitted. 
 
 Theorem star__in_path : forall s s',
   serial_witness R ->

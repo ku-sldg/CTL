@@ -103,28 +103,20 @@ Definition EU (P Q: tprop state) : tprop state :=
     (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
     R @sQ ⊨ Q.
 
-(* Definition AW {state} (P Q: tprop state) : tprop state :=
-  fun R _ s => forall p: (path R s) y i,
-    in_path_at y i p ->
-    (forall x, in_path_before x i p -> R @s ⊨ P ∧ ¬Q) ->
-    R @y ⊨ P ∨ Q. *)
+Definition AW {state} (P Q: tprop state) : tprop state :=
+  fun R _ s => forall p: path R s,
+    (forall s', in_path s' p -> R @s' ⊨ P ∧ ¬Q) \/
+    (exists sQ i,
+      in_path_at sQ i p /\ 
+      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
+      R @sQ ⊨ Q).
 
 End PathProps.
 
 Notation "A[ P 'U' Q ]" := (AU P Q) (at level 40, format "A[ P  'U'  Q ]") : tprop_scope.
 Notation "E[ P 'U' Q ]" := (EU P Q) (at level 40, format "E[ P  'U'  Q ]") : tprop_scope.
-
-
-(* Derived formulas *)
-
-Definition AW {state} (P Q: tprop state) : tprop state :=
-  fun R _ s => R @s ⊨ AG (P ∧ ¬Q) ∨ A[P U Q].
-  (* fun R s => forall s' (seq: R#* s s'),
-    (forall x, in_seq x seq -> R @x ⊨ P ∧ ¬Q) ->
-    forall s'', 
-      R s' s'' ->
-      R @s'' ⊨ P ∨ Q. *)
 Notation "A[ P 'W' Q ]" := (AW P Q) (at level 40, format "A[ P  'W'  Q ]") : tprop_scope.
+
 
 Global Opaque tentails.
 Global Opaque ttop.

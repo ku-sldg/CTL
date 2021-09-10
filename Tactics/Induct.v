@@ -46,11 +46,17 @@ Ltac _induct_by H inductStep :=
 Tactic Notation "induct" hyp(H) :=
   _induct_by H ltac:(fun hyp => induction hyp).
 
+Tactic Notation "induct" hyp(H) "as" simple_intropattern(pat) :=
+  _induct_by H ltac:(fun hyp => induction hyp as pat).
+
 Tactic Notation "induct" hyp(H) "using" uconstr(c) :=
   _induct_by H ltac:(fun hyp => induction hyp using c).
 
+Tactic Notation "induct" hyp(H) "as" simple_intropattern(pat) "using" uconstr(c) :=
+  _induct_by H ltac:(fun hyp => induction hyp as pat using c).
 
-(* induct* variant does more work to clean up the context.
+
+(* induct! variant does more work to clean up the context.
    
    In particular, regular induct can leaves behind silly hypotheses
    of the form
@@ -64,7 +70,7 @@ Ltac ecut_eq_aux IH :=
   first
     [ match type of IH with 
       | _ = _ -> _ =>
-          try cuth IH by exact eq_refl
+          try forward IH by exact eq_refl
       end
     | especialize IH;
       ecut_eq_aux IH].
@@ -78,7 +84,7 @@ Ltac ecut_eq IH :=
   let ecut_eq_aux IH := first
     [ match type of IH with 
       | _ = _ -> _ =>
-          try cuth IH by exact eq_refl
+          try forward IH by exact eq_refl
       end
     | especialize IH;
       ecut_eq_aux IH] in
@@ -106,8 +112,15 @@ Ltac _induct_star_by H inductStep :=
 Tactic Notation "induct!" hyp(H) :=
   _induct_star_by H ltac:(fun hyp => induction hyp).
 
+Tactic Notation "induct!" hyp(H) "as" simple_intropattern(pat) :=
+  _induct_star_by H ltac:(fun hyp => induction hyp as pat).
+
 Tactic Notation "induct!" hyp(H) "using" uconstr(c) :=
   _induct_star_by H ltac:(fun hyp => induction hyp using c).
+
+Tactic Notation "induct!" hyp(H) "as" simple_intropattern(pat) "using" uconstr(c) :=
+  _induct_star_by H ltac:(fun hyp => induction hyp as pat using c).
+
 
 Ltac hyp_eq H H' :=
   match H with 
@@ -152,8 +165,15 @@ Ltac _max_induction_by H inductStep :=
 Tactic Notation "max" "induction" hyp(H) :=
   _max_induction_by H ltac:(fun hyp => induction hyp).
 
+Tactic Notation "max" "induction" hyp(H) "as" simple_intropattern(pat) :=
+  _max_induction_by H ltac:(fun hyp => induction hyp as pat).
+
 Tactic Notation "max" "induction" hyp(H) "using" constr(c) :=
   _max_induction_by H ltac:(fun hyp => induction hyp using c).
+
+Tactic Notation "max" "induction" hyp(H) "as" simple_intropattern(pat) "using" constr(c) :=
+  _max_induction_by H ltac:(fun hyp => induction hyp as pat using c).
+
 
 (* Can't call this? *)
 Tactic Notation "max" "dependent" "induction" hyp(H) :=
@@ -166,55 +186,50 @@ Tactic Notation "max" "dependent" "induction" hyp(H) :=
 Tactic Notation "max" "induct" hyp(H) :=
   _induct_by H ltac:(fun hyp => max induction hyp).
 
+Tactic Notation "max" "induct" hyp(H) "as" simple_intropattern(pat) :=
+  _induct_by H ltac:(fun hyp => max induction hyp as pat).
+
 Tactic Notation "max" "induct" hyp(H) "using" uconstr(c) :=
   _induct_by H ltac:(fun hyp => max induction hyp using c).
 
-Tactic Notation "max" "induct*" hyp(H) :=
+Tactic Notation "max" "induct" hyp(H) "as" simple_intropattern(pat) "using" uconstr(c) :=
+  _induct_by H ltac:(fun hyp => max induction hyp as pat using c).
+
+Tactic Notation "max" "induct!" hyp(H) :=
   _induct_star_by H ltac:(fun hyp => max induction hyp).
 
-Tactic Notation "max" "induct*" hyp(H) "using" uconstr(c) :=
+Tactic Notation "max" "induct!" hyp(H) "as" simple_intropattern(pat) :=
+  _induct_star_by H ltac:(fun hyp => max induction hyp as pat).
+
+Tactic Notation "max" "induct!" hyp(H) "using" uconstr(c) :=
   _induct_star_by H ltac:(fun hyp => max induction hyp using c).
 
+Tactic Notation "max" "induct!" hyp(H) "as" simple_intropattern(pat) "using" uconstr(c) :=
+  _induct_star_by H ltac:(fun hyp => max induction hyp as pat using c).
 
-(* destruction / inversion *)
+
+(* destruction *)
 
 Tactic Notation "destruction" constr(H) :=
   _induct_by H ltac:(fun hyp => destruct H);
+  subst.
+
+Tactic Notation "destruction" constr(H) "as" simple_intropattern(pat) :=
+  _induct_by H ltac:(fun hyp => destruct H as pat);
   subst.
 
 Tactic Notation "destruction" constr(H) "eqn" ":" ident(I) :=
   _induct_by H ltac:(fun hyp => destruct H eqn:I);
   subst.
 
+Tactic Notation "destruction" constr(H) "as" simple_intropattern(pat)
+  "eqn" ":" ident(I) :=
+  _induct_by H ltac:(fun hyp => destruct H as pat eqn:I);
+  subst.
+
+
 (* For some reason, this doesn't do the same as inversion for some terms *)
 (* Ltac inv H :=
   let H' := fresh H in 
   copy H H';
   destruction H'. *)
-
-Ltac inv H :=
-  inversion H;
-  subst!.
-
-Ltac invc H :=
-  inv H;
-  clear H.
-
-(* Dependent inv
-   Sometimes, inversion leaves behind equalities of existT terms. This tactic 
-   uses dependent destruction to break these into further equalities.
-   (Note, this leverages axioms about equality)
- *)
-
-Ltac dep_destr_sigma :=
-  repeat match goal with 
-  | H: existT _ _ _ = existT _ _ _ |- _ => dependent destruction H
-  end.
-
-Tactic Notation "dependent" "inv" hyp(H) :=
-  inv H;
-  dep_destr_sigma.
-
-Tactic Notation "dependent" "invc" hyp(H) :=
-  invc H;
-  dep_destr_sigma.
