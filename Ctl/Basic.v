@@ -132,3 +132,4 @@ Theorem rew_AW : forall P Q,
 Proof using. reflexivity. Qed.
 
 End Basic.
+Close Scope tprop_scope.

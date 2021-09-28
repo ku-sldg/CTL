@@ -5,20 +5,18 @@ Require Import Coq.Program.Basics.
 Require Import Coq.Program.Combinators.
 Require Import Setoid.
 
-Require Import Coq.Logic.ClassicalChoice.
-
 Require Import Tactics.Tactics.
-Require Import Classical.
+Require Import Axioms.
 
 Open Scope program_scope.
 
 
-Definition isomorphic (A B: Type) : Prop :=
+Definition isomorphic A B : Prop :=
   exists (f: A -> B) (g: B -> A), 
     (forall b, f (g b) = b) /\
     (forall a, g (f a) = a).
 
-Definition isomorphism (A B: Type) :=
+Definition isomorphism A B :=
   Σ (f: A -> B) (g: B -> A),
     (forall b, f (g b) = b) /\
     (forall a, g (f a) = a).
@@ -43,7 +41,15 @@ Definition isomorphism_invert {A B} (ϕ: A ≅> B) : B ≅> A.
   destruct ϕ as (f & g & ?).
   now exists g f.
 Defined.
-Notation "ϕ ⁻¹" := (isomorphism_invert ϕ) (at level 5, format "ϕ ⁻¹").
+Notation "ϕ ⁻¹" := (isomorphism_invert ϕ)
+  (at level 5, format "ϕ ⁻¹").
+
+(* Class invertible {U} (P: U -> U -> Type) :=
+  {inverse : forall {A B}, P A B -> P B A}.
+Notation "x ⁻¹" := (inverse x) (at level 5, format "x ⁻¹").
+
+Instance isomorphism_invertible : invertible isomorphism := 
+  {inverse := @isomorphism_invert}. *)
 
 (* Analogous to transitivity *)
 Theorem isom_compose {X Y Z}: 
@@ -61,7 +67,7 @@ Defined.
 
 (* Projections and lifts *)
 
-Definition iso_proj1 {A B} (ϕ: A ≅> B) : A -> B :=
+Definition iso_proj1 {A B} (ϕ: A ≅> B) : A -> B := 
   match ϕ with 
   | existT _ f _ => f
   end.
@@ -108,6 +114,9 @@ Proof using.
   destruct exists H f g.
   now exists g f.
 Qed.
+(* Instance isomorphic_invertible : invertible isomorphic := 
+  {inverse := iso_sym}. *)
+
 
 Theorem iso_trans :
   transitive Type isomorphic.
@@ -134,6 +143,7 @@ Proof using.
   destruct exists H f g.
   now exists f g.
 Qed. 
+Coercion isomorphism__isomorphic : isomorphism >-> isomorphic.
 
 Theorem isomorphic__isomorphism {A B}:
   A ≅ B ~>
@@ -311,10 +321,9 @@ Qed.
 Definition image {A B} (f: A -> B) :=
   {b | exists a, f a = b}.
 
-Definition image_proj {A B} {f: A -> B} (img: image f) : B.
-  now destruct img.
+Definition image_proj {A B} {f: A -> B} (i: image f) : B.
+  now destruct i.
 Defined.
-(* Coercion image_proj : image >-> eq. *)
 
 Definition image_dep {A B} (f: forall a: A, B a) :=
   Σ a (b: B a), f a = b.
@@ -356,22 +365,10 @@ Proof using.
   apply iso_image.
 Qed.
 
-Theorem construct_choice : forall A B,
-  (A ~> B) ~> (A -> B).
-Proof using.
-  intros * H.
-  pose proof (@choice A B (fun _ _ => True)) as choice.
-  forward choice.
-  - clear choice.
-    intro a.
-    construct H in a.
-    now exists a.
-  - destruct exists choice f.
-    now constructor.
-Defined.
 
-
-Definition injective {A B} (f: A -> B) := forall a a', f a = f a' -> a = a'.
+Definition injective  {A B} (f: A -> B) := forall a a', f a = f a' -> a = a'.
+Definition surjective {A B} (f: A -> B) := forall b, exists a, f a = b.
+Definition bijective  {A B} (f: A -> B) := injective f /\ surjective f.
 
 Definition f_image {A B} (f: A -> B) : A -> image f.
   intro a.
@@ -467,54 +464,64 @@ Proof using.
   split; intros; apply proof_irrelevance.
 Qed. 
 
-(* Ltac assert_exists :=
-  match goal with 
-  | |- @ex ?A _ => 
-      let _temp := fresh in
-      assert (_temp : A)
-      (* [|exists _temp; unfold _temp; clear _temp] *)
-  | |- @sig  ?A _ =>
-      let _temp := fresh in
-      assert (_temp : A);
-      [|exists _temp; unfold _temp; clear _temp]
-  | |- @sigT ?A _ =>
-      let _temp := fresh in
-      assert (_temp : A);
-      [|exists _temp; unfold _temp; clear _temp]
-  | |- context[?f _] => unfold f; assert_exists
-  end. *)
+(* Think twice before including this axiom. It's not necessarily compatible
+   with other common axioms! (for instance, UIP / K)
+ *)
+Axiom weak_univalence : forall A B,
+  (A ≅ B) -> A = B.
 
-(* Theorem univalence : forall A B,
+(* weak univalence + proof irrelevance *)
+Theorem univalence : forall A B,
   (A = B) ≅ (A ≅ B).
 Proof using.
   intros *.
-  exists (@eq_rect_r _ B (fun u => u ≅ B) (iso_refl B) A). *)
-
-Definition weak_univalence := forall A B, (A ≅ B) -> A = B.
-
-Definition univalence := forall A B, (A = B) ≅ (A ≅ B).
-
-(* Univalence = weak_univalance + proof irrelevance *)
-Theorem strengthen_univalence : 
-  weak_univalence -> univalence.
-Proof using.
-  unfold weak_univalence, univalence.
-  intros H *.
-  specialize (H A B).
-  exists (@eq_ind_r _ B (fun u => u ≅ B) (iso_refl B) A).
-  exists H.
+  define exists by (intros ->; apply iso_refl).
+  exists (weak_univalence A B).
   split; intros; apply proof_irrelevance.
 Qed.
 
-Theorem stronger_univalence : 
-  weak_univalence ->
+(* univalence + prop extensionality *)
+Theorem strong_univalence : 
   forall A B, (A = B) = (A ≅ B).
 Proof using. 
-  intros H *.
-  symmetry.
-  extensionality.
-  apply iso_proof_irrelevance.
-  - apply proof_irrelevance.
-  - symmetry.
-    now apply strengthen_univalence.
+  intros *.
+  rewrite <- iso_prop_extenionality.
+  apply univalence.
 Qed.
+
+(* This does not apply the isomorphism, it simply casts the type *)
+Definition cast {A B} (ϕ: A ≅ B) (a: A) : B.
+  rewrite <- strong_univalence in ϕ.
+  now destruct ϕ.
+Defined.
+
+(* This does not apply the isomorphism, it simply casts the type *)
+Definition cast_inv {A B} (ϕ: A ≅ B) (b: B) : A.
+  symmetry in ϕ.
+  now apply (cast ϕ).
+Defined.
+
+Lemma cast_inv_eq_cast_sym : forall A B (ϕ: A ≅ B), 
+  cast_inv ϕ = cast (iso_sym _ _ ϕ).
+Proof using.
+  reflexivity.
+Qed.
+
+Theorem cast_eq : forall A B (ϕ: A ≅ B) a,
+  cast ϕ a ~= a.
+Proof using.
+  intros *.
+  unfold cast.
+  destruct strong_univalence.
+  now subst.
+Qed. 
+
+Theorem cast_inv_eq : forall A B (ϕ: A ≅ B) b,
+  cast_inv ϕ b ~= b.
+Proof using.
+  intros *.
+  rewrite cast_inv_eq_cast_sym.
+  apply cast_eq.
+Qed. 
+
+Close Scope program_scope.

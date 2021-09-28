@@ -3,21 +3,15 @@ Require Import Coq.Logic.Classical.
 Require Import Coq.Logic.ClassicalFacts.
 Require Import Coq.Logic.Eqdep.
 
+Require Import Coq.Logic.JMeq.
+(* This dependency is a little messy, since Tactics.Construct depends on this *)
+Require Import Tactics.General.
+
 Require Export Coq.Logic.Classical.
+Require Export Coq.Logic.ClassicalChoice.
 Require Export Coq.Logic.FunctionalExtensionality.
 Require Export Coq.Logic.PropExtensionality.
 
-
-Theorem destruct_impl : forall p q,
-  ~p \/ p /\ q <-> (p -> q).
-Proof using.
-  intros p q.
-  split; intro H.
-  - destruct H.
-    + intro Hp. contradiction.
-    + intro H1. apply H.
-  - destruct (classic p); auto.
-Qed.
 
 Tactic Notation "destruct" "classic" uconstr(c) "as" ident(H) :=
   destruct (classic c) as [H|H].
@@ -25,9 +19,6 @@ Tactic Notation "destruct" "classic" uconstr(c) "as" ident(H) :=
 Tactic Notation "destruct" "classic" uconstr(c) :=
   let x := fresh in
   destruct classic c as x.
-
-Require Import Coq.Logic.JMeq.
-Require Import Tactics.Tactics.
 
 
 Theorem JMeq_same_type : forall (A B: Type) (x: A) (y: B),
@@ -38,14 +29,6 @@ Proof using.
   destruct H.
   reflexivity.
 Qed.
-
-(* In practice, likely no need to transform to regular equality. *)
-Ltac JMeq_eq H :=
-  match type of H with 
-  | ?x ~= ?y =>
-      destruct (JMeq_same_type _ _ x y H);
-      apply JMeq_eq in H
-  end.
 
 
 Tactic Notation "contradict" "goal" hyp(H) :=
@@ -112,31 +95,21 @@ Proof using.
 Qed.
 
 
-(* Builds proof irrelevance from excluded middle *)
-Theorem proof_irrelevance : forall (P: Prop) (p1 p2: P),
+(* Builds proof irrelevance from LEM *)
+Theorem classic_proof_irrelevance : forall (P: Prop) (p1 p2: P),
   p1 = p2.
 Proof using.
   intros *.
   apply proof_irrelevance_cci.
   exact classic.
 Qed.
-(* Print Assumptions proof_irrelevance. *)
 
-Definition uip_refl := forall U (x:U) (p: x = x),
-  p = eq_refl.
-
-Definition eq_rect_eq := forall U (p:U) (Q:U -> Type) (x:Q p) (h:p = p),
-  x = eq_rect p Q x p h.
-
-Theorem uip__eq_rect_eq:
-  uip_refl ->
-  eq_rect_eq.
+Theorem classic_uip : forall (A B: Type) (p q: A = B),
+  p = q.
 Proof using.
-  unfold uip_refl, eq_rect_eq.
-  intros H *.
-  now rewrite (H _ _ h).
+  intros.
+  apply classic_proof_irrelevance.
 Qed.
-
 
 (* De Morgan's + extensionality *)
 
@@ -191,6 +164,9 @@ Qed.
    uses excluded middle (we could also directly axiomitize eq_rect_eq)
  *)
 
+Definition eq_rect_eq := forall U p (Q: U -> Type) (x: Q p) (h: p = p),
+  x = eq_rect p Q x p h.
+
 Theorem inj_pairT2_paramterized :
   eq_rect_eq ->
   forall U (P: U -> Type) p x y,
@@ -202,7 +178,7 @@ Proof using.
   now rewrite <- eq_rect_eq in H1.
 Qed.
 
-(* Uses classic axiom *)
+(* Uses classic LEM *)
 Theorem inj_pairT2_classic : forall U (P: U -> Type) p x y,
   existT P p x = existT P p y ->
   x = y.
@@ -226,7 +202,6 @@ Tactic Notation "dependent" "inv" hyp(H) "as" simple_intropattern(pat) :=
   inv H as pat;
   destr_sigma_eq;
   subst!.
-
 
 Tactic Notation "dependent" "invc" hyp(H) :=
   invc H;

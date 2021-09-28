@@ -1,66 +1,29 @@
-Require Import Coq.Relations.Relation_Definitions.
-Require Import Setoid.
+Require Import Notation.
+Require Import BinaryRelations.
+Require Import Coq.Strings.String.
 
-(* Require Import GeneralTactics. *)
+Require Export Coq.Strings.String.
+
+Open Scope string_scope.
+
 
 Inductive privilege : Set :=
-  | read 
-  | write 
-  | exec.
+  | p_read 
+  | p_write.
+  (* | exec. *)
 
-Definition access component := component -> privilege -> Prop.
+Definition comp := string.
 
-Definition access_eq {component} (a1 a2: access component) :=
-  forall c p, a1 c p <-> a2 c p.
+Definition access := comp -> privilege -> bool.
 
-Lemma access_eq_refl {comp}: reflexive (access comp) access_eq.
-Proof. easy. Qed.
+Definition allAcc : access := λ _ _, true.
 
-Lemma access_eq_sym {comp}: symmetric (access comp) access_eq.
-Proof.
-  unfold symmetric, access_eq.
-  intros x y H c p.
-  split; intro H2. 
-  + apply H. assumption.
-  + apply H. assumption.
-Qed.
+Definition allReadOnly : access := λ _ p,
+  match p with 
+  | p_read => true 
+  | _    => false 
+  end.
 
-Lemma access_eq_trans {comp}: transitive (access comp) access_eq.
-Proof.
-  unfold access_eq.
-  intros a1 a2 a3 Hab Hbc.
-  intros c p.
-  split; intro H.
-  + apply Hbc.
-    apply Hab.
-    assumption.
-  + apply Hab.
-    apply Hbc.
-    assumption.
-Qed.
-
-Theorem access_eq_is_eq {comp}: equivalence (access comp) access_eq.
-Proof using.
-  split.
-  - apply access_eq_refl.
-  - apply access_eq_trans.
-  - apply access_eq_sym.
-Qed.
-
-Add Parametric Relation (comp: Type): (access comp) (@access_eq comp)
-  reflexivity  proved by (@access_eq_refl comp)
-  symmetry     proved by (@access_eq_sym comp)
-  transitivity proved by (@access_eq_trans comp)
-  as access_eq_rel.
-
-(* Specific access controls *)
-
-Inductive allAcc {component}: access component :=
-  | aa : forall c p, allAcc c p.
-
-Inductive readonly {component}: access component :=
-  | ro : forall c, readonly c read.
-
-(* rename full? *)
-Inductive private {component} (c: component): access component :=
-  | anyPriv : forall (p: privilege), private c c p.
+Definition private (c: comp): access := λ c' _, c =? c'.
+  
+Close Scope string_scope.

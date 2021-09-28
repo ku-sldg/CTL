@@ -3,10 +3,12 @@
 CpdtTactics.v
 
 Notation.v
-Classical.v
 
 Tactics/Combinators.v
 Tactics/General.v
+
+Axioms.v
+
 Tactics/Gen.v
 Tactics/Induct.v
 Tactics/Construct.v

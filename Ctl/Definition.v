@@ -19,7 +19,8 @@ Definition tprop state :=
     Prop.
 
 Declare Scope tprop_scope.
-Delimit Scope tprop_scope with tprop.
+(* Delimit Scope tprop_scope with tprop. *)
+Bind Scope tprop_scope with tprop.
 Open Scope tprop_scope.
 
 Definition tentails {state} (R: relation state) {t: transition R}

@@ -19,6 +19,31 @@ Tactic Notation "tentails!" :=
   change_no_check (?R @?s ⊨ ⟨?P⟩) with (P s);
   cbn.
 
+Tactic Notation "tentails" "in" hyp(H) :=
+  change (?R @?s ⊨ ⟨?P⟩) with (P s) in H.
+
+Tactic Notation "tentails!" "in" hyp(H) :=
+  cbn in H;
+  repeat match type of H with 
+  | ?R @?s ⊨ ?P => unfold P in H
+  end;
+  progress change (?R @?s ⊨ ⟨?P⟩) with (P s) in H;
+  cbn in H.
+
+Tactic Notation "tentails" "in" "*" :=
+  tentails;
+  repeat match goal with 
+  | H : _ |- _ => tentails in H
+  end.
+
+Tactic Notation "tentails!" "in" "*" :=
+  tentails!;
+  repeat match goal with 
+  | H : _ |- _ => tentails! in H
+  end.
+
+
+
 (*
 Tactic Notation "unfold_timpl" :=
   progress change_no_check (?R @?s ⊨ ?p ⟶ ?q) with (R @s ⊨ p -> R @s ⊨ q).
@@ -359,3 +384,5 @@ Tactic Notation "etapplyc" hyp(H) :=
   etapply H; clear H.
 Tactic Notation "etapplyc" hyp(H) "in" hyp(H2) :=
   etapply H in H2; clear H.
+
+Close Scope tprop_scope.

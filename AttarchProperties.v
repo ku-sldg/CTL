@@ -1,3 +1,4 @@
+Require Import Notation.
 Require Import Ctl.Ctl.
 Require Import BinaryRelations.
 Require Import TransitionSystems.
@@ -6,48 +7,62 @@ Require Import AttarchTrans.
 
 Require Import Tactics.Tactics.
 
+Open Scope string_scope.
+Open Scope tprop_scope.
+Open Scope env_scope.
 
-Definition useram_key_secure : tprop (attarch_global * attarch_state) := 
-  ⟨fun st =>
-    val_at (useram_key (fst st)) = Some good_useram_key -> 
-    acc_at (useram_key (fst st)) = useram_key_acc⟩. 
+Definition useram_key_secure : tprop attarch_state := ⟨λ '(l, _),
+    forall Γ l' s c,
+      l = sel4_run (l', Γ) s ->
+      read Γ c "useram_key" good_useram_key -> 
+      c = "useram"
+  ⟩.
+
+Definition diverged : tprop attarch_state :=
+  ⟨λ '(l, _), l = attarch_bot⟩.
+
+Ltac star_notation := 
+  repeat change (clos_refl_trans_n1 _ ?R) with (R^*) in *.
+
+(* AG strong induction. Reflect to seq. Hypothesis 
+   is in_seq x -> R @ x ⊨ H
+ *)
 
 Theorem useram_key_never_compromised:
-  attarch_trans @initial_state_good ⊨ AG useram_key_secure.
+  attarch_trans @attarch_init_state ⊨ AG useram_key_secure.
 Proof.
-  (* rewrite rew_AG_star. *)
   apply star__AG.
   intros * Hstar.
-  induct! Hstar.
+  induct! Hstar; star_notation.
   - tentails!. discriminate.
-  - invc H; try assumption!.
-    invc H.
-    + invc H0; try assumption!.
-      now tentails!.
-    + invc H0; [|inv H0]; assumption!.
+  - invc H.
+    + tentails!.
+      intros * [=] H'; subst.
+      econtradiction no_lookup_no_read; [|eassumption].
+      now unfold map_access.
+    + tentails!.
+      intros * [=] H'; subst.
+      econtradiction no_lookup_no_read; [|eassumption].
+      now unfold map_access.
+    + invc H.
+      * tentails! in *.
+        intros * [=] H'; subst.
+        eapply IHHstar.
+        reflexivity.
+        eapply write_unchanged_read'; try eassumption.
+        discriminate.
+      * tentails! in *.
+        intros * [=] H'; subst.
+        now eapply IHHstar.
+    + invc H.
+      invc H0.
+      tentails! in *.
+      intros * [=] H'; subst.
+      now eapply IHHstar.
+    + now tentails!.
 Qed.
 Print Assumptions useram_key_never_compromised.
 
 
-Definition setup_done : tprop (attarch_global * attarch_state) := 
-  ⟨fun st =>
-    snd st = sel4_run (platam_run, vm_run useram_waiting_request)⟩. 
-
-(*
-Theorem useram_key_never_compromised_setup:
-  attarch_trans @initial_state_good ⊨ A[useram_key_secure U setup_done].
-Proof using.
-  rewrite rew_AW.
-  intros n p y i Hin Hprev.
-  let Hin' := fresh in
-    copy Hin Hin';
-    apply in_path_at__get_prefix in Hin' as [p' Hprefix].
-  destruct exists p' curr_state.
-  max induct* p'.
-  - apply in_path_at_first_inv in Hin as ->.
-    apply tentails_tdisj_l.
-    tentails.
-    discriminate.
-  -
-Abort.
-*)
+Close Scope tprop_scope.
+Close Scope string_scope.

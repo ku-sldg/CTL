@@ -4,7 +4,7 @@ Require Import Isomorphisms.
 
 Require Import Lia.
 Require Import Tactics.Tactics.
-Require Import Classical.
+Require Import Axioms.
 Require Import CpdtTactics.
 
 
@@ -12,6 +12,7 @@ Section Paths.
 
 Context {state : Type}.
 Variable R : relation state.
+
 
 CoInductive path (s: state) : Type := 
   | step : forall s', R s s' -> path s' -> path s.

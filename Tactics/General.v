@@ -51,6 +51,9 @@ Tactic Notation "expand" constr(x) "in" hyp(H) := unfold x in H; fold x in H.
 Tactic Notation "expand" constr(x) "in" "*" := unfold x in *; fold x in *.
 
 
+(* Like `contradiction`, but introduces unification variables instead of failing *)
+Tactic Notation "econtradiction" uconstr(u) := exfalso; eapply u.
+
 (* `pose new proof`, variant of `pose proof` that fails if such a hypothesis
    already exists in the context. Useful for automation which saturates the 
    context with generated facts
@@ -195,10 +198,46 @@ Ltac especialize_term H :=
 Tactic Notation "define" uconstr(c) "as" ident(H) :=
   unshelve evar (H : c).
 
+Tactic Notation "define" uconstr(c) "as" ident(H) "by" tactic(tac) :=
+  define c as H; [solve[tac]|].
+
 Tactic Notation "define" uconstr(c) :=
   let H := fresh in
   define c as H.
 
+Tactic Notation "define" uconstr(c) "by" tactic(tac) :=
+  define c; [solve[tac]|].
+
+Ltac _define_exists_aux :=
+  let def_ex_with := fun A => 
+        let _temp := fresh in 
+        define A as _temp; 
+        [|exists _temp;
+          unfold _temp;
+          clear _temp]
+  in match goal with 
+  | |- @ex   ?A _ => def_ex_with A
+  | |- @sig  ?A _ => def_ex_with A
+  | |- @sigT ?A _ => def_ex_with A
+  end.
+Ltac _define_exists :=
+  _define_exists_aux + (
+    match goal with 
+    | |- ?x _ _ _ _ _  => unfold x
+    | |- ?x _ _ _ _    => unfold x
+    | |- ?x _ _ _      => unfold x
+    | |- ?x _ _        => unfold x
+    | |- ?x _          => unfold x
+    | |- context[?x _] => unfold x
+    end;
+    _define_exists
+  ).
+Tactic Notation "define" "exists" :=
+  _define_exists.
+
+Tactic Notation "define" "exists" "by" tactic(tac) :=
+  define exists; [solve[tac]|].
+  
 Ltac specialize_term H x :=
   let _temp := fresh in 
   epose (_temp := H x);

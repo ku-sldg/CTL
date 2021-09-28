@@ -3,15 +3,15 @@ Require Import Ctl.Paths.
 Require Import Ctl.Definition.
 Require Import Ctl.Basic.
 Require Import BinaryRelations.
-Open Scope tprop_scope.
 
 Require Import Lia.
 Require Import Ctl.Tactics.
 Require Import Tactics.Tactics.
-Require Import Classical.
+Require Import Axioms.
 Require Import CpdtTactics.
 
 Section Properties.
+Open Scope tprop_scope.
 
 Context {state: Type}.
 Variable R: relation state.
@@ -665,4 +665,5 @@ Proof.
   - tapply unexpand_AG.
 Qed.
 
+Close Scope tprop_scope.
 End Properties.

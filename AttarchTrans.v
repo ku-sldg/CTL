@@ -1,178 +1,165 @@
+Require Import Notation.
 Require Import Ctl.Definition.
 Require Import BinaryRelations.
 Require Import TransitionSystems.
 Require Import Privilege.
 
-Inductive component : Set := 
-  | platam 
-  | vmm 
-  | useram
-  | malicious_linux_component.
+Open Scope string_scope.
+Open Scope env_scope.
 
-Inductive boot_ev_t :=
-  | good_boot_ev 
-  | bad_boot_ev.
+
+(* value types *)
+
+Inductive boot_token_t :=
+  | good_boot_token
+  | bad_boot_token.
 Inductive vm_ev_t :=
   | good_vm_ev
   | bad_vm_ev.
 Inductive platam_key_t :=
   | good_platam_key
+  | encr_platam_key
   | bad_platam_key.
 Inductive useram_key_t :=
   | good_useram_key
+  | encr_useram_key
   | bad_useram_key.
-
-Record mem_store v : Type := mkMem_store 
-  { acc_at: access component
-  ; val_at: option v
-  }.
-Arguments acc_at {v}%type_scope.
-Arguments val_at {v}%type_scope.
-
-Record attarch_global := mkAttarchGl
-  { boot_ev    : mem_store boot_ev_t
-  ; vm_ev      : mem_store vm_ev_t
-  ; platam_key : mem_store platam_key_t
-  ; useram_key : mem_store useram_key_t
-  }.
-
-Definition set_boot_ev (st: attarch_global) m : attarch_global :=
-  {| boot_ev    := m; 
-     vm_ev      := vm_ev st;
-     platam_key := platam_key st;
-     useram_key := useram_key st |}.
-Definition set_vm_ev (st: attarch_global) m : attarch_global :=
-  {| boot_ev    := boot_ev st;
-     vm_ev      := m;
-     platam_key := platam_key st;
-     useram_key := useram_key st |}.
-Definition set_useram_key (st: attarch_global) m : attarch_global :=
-  {| boot_ev    := boot_ev st; 
-     vm_ev      := vm_ev st;
-     platam_key := platam_key st;
-     useram_key := m |}.
-Definition set_platam_key (st: attarch_global) m : attarch_global :=
-  {| boot_ev    := boot_ev st; 
-     vm_ev      := vm_ev st;
-     platam_key := m;
-     useram_key := useram_key st |}.
+Inductive useram_key_decr_key_t :=
+  | good_decr_key
+  | encr_decr_key
+  | bad_decr_key.
 
 
-Definition initial_global_state_good :=
-  {| boot_ev    := {|acc_at := readonly; val_at := Some good_boot_ev|};
-     vm_ev      := {|acc_at := allAcc; val_at := None|};
-     platam_key := {|acc_at := allAcc; val_at := None|};
-     useram_key := {|acc_at := allAcc; val_at := None|}
-  |}.
+(* Transition definitions *)
 
+Inductive platam_label :=
+  | platam_init 
+  | platam_meas_release
+  | platam_listen.
 
-(* Add linux state under vm? *)
-(* Note, all sudoers have access to useram/platam channel *)
-Inductive useram_state : Set :=
-  | useram_waiting_key (* initial state *)
-  | useram_waiting_request
-  | useram_measuring
-  | useram_making_request
-  | useram_sending_response.
+(* Definition platam_state := dynamic_state platam_label. *)
+Definition platam_state := platam_label × env.
+Definition platam_init_state : platam_state :=
+  (platam_init,
+   private "platam" ? (
+     "platam_key" ↦ encr_platam_key ;;
+     "useram_key_decr_key" ↦ encr_decr_key
+  )).
 
-Inductive useram_trans : state_trans attarch_global useram_state :=
-  | useram_get_key : forall st,
-      acc_at (useram_key st) useram read ->
-      useram_trans 
-        (st, useram_waiting_key)
-        (st, useram_waiting_request).
-
-Inductive platam_state : Set :=
-  | platam_init
-  | platam_measure
-  | platam_appraise
-  | platam_run.
-
-
-Inductive useram_key_acc : access component :=
-  | useram_useram_key_read  : useram_key_acc useram read
-  | platam_useram_key_read  : useram_key_acc platam read
-  | platam_useram_key_write : useram_key_acc platam write.
-
-Definition acquire_key boot_ev :=
-  match boot_ev with 
-  | good_boot_ev => good_platam_key
-  | bad_boot_ev => bad_platam_key
+Definition decrypt_platam_key key token : platam_key_t := 
+  match (key, token) with 
+  | (encr_platam_key, good_boot_token) => good_platam_key
+  | _ => bad_platam_key
   end.
 
-Inductive platam_trans : state_trans attarch_global platam_state :=
-  | platam_acquire_key : forall st boot_ev_val,
-      acc_at (boot_ev st) platam read ->
-      val_at (boot_ev st) = Some boot_ev_val ->
+Definition decrypt_useram_key_decr_key decr_key platam_key : useram_key_decr_key_t := 
+  match (decr_key, platam_key) with 
+  | (encr_decr_key, good_platam_key) => good_decr_key
+  | _ => bad_decr_key
+  end.
+
+Inductive platam_trans : relation (platam_state × env) := 
+  | platam_unlock_key : forall Γl Γl' Γg key token,
+      read  Γl "platam" "platam_key" key ->
+      read  Γg "platam" "boot_token" token ->
+      write Γl "platam" "platam_key" (decrypt_platam_key key token) Γl' ->
       platam_trans 
-        (st, platam_init)
-        (set_platam_key st 
-          {|acc_at := private platam; val_at := Some (acquire_key boot_ev_val)|}, 
-          platam_measure)
-  | platam_measure_good_vm : forall st,
-      platam_trans
-        (st, platam_measure)
-        (set_vm_ev st {|acc_at := private platam; val_at := Some good_vm_ev|}, platam_appraise)
-  | platam_measure_bad_vm : forall st,
-      platam_trans
-        (st, platam_measure)
-        (set_vm_ev st {|acc_at := private platam; val_at := Some bad_vm_ev|}, platam_appraise)
-  | platam_release_key : forall st,
-      acc_at (vm_ev st) platam read ->
-      val_at (vm_ev st) = Some good_vm_ev ->
-      platam_trans
-        (st, platam_appraise)
-        (set_useram_key st {|acc_at := useram_key_acc; val_at := Some good_useram_key|}, platam_run).
+        (platam_init, Γl, Γg)
+        (platam_meas_release, Γl', Γg)
+  | platam_measure_release : forall Γl Γg Γg' platam_key decr_key,
+      read  Γg "platam" "good_image" true ->
+      read  Γl "platam" "useram_key_decr_key" decr_key ->
+      read  Γl "platam" "platam_key" platam_key -> 
+      write Γg "platam" "vmm_dataport" (decrypt_useram_key_decr_key decr_key platam_key) Γg' ->
+      platam_trans 
+        (platam_meas_release, Γl, Γg)
+        (platam_listen, Γl, Γg').
 
-Inductive vm_state : Set :=
-  | vm_init
-  | vm_run : useram_state -> vm_state.
+(* TODO, bad_platam_trans, *)
 
-Inductive vm_trans : state_trans attarch_global vm_state :=
-  | vm_boot : forall st,
-      vm_trans 
-        (st, vm_init)
-        (st, vm_run useram_waiting_key)
-  | vm_linux_step : forall g g' s s',
-      useram_trans (g,s) (g',s') ->
-      vm_trans
-        (g, vm_run s)
-        (g', vm_run s').
+Inductive useram_label := 
+  | useram_wait_key
+  | useram_listen.
 
-Inductive attarch_state : Set :=
+Definition useram_state := useram_label × env.
+
+Definition useram_init_state : useram_state := 
+  (useram_wait_key, private "useram" ? "useram_key" ↦ encr_useram_key).
+
+Definition decrypt_useram_key key decr_key : useram_key_t := 
+  match (key, decr_key) with 
+  | (encr_useram_key, good_decr_key) => good_useram_key
+  | _ => bad_useram_key
+  end.
+
+Inductive useram_trans : relation (useram_state × env) :=
+  | useram_get_key : forall Γl Γl' Γg encr_key decr_key,
+      read  Γl "useram" "useram_key" encr_key ->
+      read  Γg "useram" "vmm_dataport" decr_key ->
+      write Γl "useram" "useram_key" (decrypt_useram_key encr_key decr_key) Γl' ->
+      useram_trans 
+        (useram_wait_key, Γl, Γg)
+        (useram_listen, Γl', Γg).
+
+Inductive vm_label := 
+  | vm_run : useram_state -> vm_label.
+
+Definition vm_state := vm_label.
+
+Definition vm_init_state : vm_state := vm_run useram_init_state.
+
+Inductive vm_trans : relation (vm_state × env) := 
+  | useram_step : forall x y Γ Γ',
+      useram_trans (x, Γ) (y, Γ') ->
+      vm_trans (vm_run x, Γ) (vm_run y, Γ').
+
+Inductive attarch_label :=
   | boot
-  | sel4_run : platam_state * vm_state -> attarch_state
+  | sel4_run : platam_state -> vm_state -> attarch_label
   | attarch_bot.
 
-Inductive attarch_trans : state_trans attarch_global attarch_state :=
-  (* TODO: add some boolean "good seL4 image" field to global state to determine boot? *)
-  | good_boot : forall st,
-      attarch_trans 
-        (st, boot)
-        (set_boot_ev st {|acc_at := readonly; val_at := Some good_boot_ev|}, sel4_run (platam_init, vm_init))
-  | bad_boot : forall st,
-      attarch_trans 
-        (st, boot)
-        (set_boot_ev st {|acc_at := readonly; val_at := Some bad_boot_ev|}, sel4_run (platam_init, vm_init))
-  | component_step : forall g g' s s',
-      (platam_trans ⊔ vm_trans) (g,s) (g',s') ->
-      attarch_trans 
-        (g, sel4_run s)
-        (g', sel4_run s')
-  | diverge : forall x y,
-      attarch_trans (x, y) (x, attarch_bot).
+Definition attarch_state := attarch_label × env.
 
-Definition initial_state_good := (initial_global_state_good, boot).
+Definition attarch_init_state : attarch_state := (boot, allReadOnly ? "good_image" ↦ true).
+
+Inductive attarch_trans : relation attarch_state :=
+  | boot_good : forall Γ,
+      read Γ "root_of_trust" "good_image" true -> 
+      attarch_trans
+        (boot, Γ)
+        (sel4_run platam_init_state vm_init_state,
+          allReadOnly ? "boot_token" ↦ good_boot_token;; Γ)
+  | boot_bad : forall Γ,
+      read Γ "root_of_trust" "good_image" false -> 
+      attarch_trans
+        (boot, Γ)
+        (sel4_run platam_init_state vm_init_state,
+          allReadOnly ? "boot_token" ↦ bad_boot_token;; Γ)
+  | platam_step : forall x l l' Γl Γl' Γg Γg',
+      platam_trans (l, Γl, Γg) (l', Γl', Γg') ->
+      attarch_trans 
+        (sel4_run (l, Γl) x, Γg)
+        (sel4_run (l', Γl') x, Γg')
+  | vm_step : forall x l l' Γg Γg',
+      vm_trans (l, Γg) (l', Γg') ->
+      attarch_trans 
+        (sel4_run x l, Γg)
+        (sel4_run x l', Γg')
+ | attarch_diverge : forall l Γ,
+      attarch_trans (l, Γ) (attarch_bot, Γ).
+
 
 Lemma attarch_trans_serial : 
   serial_witness attarch_trans.
 Proof using.
   unfold serial_witness.
-  intros a.
-  destruct a as [global local].
-  exists (global, attarch_bot).
-  constructor.
+  intros [l ?].
+  eexists.
+  apply attarch_diverge.
 Defined.
 
 Instance transition__attarch_trans : transition attarch_trans :=
   { trans_serial := attarch_trans_serial }.
+
+Close Scope env_scope.
+Close Scope string_scope.

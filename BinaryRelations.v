@@ -7,7 +7,7 @@ Require Import Setoid.
 Require Import Lia.
 Require Import Isomorphisms.
 Require Import Tactics.Tactics.
-Require Import Classical.
+Require Import Axioms.
 
 Require Export Coq.Relations.Relation_Definitions.
 Require Export Coq.Relations.Relation_Operators.

@@ -1,7 +1,9 @@
+Require Import Notation.
+Require Import Axioms.
 Require Import Setoid.
 Require Import Tactics.General.
 
-(* Notation "~> b" := (inhabited b) (at level 50, format "~> b"). *)
+
 Notation "~> b" := (inhabited b) (at level 50).
 
 Definition constructs (a b: Type): Prop := a -> (~> b).
@@ -128,4 +130,26 @@ Proof using.
   intros A B P Hab HbP a.
   constructc Hab in a.
   auto.
+Qed.
+
+(* Move to construct *)
+Theorem construct_choice : forall A B,
+  (A ~> B) ~> (A -> B).
+Proof using.
+  intros * H.
+  pose proof (@choice A B (fun _ _ => True)) as choice.
+  forward choice.
+  - clear choice.
+    intro a.
+    construct H in a.
+    now exists a.
+  - destruct exists choice f.
+    now constructor.
+Defined.
+
+Theorem inhabited_eq_exists_true : forall x,
+  ~> x = exists _: x, True.
+Proof using.
+  intros *.
+  extensionality H; now destruct H.
 Qed.
