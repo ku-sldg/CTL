@@ -1,12 +1,14 @@
 Require Import Notation.
+Require Import GeneralTactics.
+Require Import Axioms.
+Require Import Truncations.
+
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Program.Basics.
 Require Import Coq.Program.Combinators.
 Require Import Setoid.
-
-Require Import Tactics.Tactics.
-Require Import Axioms.
+Require Import Lia.
 
 Open Scope program_scope.
 
@@ -21,41 +23,32 @@ Definition isomorphism A B :=
     (forall b, f (g b) = b) /\
     (forall a, g (f a) = a).
 
-Notation "A ≅ B"  := (isomorphic A B)  (at level 75).
-Notation "A ≅> B" := (isomorphism A B) (at level 75).
-(* Notation "A ≃ B"  := (isomorphic A B)  (at level 75).
-Notation "A ≃> B" := (isomorphism A B) (at level 75). *)
+Notation "A ≃ B"  := (isomorphic A B)  (at level 75).
+Notation "A ≃> B" := (isomorphism A B) (at level 75).
 
 
 (* Could also be called an automorphism *)
-Definition permutation A := A ≅> A.
+Definition permutation A := A ≃> A.
 
 
 (* Analogous to reflexivity *)
-Definition id_isomorphism A : A ≅> A.
+Definition id_isomorphism A : A ≃> A.
   now exists id id.
 Defined.
 
 (* Analogous to symmetry *)
-Definition isomorphism_invert {A B} (ϕ: A ≅> B) : B ≅> A.
+Definition isomorphism_invert {A B} (ϕ: A ≃> B) : B ≃> A.
   destruct ϕ as (f & g & ?).
   now exists g f.
 Defined.
 Notation "ϕ ⁻¹" := (isomorphism_invert ϕ)
   (at level 5, format "ϕ ⁻¹").
 
-(* Class invertible {U} (P: U -> U -> Type) :=
-  {inverse : forall {A B}, P A B -> P B A}.
-Notation "x ⁻¹" := (inverse x) (at level 5, format "x ⁻¹").
-
-Instance isomorphism_invertible : invertible isomorphism := 
-  {inverse := @isomorphism_invert}. *)
-
 (* Analogous to transitivity *)
 Theorem isom_compose {X Y Z}: 
-  X ≅> Y ->
-  Y ≅> Z ->
-  X ≅> Z.
+  X ≃> Y ->
+  Y ≃> Z ->
+  X ≃> Z.
 Proof using.
   intros * Hxy Hyz.
   destruct Hxy as (fxy & gyx & fxy_gyx & gyx_fxy).
@@ -67,33 +60,31 @@ Defined.
 
 (* Projections and lifts *)
 
-Definition iso_proj1 {A B} (ϕ: A ≅> B) : A -> B := 
+Definition iso_proj1 {A B} (ϕ: A ≃> B) : A -> B :=
   match ϕ with 
-  | existT _ f _ => f
+  | ⟨f, _⟩ => f 
   end.
 Coercion iso_proj1 : isomorphism >-> Funclass.
 
-Definition iso_proj2 {A B} (ϕ: A ≅> B) : B -> A :=
+Definition iso_proj2 {A B} (ϕ: A ≃> B) : B -> A :=
   match ϕ with 
-  | existT _ _ (existT _ g _) => g
+  | ⟨_, g, _⟩ => g
   end.
 
-Definition iso_liftl {A B X: Type} (ϕ: A ≅> B) (f: A -> A) : B -> B :=
+Definition iso_liftl {A B X: Type} (ϕ: A ≃> B) (f: A -> A) : B -> B :=
   iso_proj1 ϕ ∘ f ∘ iso_proj2 ϕ.
 
-Definition iso_lift2 {A B X: Type} (ϕ: A ≅> B) (f: B -> B) : A -> A :=
+Definition iso_lift2 {A B X: Type} (ϕ: A ≃> B) (f: B -> B) : A -> A :=
   iso_proj2 ϕ ∘ f ∘ iso_proj1 ϕ.
 
 
-Definition iso_construct_proj1 {A B} (ϕ: A ≅ B) : ~> (A -> B) :=
-  match ϕ with 
-  | ex_intro _ f _ => inhabits f
-  end.
+Definition iso_inh_proj1 {A B} (ϕ: A ≃ B) : ‖A -> B‖.
+  now destruct ϕ.
+Defined.
 
-Definition iso_construct_proj2 {A B} (ϕ: A ≅ B) : ~> (B -> A) :=
-  match ϕ with 
-  | ex_intro _ _ (ex_intro _ g _) => inhabits g
-  end.
+Definition iso_construct_proj2 {A B} (ϕ: A ≃ B) : ‖B -> A‖.
+  now destruct ϕ as (_ & ? & _).
+Defined.
 
 
 (* Properties *)
@@ -114,9 +105,6 @@ Proof using.
   destruct exists H f g.
   now exists g f.
 Qed.
-(* Instance isomorphic_invertible : invertible isomorphic := 
-  {inverse := iso_sym}. *)
-
 
 Theorem iso_trans :
   transitive Type isomorphic.
@@ -136,8 +124,8 @@ Add Parametric Relation : Type isomorphic
   as iso_rel.
 
 Theorem isomorphism__isomorphic {A B}:
-  A ≅> B ->
-  A ≅ B.
+  A ≃> B ->
+  A ≃ B.
 Proof using.
   intros H.
   destruct exists H f g.
@@ -146,8 +134,8 @@ Qed.
 Coercion isomorphism__isomorphic : isomorphism >-> isomorphic.
 
 Theorem isomorphic__isomorphism {A B}:
-  A ≅ B ~>
-  A ≅> B.
+  A ≃ B ->
+  ‖A ≃> B‖.
 Proof using.
   intros H.
   destruct exists H f g.
@@ -155,7 +143,7 @@ Proof using.
   now exists f g.
 Qed.
 
-Theorem iso_cancel_inv {A B}: forall (ϕ: A ≅> B) b,
+Theorem iso_cancel_inv {A B}: forall (ϕ: A ≃> B) b,
   ϕ (ϕ⁻¹ b) = b.
 Proof using.
   intros.
@@ -163,7 +151,7 @@ Proof using.
   assumption!.
 Qed.
 
-Theorem inv_cancel_iso {A B}: forall (ϕ: A ≅> B) a,
+Theorem inv_cancel_iso {A B}: forall (ϕ: A ≃> B) a,
   ϕ⁻¹ (ϕ a) = a.
 Proof using.
   intros.
@@ -171,15 +159,50 @@ Proof using.
   assumption!.
 Qed.
 
-Theorem inv_cancel_inv {A B}: forall (ϕ: A ≅> B),
+Theorem inv_cancel_inv {A B}: forall (ϕ: A ≃> B),
   (ϕ⁻¹)⁻¹ = ϕ.
 Proof using.
   intros *.
   now destruct ϕ as (? & ? & ?).
 Qed.
 
+Lemma eq_cancel_left {A B}: forall (ϕ: A ≃> B) a b,
+  a = ϕ⁻¹ b ->
+  ϕ a = b.
+Proof using.
+  intros * ->.
+  apply iso_cancel_inv.
+Qed.
+
+Lemma eq_cancel_right {A B}: forall (ϕ: A ≃> B) a b,
+  ϕ⁻¹ b = a ->
+  b = ϕ a.
+Proof using.
+  intros * <-.
+  symmetry.
+  apply iso_cancel_inv.
+Qed.
+
+Lemma eq_cancel_inv_left {A B}: forall (ϕ: A ≃> B) a b,
+  b = ϕ a ->
+  ϕ⁻¹ b = a.
+Proof using.
+  intros * ->.
+  apply inv_cancel_iso.
+Qed.
+
+Lemma eq_cancel_inv_right {A B}: forall (ϕ: A ≃> B) a b,
+  ϕ a = b ->
+  a = ϕ⁻¹ b.
+Proof using.
+  intros * <-.
+  symmetry.
+  apply inv_cancel_iso.
+Qed.
+
+
 Theorem iso_iso_inv {A B}: 
-  (A ≅> B) ≅> (B ≅> A).
+  (A ≃> B) ≃> (B ≃> A).
 Proof using.
   do 2 exists isomorphism_invert.
   split; intros *; apply inv_cancel_inv.
@@ -187,7 +210,7 @@ Defined.
 
 (* Reflect a proof goal into the domain of the isomorphism *)
 Theorem isomorphism_refl {A B}: forall P: B -> Type,
-  forall ϕ: A ≅> B,
+  forall ϕ: A ≃> B,
   (forall a, P (ϕ a)) -> 
   forall b, P b.
 Proof using.
@@ -198,7 +221,7 @@ Defined.
 
 (* Reflect a proof goal into the image of the isomorphism *)
 Theorem isomorphism_refl_inv {A B}: forall P: A -> Type,
-  forall ϕ: A ≅> B,
+  forall ϕ: A ≃> B,
   (forall b, P (ϕ⁻¹ b)) -> 
   forall a, P a.
 Proof using.
@@ -219,7 +242,7 @@ Ltac _iso ϕ H i :=
   epose (Hϕ := ϕ);
   repeat especialize_term Hϕ;
   match type of Hϕ with 
-  | ?A ≅> ?B =>
+  | ?A ≃> ?B =>
       let tH := type of H in first
         [ unify A tH;
           match goal with 
@@ -240,7 +263,7 @@ Ltac _iso ϕ H i :=
           | _ => apply (Hϕ⁻¹) in H
           end
         | fail "Cannot unify the type of the hypothesis with either iso type"]
-  | ?A ≅ ?B =>
+  | ?A ≃ ?B =>
       match goal with 
       | |- ?g =>
           match type of g with 
@@ -248,7 +271,7 @@ Ltac _iso ϕ H i :=
           | _ => fail "Prop-level isomorphism cannot be used on a non-Prop goal"
           end
       end;
-      construct isomorphic__isomorphism in Hϕ;
+      inhabit isomorphic__isomorphism in Hϕ;
       _iso Hϕ H;
       (* Will this ever fail? *)
       try clear Hϕ
@@ -263,46 +286,46 @@ Tactic Notation "iso" uconstr(ϕ) hyp(H) := iso ϕ H H.
 
 
 Theorem isomorphism_refl_sig {A B}: forall P: B -> Type,
-  forall ϕ: A ≅> B,
+  forall ϕ: A ≃> B,
   (Σ a, P (ϕ a)) ->
   Σ b, P b.
 Proof using.
-  intros * [a H].
+  intros * [a ?].
   now exists (ϕ a).
 Qed.
 
 Theorem isomorphism_refl_sig_inv {A B}: forall P: A -> Type,
-  forall ϕ: A ≅> B,
+  forall ϕ: A ≃> B,
   (Σ b, P (ϕ⁻¹ b)) ->
   Σ a, P a.
 Proof using.
-  intros * [a H].
+  intros * [a ?].
   now exists (ϕ⁻¹ a).
 Qed.
 
 Theorem isomorphism_refl_exists {A B}: forall P: B -> Prop,
-  forall ϕ: A ≅> B,
+  forall ϕ: A ≃> B,
   (exists a, P (ϕ a)) ->
   exists b, P b.
 Proof using.
-  intros * [a H].
+  intros * [a ?].
   now exists (ϕ a).
 Qed.
 
 Theorem isomorphism_refl_exists_inv {A B}: forall P: A -> Prop,
-  forall ϕ: A ≅> B,
+  forall ϕ: A ≃> B,
   (exists b, P (ϕ⁻¹ b)) ->
   exists a, P a.
 Proof using.
-  intros * [a H].
+  intros * [a ?].
   now exists (ϕ⁻¹ a).
 Qed.
 
 
-Definition iso_equiv {A B C} (ϕ: A ≅> B) (fa : A -> C) (fb : B -> C) :=
+Definition iso_equiv {A B C} (ϕ: A ≃> B) (fa : A -> C) (fb : B -> C) :=
   forall a, fa a = fb (ϕ a).
 
-Theorem iso_equiv_flip {A B C}: forall (ϕ: A ≅> B) (fa : A -> C) (fb : B -> C),
+Theorem iso_equiv_flip {A B C}: forall (ϕ: A ≃> B) (fa : A -> C) (fb : B -> C),
   iso_equiv ϕ fa fb = forall b, fb b = fa (ϕ⁻¹ b).
 Proof using. 
   intros *.
@@ -315,6 +338,7 @@ Proof using.
     rewrite iso_cancel_inv.
     now find rewrite.
 Qed. 
+
 
 (* Images and inverses *)
 
@@ -336,13 +360,13 @@ Proof using.
 Defined.
 
 
-Definition iso_image_lift {A B} (ϕ: A ≅> B) (b: B) : image ϕ.
+Definition iso_image_lift {A B} (ϕ: A ≃> B) (b: B) : image ϕ.
   exists b (ϕ⁻¹ b).
   apply iso_cancel_inv.
 Defined.
 
-Theorem iso_image {A B}: forall ϕ: A ≅> B,
-  image ϕ ≅> B.
+Definition iso_image {A B}: forall ϕ: A ≃> B,
+  image ϕ ≃> B.
 Proof using.
   intros *.
   exists image_proj (iso_image_lift ϕ).
@@ -353,10 +377,10 @@ Proof using.
     unfold iso_image_lift.
     f_equal.
     apply proof_irrelevance.
-Qed.
+Defined.
 
-Theorem iso_image_inv {A B}: forall ϕ: A ≅> B,
-  image ϕ⁻¹ ≅> A.
+Theorem iso_image_inv {A B}: forall ϕ: A ≃> B,
+  image ϕ⁻¹ ≃> A.
 Proof using.
   intros *.
   iso iso_iso_inv ϕ.
@@ -375,7 +399,7 @@ Definition f_image {A B} (f: A -> B) : A -> image f.
   now exists (f a) a.
 Defined.
 
-(* Dependent on axiomatic classical choice to construct inverse *)
+(* Dependent on axiomatic choice to construct inverse *)
 Theorem inverse_injection : forall A B (f: A -> B),
   injective f ->
   exists g: image f -> A, 
@@ -389,9 +413,8 @@ Proof using.
     invc H as [H].
     now apply Hinj in H.
   }
-  pose proof (choice (fun i a => f_image f a = i)) as g.
-  forward g.
-  { intros (x & y & <-). now exists y. }
+  pose proof (fun_choice _ _ (fun i a => f_image f a = i)) as g.
+  forward g by (enow intros (? & ? & <-)).
   destruct g as [g H].
   exists g.
   split; [assumption|].
@@ -400,10 +423,10 @@ Proof using.
   now apply Hinj in H.
 Qed.
 
-(* Dependent on axiomatic classical choice to construct inverse *)
+(* Dependent on axiomatic choice to construct inverse *)
 Theorem f_iso_f_image : forall A B (f: A -> B),
   injective f ->
-  A ≅ image f.
+  A ≃ image f.
 Proof using.
   intros * Hinj.
   pose proof (inverse_injection A B f Hinj) as [g ?].
@@ -412,7 +435,7 @@ Qed.
 
 
 Theorem iso_prop : forall P Q: Prop,
-  P ≅ Q ->
+  P ≃ Q ->
   (P <-> Q).
 Proof using.
   intros * H.
@@ -421,7 +444,7 @@ Qed.
 
 (* An isomorphism of Props is equality, assuming extensionality *)
 Theorem iso_prop_extenionality : forall P Q: Prop,
-  (P ≅ Q) = (P = Q).
+  (P ≃ Q) = (P = Q).
 Proof using.
   intros *.
   extensionality.
@@ -436,12 +459,12 @@ Qed.
  *)
 Theorem iso_proof_irrelevance : forall P Q: Prop,
   (forall (P: Prop) (p1 p2: P), p1 = p2) ->
-  (P ≅ Q) <-> (P <-> Q).
+  (P ≃ Q) <-> (P <-> Q).
 Proof using.
   intros * proof_irrelevance.
   split.
   - intro ϕ.
-    construct isomorphic__isomorphism in ϕ.
+    inhabit isomorphic__isomorphism in ϕ.
     split; intros ?.
     + now apply ϕ.
     + now apply (ϕ⁻¹).
@@ -450,9 +473,9 @@ Proof using.
     split; intros; apply proof_irrelevance.
 Qed.
 
-Theorem iso_proof_irrelevance2 : forall P Q: Prop,
+Theorem iso_proof_irrelevance' : forall P Q: Prop,
   (forall (P: Prop) (p1 p2: P), p1 = p2) ->
-  (P ≅ Q) ≅ (P <-> Q).
+  (P ≃ Q) ≃ (P <-> Q).
 Proof using.
   intros * proof_irrelevance.
   let _temp := fresh in 
@@ -463,5 +486,231 @@ Proof using.
   exists H1 H2.
   split; intros; apply proof_irrelevance.
 Qed. 
+
+
+(* Cardinality *)
+
+Definition type_succ (A: Type) : Type := unit + A.
+
+Definition fin_card (A: Type) (n: nat) := A ≃ {x | x < n}.
+
+Lemma exist_eq : forall A (P: A -> Prop) x y p q,
+  x = y -> 
+  exist P x p = exist P y q.
+Proof using.
+  intros * ->.
+  now rewrite (proof_irrelevance _ p q).
+Qed.
+
+Definition countable (A: Type) := A ≃ nat. 
+
+
+Ltac iso_coerc_notation := 
+  repeat match goal with 
+  | ϕ: ?A ≃> ?B |- _ =>
+      (progress change_no_check (let (x, _) := ϕ   in x) with (ϕ  : A -> B)) +
+      (progress change_no_check (let (x, _) := ϕ⁻¹ in x) with (ϕ⁻¹: B -> A))
+  end.
+
+
+Ltac is_not_var x := assert_fails (is_var x).
+
+Ltac is_proof_term p :=
+  is_not_var p;
+  match type of p with
+  | ?P => match type of P with 
+          | Prop => idtac
+          end
+  end.
+
+(* This tactic is only able to hide closed proof terms. To build a more robust tactic 
+   which abstracts open terms into closed/hideable predicates, one would likely need to 
+   implement it in Ocaml
+ *)
+Ltac hide_proof_terms := 
+  repeat match goal with 
+  | |- context[?p] =>
+      is_proof_term p;
+      let ident := fresh "p" in
+      set (ident := p);
+      clearbody ident
+  end.
+
+Ltac hide_exist_proof_terms := 
+  repeat match goal with 
+  | |- context[exist _ _ ?p] =>
+      is_not_var p;
+      let ident := fresh "pexist" in 
+      set (ident := p);
+      clearbody ident
+  end.
+
+Theorem same_fin_card : forall A B n,
+  fin_card A n ->
+  fin_card B n ->
+  A ≃ B.
+Proof using.
+  intros * ϕA ϕB.
+  inhabit isomorphic__isomorphism in ϕA;
+  inhabit isomorphic__isomorphism in ϕB.
+  exists (ϕB⁻¹ ∘ ϕA) (ϕA⁻¹ ∘ ϕB).
+  split; intros *; unfold "∘";
+    apply eq_cancel_inv_left;
+    now apply eq_cancel_left.
+Qed. 
+
+Theorem fin_succ_card : forall A n,
+  fin_card A n ->
+  fin_card (type_succ A) (S n).
+Proof using.
+  intros * ϕ.
+  inhabit isomorphic__isomorphism in ϕ.
+  define exists.
+  { intros [tt|a].
+    + exists 0.
+      lia.
+    + destruct (ϕ a) as [x xlt].
+      exists (S x).
+      lia.
+  } 
+  hide_exist_proof_terms.
+  define exists.
+  { intros [x xlt].
+    destruct x.
+    - now left.
+    - right.
+      apply ϕ⁻¹.
+      exists x.
+      lia.
+  }
+  split.
+  - intros [x xlt].
+    destruct x.
+    + now apply exist_eq.
+    + cbn.
+      iso_coerc_notation.
+      rewrite iso_cancel_inv.
+      hide_proof_terms.
+      now apply exist_eq.
+  - intros [tt|a].
+    + now destruct tt.
+    + destruct (ϕ a) as [x xlt] eqn:case.
+      hide_proof_terms.
+      cbn.
+      iso_coerc_notation.
+      f_equal.
+      apply eq_cancel_inv_left.
+      rewrite case.
+      now apply exist_eq.
+Qed.
+
+Theorem fin_sum_card : forall A B n m,
+  fin_card A n ->
+  fin_card B m ->
+  fin_card (A + B) (n + m).
+Proof using.
+  intros * ϕA ϕB.
+  inhabit isomorphic__isomorphism in ϕA;
+  inhabit isomorphic__isomorphism in ϕB.
+  define exists.
+  { intros [a|b].
+    - destruct (ϕA a) as [x xlt].
+      exists x.
+      lia.
+    - destruct (ϕB b) as [x xlt].
+      exists (n + x).
+      lia.
+  }
+  define exists.
+  { intros [x xlt].
+    destruct (Compare_dec.lt_dec x n).
+    - left.
+      apply ϕA⁻¹.
+      now exists x.
+    - right.
+      apply ϕB⁻¹.
+      exists (x - n).
+      lia.
+  }
+  split.
+  - intros [x xlt].
+    destruct (Compare_dec.lt_dec x n).
+    + cbn.
+      iso_coerc_notation.
+      rewrite iso_cancel_inv.
+      hide_proof_terms.
+      now apply exist_eq.
+    + cbn.
+      iso_coerc_notation.
+      rewrite iso_cancel_inv.
+      hide_proof_terms.
+      apply exist_eq.
+      lia.
+  - intros [a|b].
+    + destruct (ϕA a) eqn:case.
+      destruct (Compare_dec.lt_dec x n); [|contradiction].
+      cbn.
+      f_equal.
+      iso_coerc_notation.
+      apply eq_cancel_inv_left.
+      rewrite case.
+      now apply exist_eq.
+    + destruct (ϕB b) eqn:case.
+      destruct (Compare_dec.lt_dec (n + x) n); [lia|].
+      cbn.
+      hide_proof_terms.
+      f_equal.
+      iso_coerc_notation.
+      apply eq_cancel_inv_left.
+      rewrite case.
+      apply exist_eq.
+      lia.
+Qed.
+
+Theorem fin_prod_card : forall A B n m,
+  fin_card A n ->
+  fin_card B m ->
+  fin_card (A * B) (n * m).
+Proof using.
+  intros * ϕA ϕB.
+  inhabit isomorphic__isomorphism in ϕA;
+  inhabit isomorphic__isomorphism in ϕB.
+  define exists.
+  { intros [a b].
+    destruct (ϕA a) as [x xlt];
+    destruct (ϕB b) as [y ylt].
+    exists (x*m + y).
+    clear - xlt ylt.
+    nia.
+  }
+  define exists.
+  { intros [x xlt].
+    constructor.
+    - apply ϕA⁻¹.
+      exists (PeanoNat.Nat.div x m).
+      apply PeanoNat.Nat.div_lt_upper_bound; lia.
+    - apply ϕB⁻¹.
+      exists (PeanoNat.Nat.modulo x m).
+      apply PeanoNat.Nat.mod_upper_bound.
+      lia.
+  }
+  split.
+  - intros [x xlt].
+    cbn.
+    iso_coerc_notation.
+    do 2 rewrite iso_cancel_inv.
+    hide_proof_terms.
+    apply exist_eq.
+    todo.
+  - intros [a b].
+    destruct (ϕA a) as [x xlt];
+    destruct (ϕB b) as [y ylt].
+    hide_proof_terms.
+    cbn.
+    iso_coerc_notation.
+    
+
+
+Admitted.
 
 Close Scope program_scope.

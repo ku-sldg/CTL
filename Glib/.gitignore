@@ -1,0 +1,11 @@
+.*
+!.gitignore
+
+*.glob
+*.vo
+*.vok
+*.vos
+
+Test/*
+
+Makefile.conf

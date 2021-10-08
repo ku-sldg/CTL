@@ -4,7 +4,7 @@ Require Import Ctl.Basic.
 Open Scope tprop_scope.
 
 Require Import Setoid.
-Require Import Tactics.Tactics.
+Require Import Glib.Glib.
 
 Ltac tentails :=
   match goal with 

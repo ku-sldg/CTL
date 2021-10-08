@@ -1,6 +1,6 @@
+Require Import Ctl.BinaryRelations.
 Require Import Ctl.Paths.
 Require Import Ctl.Definition.
-Require Import BinaryRelations.
 Open Scope tprop_scope.
 
 Section Basic.

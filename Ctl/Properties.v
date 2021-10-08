@@ -1,14 +1,11 @@
-Require Import Notation.
+Require Import Ctl.BinaryRelations.
 Require Import Ctl.Paths.
 Require Import Ctl.Definition.
 Require Import Ctl.Basic.
-Require Import BinaryRelations.
-
-Require Import Lia.
 Require Import Ctl.Tactics.
-Require Import Tactics.Tactics.
-Require Import Axioms.
-Require Import CpdtTactics.
+
+Require Import Glib.Glib.
+Require Import Lia.
 
 Section Properties.
 Open Scope tprop_scope.

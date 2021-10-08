@@ -1,11 +1,9 @@
-Require Import Notation.
-Require Import Ctl.Ctl.
-Require Import BinaryRelations.
 Require Import TransitionSystems.
 Require Import Privilege.
 Require Import AttarchTrans.
 
-Require Import Tactics.Tactics.
+Require Import Ctl.Ctl.
+Require Import Glib.Glib.
 
 Open Scope string_scope.
 Open Scope tprop_scope.

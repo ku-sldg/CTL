@@ -1,4 +1,4 @@
-Require Import Tactics.Combinators.
+Require Import TacticCombinators.
 
 (* Overwrite exists tactic to support multiple instantiations 
    (up to four)
@@ -284,7 +284,7 @@ Tactic Notation "repeat+" tactic(tac) :=
 
 (* `now` tactic with support for easy goals with existentials *)
 Tactic Notation "enow" tactic(tac) :=
-  (now tac) + (tac; solve [eassumption + eauto]).
+  (now tac) + (tac; solve [eassumption + eauto + now eexists]).
 
 
 (* Find a hypothesis to apply the tactic to. Fails on non-progress. *)
@@ -359,13 +359,16 @@ Tactic Notation "invc" hyp(H) :=
   let _temp := fresh "_temp" in
   rename H into _temp;
   inv _temp;
-  clear _temp.
+  (* Some inversions will clear the hypothesis automatically
+     (notably inversions on equalities), so we should only `try`
+     to clear it. *)
+  try clear _temp.
 
 Tactic Notation "invc" hyp(H) "as" simple_intropattern(pat) :=
   let _temp := fresh in 
   rename H into _temp;
   inv _temp as pat;
-  clear _temp.
+  try clear _temp.
 
 
 Tactic Notation "dependent" "destruction" uconstr(c) :=

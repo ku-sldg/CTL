@@ -1,4 +1,4 @@
-Require Import Tactics.General.
+Require Import GeneralTactics.
 
 (* `gen`/`to` tactics. Generalizes the term (: A) by a predicate (: A -> Prop)
    Useful when generalizing an inductive principle.

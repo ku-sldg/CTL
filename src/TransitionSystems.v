@@ -1,8 +1,8 @@
-Require Import Notation.
-Require Import BinaryRelations.
 Require Import Privilege.
 Require Import Axioms.
-Require Import Tactics.Tactics.
+
+Require Import Ctl.BinaryRelations.
+Require Import Glib.Glib.
 
 Open Scope string_scope.
 

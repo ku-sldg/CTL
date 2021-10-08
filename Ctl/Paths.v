@@ -1,11 +1,7 @@
-Require Import Notation.
-Require Import BinaryRelations.
-Require Import Isomorphisms.
+Require Import Ctl.BinaryRelations.
 
+Require Import Glib.Glib.
 Require Import Lia.
-Require Import Tactics.Tactics.
-Require Import Axioms.
-Require Import CpdtTactics.
 
 
 Section Paths.

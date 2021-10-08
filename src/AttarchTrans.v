@@ -1,8 +1,9 @@
-Require Import Notation.
-Require Import Ctl.Definition.
-Require Import BinaryRelations.
-Require Import TransitionSystems.
 Require Import Privilege.
+Require Import TransitionSystems.
+
+Require Import Ctl.BinaryRelations.
+Require Import Ctl.Definition.
+Require Import Glib.Glib.
 
 Open Scope string_scope.
 Open Scope env_scope.

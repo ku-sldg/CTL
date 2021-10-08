@@ -1,6 +1,6 @@
-Require Import Tactics.General.
-Require Import Tactics.Combinators.
-Require Import Tactics.Gen.
+Require Import GeneralTactics.
+Require Import TacticCombinators.
+Require Import Gen.
 
 Require Import Coq.Program.Equality.
 

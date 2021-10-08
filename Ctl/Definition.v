@@ -1,5 +1,5 @@
+Require Import Ctl.BinaryRelations.
 Require Import Ctl.Paths.
-Require Import BinaryRelations.
 
 Class transition {A} (R: relation A) := 
   {trans_serial: serial_witness R}.

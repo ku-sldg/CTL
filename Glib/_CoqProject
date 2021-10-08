@@ -1,0 +1,15 @@
+-R . Glib
+
+Notation.v
+TacticCombinators.v
+GeneralTactics.v
+Axioms/UipFacts.v
+Axioms/Classical.v
+Axioms/Extensionality.v
+Truncations.v
+Axioms/Choice.v
+Axioms/Axioms.v
+Gen.v
+Induct.v
+Isomorphisms.v
+Glib.v

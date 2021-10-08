@@ -5,9 +5,7 @@ Require Import Coq.Lists.List.
 
 Require Import Setoid.
 Require Import Lia.
-Require Import Isomorphisms.
-Require Import Tactics.Tactics.
-Require Import Axioms.
+Require Import Glib.Glib.
 
 Require Export Coq.Relations.Relation_Definitions.
 Require Export Coq.Relations.Relation_Operators.
@@ -189,8 +187,8 @@ Proof using.
 Qed.
 
 Theorem star__seq : forall x y,
-  R^* x y ~>
-  R#* x y.
+  R^* x y ->
+  ‖R#* x y‖.
 Proof using.
   intros * H.
   induction H.
@@ -441,7 +439,7 @@ Proof using.
 Qed.
 
 Definition ϕ_seq__seq_rev : forall x y,
-  R#* x y ≅> seq_rev x y.
+  R#* x y ≃> seq_rev x y.
 Proof using.
   intros *.
   exists (@seq__seq_rev x y) (@seq_rev__seq x y).
@@ -463,7 +461,7 @@ Proof using.
 Defined.
 
 Theorem isomorphic_seq__seq_rev : forall x y,
-  R#* x y ≅ seq_rev x y.
+  R#* x y ≃ seq_rev x y.
 Proof using.
   intros.
   apply isomorphism__isomorphic.
