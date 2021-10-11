@@ -11,7 +11,8 @@ Require Import Axioms.Extensionality.
 Axiom choice : Π (A: Type) (B: A -> Type),
   (Π x, ‖B x‖) -> ‖Π x, B x‖.
 
-Lemma choice_ext : Π (A: Type) (B: A -> Type),
+(* Truncation commutes across Π-abstractions *)
+Corollary trunc_comm_forall : Π (A: Type) (B: A -> Type),
   (Π x, ‖B x‖) = ‖Π x, B x‖.
 Proof using.
   intros *.
@@ -21,18 +22,26 @@ Proof using.
     now uninhabit H.
 Qed.
 
-Theorem nondep_choice : forall A B,
+(* Reduction rule on choice (trivialized by proof irrelevance) *)
+Lemma choice_red : forall (A: Type) (B: A -> Type) (b: Π a, B a),
+  choice _ _ (λ x, |b x|) = |λ x, b x|.
+Proof using.
+  intros *.
+  apply proof_irrelevance.
+Qed.
+
+Lemma nondep_choice : forall A B,
   (A -> ‖B‖) -> ‖A -> B‖.
 Proof using.
   intros * f.
   now apply choice.
 Qed.
 
-Theorem nondep_choice_ext : forall A B,
+Corollary trunc_comm_arrow : forall A B,
   (A -> ‖B‖) = ‖A -> B‖.
 Proof using.
   intros.
-  apply choice_ext.
+  apply trunc_comm_forall.
 Qed.
 
 Lemma fun_choice : forall A B (R: A -> B -> Prop),
@@ -53,7 +62,7 @@ Proof using.
     now destruct (Rltotal a).
 Qed.
 
-Theorem dependent_choice : forall (A: Type) (B: A -> Type) (R: forall a, B a -> Prop),
+Corollary dependent_choice : forall (A: Type) (B: A -> Type) (R: forall a, B a -> Prop),
   (forall a, exists b, R a b) ->
   exists f: (forall a, B a),
     forall a, R a (f a).
@@ -63,20 +72,15 @@ Proof using.
 Qed.
 
 (* Functional choice does not require an axiom when the proof of left-totalness 
-   is transparent/constructive
- *)
+   is transparent/constructive *)
 Definition fun_choice_constructive : forall A B (R: A -> B -> Prop),
   (forall a, Σ b, R a b) ->
   Σ f: A -> B, forall a, R a (f a).
 Proof using.
   intros * Rltotal.
-  define exists.
-  - intro a.
-    specialize (Rltotal a).
-    now destruct Rltotal.
-  - intro a.
-    simpl.
-    now destruct (Rltotal a).
+  exists (λ a, projT1 (Rltotal a)).
+  intro a.
+  now destruct (Rltotal a).
 Defined.
 
 Lemma rel_choice : forall A B (R: A -> B -> Prop),

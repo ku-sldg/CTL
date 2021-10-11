@@ -11,5 +11,7 @@ Axioms/Choice.v
 Axioms/Axioms.v
 Gen.v
 Induct.v
+Quotient.v
 Isomorphisms.v
+Cardinality.v
 Glib.v

@@ -2,7 +2,9 @@ Require Import Notation.
 Require Import GeneralTactics.
 Require Import Axioms.
 Require Import Truncations.
+Require Import Quotient.
 
+Require Import Coq.Logic.FinFun.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Program.Basics.
@@ -389,11 +391,6 @@ Proof using.
   apply iso_image.
 Qed.
 
-
-Definition injective  {A B} (f: A -> B) := forall a a', f a = f a' -> a = a'.
-Definition surjective {A B} (f: A -> B) := forall b, exists a, f a = b.
-Definition bijective  {A B} (f: A -> B) := injective f /\ surjective f.
-
 Definition f_image {A B} (f: A -> B) : A -> image f.
   intro a.
   now exists (f a) a.
@@ -401,14 +398,14 @@ Defined.
 
 (* Dependent on axiomatic choice to construct inverse *)
 Theorem inverse_injection : forall A B (f: A -> B),
-  injective f ->
+  Injective f ->
   exists g: image f -> A, 
     (forall i, f_image f (g i) = i) /\
     (forall a, g (f_image f a) = a).
 Proof using.
   intros * Hinj.
-  transform Hinj (injective (f_image f)).
-  { unfold injective.
+  transform Hinj (Injective (f_image f)).
+  { unfold Injective.
     intros * H.
     invc H as [H].
     now apply Hinj in H.
@@ -424,8 +421,8 @@ Proof using.
 Qed.
 
 (* Dependent on axiomatic choice to construct inverse *)
-Theorem f_iso_f_image : forall A B (f: A -> B),
-  injective f ->
+Theorem injection_image : forall A B (f: A -> B),
+  Injective f ->
   A ≃ image f.
 Proof using.
   intros * Hinj.
@@ -433,6 +430,73 @@ Proof using.
   now exists (f_image f) g.
 Qed. 
 
+(* Dependent on axiomatic choice to construct inverse *)
+Lemma surjection_image : forall A B (f: A -> B),
+  Surjective f ->
+  image f ≃ B.
+Proof using.
+  unfold Surjective.
+  intros * Hsur.
+  transform Hsur (Π b, ‖{a | f a = b}‖) by
+    (intros; now rewrite trunc_sig_eq_exists).
+  inhabit choice in Hsur.
+  define exists by (now intros [? _]).
+  define exists.
+  { intros b.
+    exists b.
+    destruct (Hsur b) as [a ?].
+    now exists a.
+  }
+  split.
+  - auto.
+  - intros (b & a & ?).
+    now apply exist_eq.
+Qed.
+
+Lemma iso_injective : forall A B (ϕ : A ≃> B),
+  Injective ϕ.
+Proof using.
+  intros * a a' H.
+  apply (f_equal ϕ⁻¹) in H.
+  now repeat rewrite inv_cancel_iso in H.
+Qed.
+
+Lemma iso_surjective : forall A B (ϕ : A ≃> B),
+  Surjective ϕ.
+Proof using.
+  intros * b.
+  exists (ϕ⁻¹ b).
+  apply iso_cancel_inv.
+Qed.
+
+Definition Bijective  {A B} (f: A -> B) := Injective f /\ Surjective f.
+
+Corollary iso_bijective : forall A B (ϕ : A ≃> B),
+  Bijective ϕ.
+Proof using.
+  intros *.
+  split.
+  - apply iso_injective.
+  - apply iso_surjective.
+Qed.
+
+Theorem bijection_iso : forall A B (f: A -> B),
+  Bijective f -> 
+  A ≃ B.
+Proof using.
+  intros * [? ?].
+  transitivity (image f).
+  - now apply injection_image.
+  - now apply surjection_image.
+Qed.
+
+Corollary ex_bijection_iso : forall A B,
+  (exists f: A -> B, Bijective f) -> 
+  A ≃ B.
+Proof using.
+  intros * [? ?].
+  enow eapply bijection_iso.
+Qed.
 
 Theorem iso_prop : forall P Q: Prop,
   P ≃ Q ->
@@ -488,229 +552,137 @@ Proof using.
 Qed. 
 
 
-(* Cardinality *)
+(* Arithmetic properties of isomorphisms *)
 
-Definition type_succ (A: Type) : Type := unit + A.
+Definition void := Empty_set.
 
-Definition fin_card (A: Type) (n: nat) := A ≃ {x | x < n}.
-
-Lemma exist_eq : forall A (P: A -> Prop) x y p q,
-  x = y -> 
-  exist P x p = exist P y q.
+Theorem sum_comm : forall A B,
+  A + B ≃ B + A.
 Proof using.
-  intros * ->.
-  now rewrite (proof_irrelevance _ p q).
+  intros *.
+  do 2 define exists by (now (intros [?|?]; [right|left])).
+  split; now intros [?|?].
 Qed.
 
-Definition countable (A: Type) := A ≃ nat. 
-
-
-Ltac iso_coerc_notation := 
-  repeat match goal with 
-  | ϕ: ?A ≃> ?B |- _ =>
-      (progress change_no_check (let (x, _) := ϕ   in x) with (ϕ  : A -> B)) +
-      (progress change_no_check (let (x, _) := ϕ⁻¹ in x) with (ϕ⁻¹: B -> A))
-  end.
-
-
-Ltac is_not_var x := assert_fails (is_var x).
-
-Ltac is_proof_term p :=
-  is_not_var p;
-  match type of p with
-  | ?P => match type of P with 
-          | Prop => idtac
-          end
-  end.
-
-(* This tactic is only able to hide closed proof terms. To build a more robust tactic 
-   which abstracts open terms into closed/hideable predicates, one would likely need to 
-   implement it in Ocaml
- *)
-Ltac hide_proof_terms := 
-  repeat match goal with 
-  | |- context[?p] =>
-      is_proof_term p;
-      let ident := fresh "p" in
-      set (ident := p);
-      clearbody ident
-  end.
-
-Ltac hide_exist_proof_terms := 
-  repeat match goal with 
-  | |- context[exist _ _ ?p] =>
-      is_not_var p;
-      let ident := fresh "pexist" in 
-      set (ident := p);
-      clearbody ident
-  end.
-
-Theorem same_fin_card : forall A B n,
-  fin_card A n ->
-  fin_card B n ->
-  A ≃ B.
+Theorem sum_id_l : forall A,
+  void + A ≃ A.
 Proof using.
-  intros * ϕA ϕB.
-  inhabit isomorphic__isomorphism in ϕA;
-  inhabit isomorphic__isomorphism in ϕB.
-  exists (ϕB⁻¹ ∘ ϕA) (ϕA⁻¹ ∘ ϕB).
-  split; intros *; unfold "∘";
-    apply eq_cancel_inv_left;
-    now apply eq_cancel_left.
-Qed. 
-
-Theorem fin_succ_card : forall A n,
-  fin_card A n ->
-  fin_card (type_succ A) (S n).
+  intros *.
+  define exists by (now intros [?|?]).
+  exists (λ a, inr a).
+  split.
+  - easy.
+  - now intros [?|?].
+Qed.
+  
+Theorem sum_id_r : forall A,
+  A + void ≃ A.
 Proof using.
-  intros * ϕ.
-  inhabit isomorphic__isomorphism in ϕ.
+  intros *.
+  etransitivity.
+  - apply sum_comm.
+  - apply sum_id_l.
+Qed.
+
+Theorem sum_assoc : forall A B C,
+  A + (B + C) ≃ (A + B) + C.
+Proof using.
+  intros *.
   define exists.
-  { intros [tt|a].
-    + exists 0.
-      lia.
-    + destruct (ϕ a) as [x xlt].
-      exists (S x).
-      lia.
-  } 
-  hide_exist_proof_terms.
+  { intros [?|[?|?]].
+    + now (left; left).
+    + now (left; right).
+    + now right.
+  }
   define exists.
-  { intros [x xlt].
-    destruct x.
+  { intros [[?|?]|?].
+    + now left.
+    + now (right; left).
+    + now (right; right).
+  }
+  split.
+  - now intros [[?|?]|?].
+  - now intros [?|[?|?]].
+Qed.
+
+Theorem prod_comm : forall A B,
+  A × B ≃ B × A.
+Proof using.
+  intros *.
+  do 2 define exists by (now intros [? ?]).
+  split; now intros [? ?].
+Qed.
+
+Theorem prod_id_l : forall A,
+  unit × A ≃ A.
+Proof using.
+  intros *.
+  exists (λ '(_, a), a) (λ a, (tt, a)).
+  split.
+  - easy.
+  - intros [tt a].
+    now destruct tt.
+Qed.
+
+Theorem prod_id_r : forall A,
+  A × unit ≃ A.
+Proof using.
+  intros *.
+  etransitivity.
+  - apply prod_comm.
+  - apply prod_id_l.
+Qed.
+
+Theorem prod_assoc : forall A B C,
+  A × (B × C) ≃ (A × B) × C.
+Proof using.
+  intros *.
+  define exists by (now intros [? [? ?]]).
+  define exists by (now intros [[? ?] ?]).
+  split.
+  - now intros [[? ?] ?].
+  - now intros [? [? ?]].
+Qed.
+
+Theorem sum_prod_distribute : forall A B C,
+  A × (B + C) ≃ A × B + A × C.
+Proof using.
+  intros *.
+  define exists.
+  { intros [? [?|?]].
     - now left.
-    - right.
-      apply ϕ⁻¹.
-      exists x.
-      lia.
+    - now right.
+  }
+  define exists.
+  { intros [[? ?]|[? ?]].
+    - split; [assumption| now left].
+    - split; [assumption| now right].
   }
   split.
-  - intros [x xlt].
-    destruct x.
-    + now apply exist_eq.
-    + cbn.
-      iso_coerc_notation.
-      rewrite iso_cancel_inv.
-      hide_proof_terms.
-      now apply exist_eq.
-  - intros [tt|a].
-    + now destruct tt.
-    + destruct (ϕ a) as [x xlt] eqn:case.
-      hide_proof_terms.
-      cbn.
-      iso_coerc_notation.
-      f_equal.
-      apply eq_cancel_inv_left.
-      rewrite case.
-      now apply exist_eq.
+  - now intros [[? ?]|[? ?]].
+  - now intros [? [?|?]].
 Qed.
 
-Theorem fin_sum_card : forall A B n m,
-  fin_card A n ->
-  fin_card B m ->
-  fin_card (A + B) (n + m).
+Theorem quotient_identity : forall A, 
+  A ≃ A / eq.
 Proof using.
-  intros * ϕA ϕB.
-  inhabit isomorphic__isomorphism in ϕA;
-  inhabit isomorphic__isomorphism in ϕB.
-  define exists.
-  { intros [a|b].
-    - destruct (ϕA a) as [x xlt].
-      exists x.
-      lia.
-    - destruct (ϕB b) as [x xlt].
-      exists (n + x).
-      lia.
-  }
-  define exists.
-  { intros [x xlt].
-    destruct (Compare_dec.lt_dec x n).
-    - left.
-      apply ϕA⁻¹.
-      now exists x.
-    - right.
-      apply ϕB⁻¹.
-      exists (x - n).
-      lia.
-  }
+  intros *.
+  apply ex_bijection_iso.
+  exists (qclass eq).
   split.
-  - intros [x xlt].
-    destruct (Compare_dec.lt_dec x n).
-    + cbn.
-      iso_coerc_notation.
-      rewrite iso_cancel_inv.
-      hide_proof_terms.
-      now apply exist_eq.
-    + cbn.
-      iso_coerc_notation.
-      rewrite iso_cancel_inv.
-      hide_proof_terms.
-      apply exist_eq.
-      lia.
-  - intros [a|b].
-    + destruct (ϕA a) eqn:case.
-      destruct (Compare_dec.lt_dec x n); [|contradiction].
-      cbn.
-      f_equal.
-      iso_coerc_notation.
-      apply eq_cancel_inv_left.
-      rewrite case.
-      now apply exist_eq.
-    + destruct (ϕB b) eqn:case.
-      destruct (Compare_dec.lt_dec (n + x) n); [lia|].
-      cbn.
-      hide_proof_terms.
-      f_equal.
-      iso_coerc_notation.
-      apply eq_cancel_inv_left.
-      rewrite case.
-      apply exist_eq.
-      lia.
+  + intros x y [=].
+    symmetry.
+    pattern x.
+    now find (fun H => induction H).
+  + apply qclass_surjective.
 Qed.
 
-Theorem fin_prod_card : forall A B n m,
-  fin_card A n ->
-  fin_card B m ->
-  fin_card (A * B) (n * m).
+
+Theorem quotient_universal_property : forall A R B {equivR: Equivalence R},
+  (A/R -> B) ≃ (Σ f: A -> B, forall x y, R x y -> f x = f y).
 Proof using.
-  intros * ϕA ϕB.
-  inhabit isomorphic__isomorphism in ϕA;
-  inhabit isomorphic__isomorphism in ϕB.
-  define exists.
-  { intros [a b].
-    destruct (ϕA a) as [x xlt];
-    destruct (ϕB b) as [y ylt].
-    exists (x*m + y).
-    clear - xlt ylt.
-    nia.
-  }
-  define exists.
-  { intros [x xlt].
-    constructor.
-    - apply ϕA⁻¹.
-      exists (PeanoNat.Nat.div x m).
-      apply PeanoNat.Nat.div_lt_upper_bound; lia.
-    - apply ϕB⁻¹.
-      exists (PeanoNat.Nat.modulo x m).
-      apply PeanoNat.Nat.mod_upper_bound.
-      lia.
-  }
-  split.
-  - intros [x xlt].
-    cbn.
-    iso_coerc_notation.
-    do 2 rewrite iso_cancel_inv.
-    hide_proof_terms.
-    apply exist_eq.
-    todo.
-  - intros [a b].
-    destruct (ϕA a) as [x xlt];
-    destruct (ϕB b) as [y ylt].
-    hide_proof_terms.
-    cbn.
-    iso_coerc_notation.
-    
-
-
+  intros * equivR.
 Admitted.
 
+    
 Close Scope program_scope.

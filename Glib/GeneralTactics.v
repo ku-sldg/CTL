@@ -1,3 +1,4 @@
+Require Import Notation.
 Require Import TacticCombinators.
 
 (* Overwrite exists tactic to support multiple instantiations 
@@ -373,3 +374,24 @@ Tactic Notation "invc" hyp(H) "as" simple_intropattern(pat) :=
 
 Tactic Notation "dependent" "destruction" uconstr(c) :=
   fail "To use dependent destruction, first [Require Import Coq.Program.Equality]".
+
+
+(* eta reduction / expansion *)
+
+Tactic Notation "eta" :=
+  change (λ x, ?f x) with f.
+
+Tactic Notation "eta" "in" hyp(H) :=
+  change (λ x, ?f x) with f in H.
+
+Tactic Notation "eta" "in" "*" :=
+  change (λ x, ?f x) with f in *.
+
+Tactic Notation "eta_expand" uconstr(f) :=
+  change f with (λ x, f x).
+
+Tactic Notation "eta_expand" uconstr(f) "in" hyp(H) :=
+  change f with (λ x, f x) in H.
+
+Tactic Notation "eta_expand" uconstr(f) "in" "*" :=
+  change f with (λ x, f x) in *.

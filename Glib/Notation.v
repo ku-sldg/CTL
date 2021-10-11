@@ -1,8 +1,18 @@
+Notation "'∃' x .. y , p" := (ex (fun x => .. (ex (fun y => p)) ..))
+  (at level 200, x binder, y binder, right associativity,
+   format "'[' '∃'  x .. y , '/ '  p ']'")
+  : type_scope.
+
+Notation "'∃' ! x .. y , p" :=
+  (ex (unique (fun x => .. (ex (unique (fun y => p))) ..)))
+  (at level 200, x binder, right associativity,
+   format "'[' '∃' !  x .. y , '/ ' p ']'")
+  : type_scope.
+
 Notation "'sigma' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p)) ..))
   (at level 200, x binder, y binder, right associativity,
    only parsing)
   : type_scope.
-   (* format "'[' 'sigma' '/ ' x .. y , '/  ' p ']'") *)
 
 Notation "'Σ' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p)) ..))
   (at level 200, x binder, y binder, right associativity,

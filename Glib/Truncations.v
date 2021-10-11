@@ -153,7 +153,7 @@ Proof using.
 Qed.
 
 Lemma trunc_sig_eq_exists : forall A (P: A -> Prop),
-  ‖{x | P x}‖ = exists x, P x.
+  ‖{x | P x}‖ = ∃ x, P x.
 Proof using.
   intros *.
   extensionality H.
@@ -163,7 +163,7 @@ Proof using.
 Qed.
 
 Lemma trunc_sigma_eq_exists : forall A (P: A -> Type),
-  ‖Σ x, P x‖ = exists x, ‖P x‖.
+  ‖Σ x, P x‖ = ∃ x, ‖P x‖.
 Proof using.
   intros *.
   extensionality H.

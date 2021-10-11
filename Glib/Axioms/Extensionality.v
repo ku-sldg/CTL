@@ -135,3 +135,70 @@ Proof using.
   - now apply all_not_not_ex.
 Qed.
 
+Lemma sig_eq : forall A (P Q: A -> Prop),
+  P = Q -> 
+  {x | P x} = {x | Q x}.
+Proof using.
+  now intros * ->.
+Qed.
+
+Corollary sig_eq_ext : forall A (P Q: A -> Prop),
+  (forall x, P x <-> Q x) -> 
+  {x | P x} = {x | Q x}.
+Proof using.
+  intros * ?.
+  apply sig_eq.
+  extensionality.
+  intros ?.
+  now extensionality.
+Qed.
+
+Lemma exist_eq_ext : forall A (P: A -> Prop) x y p q,
+  (x = y) = (exist P x p = exist P y q).
+Proof using.
+  intros *.
+  extensionality; split.
+  - apply exist_eq.
+  - now intros [=]. 
+Qed.
+
+Lemma exist_eq_ext' : forall A (P: A -> Prop) (x y: {a | P a}),
+  (proj1_sig x = proj1_sig y) = (x = y).
+Proof using.
+  intros *.
+  destruct x, y.
+  apply exist_eq_ext.
+Qed.
+
+
+Theorem dep_fun_neq_witness : forall (A: Type) (B: A -> Type) (f g: Π a, B a),
+  f <> g -> exists x, f x <> g x.
+Proof using.
+  intros * Hneq.
+  rewrite <- rew_not_all.
+  intro contra.
+  apply Hneq.
+  now extensionality.
+Qed.
+
+Corollary fun_neq_witness : forall A B (f g: A -> B),
+  f <> g -> exists x, f x <> g x.
+Proof using.
+  intros *.
+  now apply dep_fun_neq_witness.
+Qed.
+
+
+Theorem predicate_neq_bot_witness : forall A (P: A -> Prop),
+  P <> (λ _, False) ->
+  exists a, P a.
+Proof using.
+  intros * Hneq.
+  apply fun_neq_witness in Hneq as [a Hneq].
+  exists a.
+  contradict goal.
+  applyc Hneq.
+  now rewrite <- provable_contradiction_is_false.
+Qed.
+
+
