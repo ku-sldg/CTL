@@ -15,7 +15,7 @@ Tactic Notation "destruct" "classic" uconstr(c) :=
   let x := fresh in
   destruct classic c as x.
 
-Tactic Notation "contradict" "goal" hyp(H) :=
+Tactic Notation "contradict" "goal" ident(H) :=
   apply NNPP; intro H.
 
 Tactic Notation "contradict" "goal" :=
@@ -72,8 +72,6 @@ Proof using.
 Qed.
 
 
-  
-
 (* UIP *)
 
 Module ClassicalUipImpl.
@@ -90,3 +88,11 @@ Export UipTheory.
 Hint Resolve inj_pair2 inj_pairT2: eqdep.
 
 
+Lemma hproof_irrelevance : forall (P Q: Prop) (p: P) (q: Q),
+  P = Q ->
+  p ~= q.
+Proof using.
+  intros * <-.
+  apply eq_heq.
+  apply proof_irrelevance.
+Qed.

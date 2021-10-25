@@ -8,3 +8,4 @@ Require Export Notation.
 Require Export Quotient.
 Require Export TacticCombinators.
 Require Export Truncations.
+Require Export Misc.

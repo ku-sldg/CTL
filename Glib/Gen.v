@@ -136,3 +136,5 @@ Tactic Notation "gen" "eq" "?" ":=" uconstr(u)
 Tactic Notation "gen" "eq" "?" ":=" uconstr(u) 
   "in" "*" :=
   gen refl ? := u to eq in *.
+
+(* TODO: gen heq *)

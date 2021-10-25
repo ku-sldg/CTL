@@ -1,6 +1,5 @@
--R Glib Glib
+-R Glib Glib 
 -R Ctl Ctl
--R src Attarch
 
 Glib/Notation.v
 Glib/TacticCombinators.v
@@ -13,7 +12,10 @@ Glib/Axioms/Choice.v
 Glib/Axioms/Axioms.v
 Glib/Gen.v
 Glib/Induct.v
+Glib/Quotient.v
 Glib/Isomorphisms.v
+Glib/Cardinality.v
+Glib/Misc.v
 Glib/Glib.v
 
 Ctl/BinaryRelations.v
@@ -23,9 +25,3 @@ Ctl/Basic.v
 Ctl/Tactics.v
 Ctl/Properties.v
 Ctl/Ctl.v
-
-src/CpdtTactics.v
-src/TransitionSystems.v
-src/Privilege.v
-src/AttarchTrans.v
-src/AttarchProperties.v

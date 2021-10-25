@@ -1,17 +1,22 @@
 Require Import Notation.
 Require Import TacticCombinators.
 
-(* Overwrite exists tactic to support multiple instantiations 
-   (up to four)
- *)
+
+(* expanded exists tactic to work with inhabited type *)
+Tactic Notation "_exists" uconstr(u) := 
+  match goal with 
+  | |- inhabited _ => refine (inhabits u)
+  | _ => exists u
+  end.
+
 Tactic Notation "exists" uconstr(x1) :=
-  exists x1.
+  _exists x1.
 Tactic Notation "exists" uconstr(x1) uconstr(x2) :=
-  exists x1; exists x2.
+  exists x1; _exists x2.
 Tactic Notation "exists" uconstr(x1) uconstr(x2) uconstr(x3) :=
-  exists x1 x2; exists x3.
+  exists x1 x2; _exists x3.
 Tactic Notation "exists" uconstr(x1) uconstr(x2) uconstr(x3) uconstr(x4) :=
-  exists x1 x2 x3; exists x4.
+  exists x1 x2 x3; _exists x4.
 
 
 (* destruct variants *)
@@ -113,12 +118,21 @@ Tactic Notation "transform" hyp(H) uconstr(c) "by" tactic(tac) :=
 Ltac unset x := unfold x in *; clear x.
 
 
-(* A sylistic alias for `admit`. Used to distinguish admitted goals
+(* (* A sylistic alias for `admit`. Used to distinguish admitted goals
    which you know how to solve and that you plan come back to once the 
    difficult proof goals are solved.
  *)
-Ltac todo := admit.
-
+Ltac todo := admit. *)
+(* Synonymous with `admit` (although the unification variable will be named 
+   TODOx)
+ *)
+Ltac todo :=
+  match goal with 
+  | |- ?goal =>
+      let i := fresh "TODO" in
+      evar (i : goal);
+      exact i
+  end.
 
 (* `forward` conducts forward reasoning by eliminating the assumption 
    in an implication. Optionally, you can supply a tactic with the `by` clause.

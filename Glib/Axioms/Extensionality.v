@@ -201,4 +201,29 @@ Proof using.
   now rewrite <- provable_contradiction_is_false.
 Qed.
 
+Theorem types_neq : forall P Q: Type,
+  ((P -> Q) -> False) -> P <> Q.
+Proof using.
+  intros * ? ->.
+  auto.
+Qed.
 
+Theorem sets_neq : forall P Q: Set,
+  ((P -> Q) -> False) -> P <> Q.
+Proof using.
+  intros * ? ->.
+  auto.
+Qed.
+
+Theorem props_neq : forall P Q: Prop,
+  ~ (P -> Q) -> P <> Q.
+Proof using.
+  intros * ? ->.
+  auto.
+Qed.
+
+Goal unit <> Empty_set.
+  apply sets_neq.
+  intro H.
+  destruct (H tt).
+Qed.

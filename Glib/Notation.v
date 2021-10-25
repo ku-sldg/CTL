@@ -9,6 +9,16 @@ Notation "'∃' ! x .. y , p" :=
    format "'[' '∃' !  x .. y , '/ ' p ']'")
   : type_scope.
 
+Notation "{ ! x : A | P }" := (sig (unique (fun x : A => P)))
+  (at level 0, x at level 99 as name,
+   format "{  ! x  :  A  |  P }")
+  : type_scope.
+
+Notation "{ ! x | P }" := (sig (unique (fun x => P)))
+  (at level 0, x at level 99 as name,
+   format "{  ! x  |  P }")
+  : type_scope.
+
 Notation "'sigma' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p)) ..))
   (at level 200, x binder, y binder, right associativity,
    only parsing)
@@ -29,8 +39,8 @@ Notation "x × y" := (prod x y) (at level 40, left associativity): type_scope.
 
 Notation "'Π' x .. y , P" := (forall x, .. (forall y, P) ..)
   (at level 200, x binder, y binder, right associativity,
-   (* only parsing) *)
-   format "'[' 'Π'  x .. y , '/ '  P ']'")
+   only parsing)
+   (* format "'[' 'Π'  x .. y , '/ '  P ']'") *)
   : type_scope.
 
 Notation "'∀' x .. y , P" := (forall x, .. (forall y, P) ..)

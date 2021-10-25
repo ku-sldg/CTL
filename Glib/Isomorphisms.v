@@ -554,7 +554,26 @@ Qed.
 
 (* Arithmetic properties of isomorphisms *)
 
-Definition void := Empty_set.
+(* Rather than naively folding `sum unit` over the nat, we manually recurse in 
+   order to distinguish the number `1` and avoid the unecessary sum with `0`.
+ *)
+Fixpoint nat_to_set (n: nat) : Set :=
+  match n with 
+  | 0 => Empty_set 
+  | 1 => unit
+  | S n' => unit + (nat_to_set n')
+  end.
+Coercion nat_to_set : nat >-> Sortclass.
+
+Theorem two_is_bool :
+  2 ≃ bool.
+Proof using.
+  exists (λ b: 2, if b then true else false).
+  exists (λ b: bool, if b then inl tt else inr tt).
+  split.
+  - now intros [|].
+  - now intros [[]|[]].
+Qed.
 
 Theorem sum_comm : forall A B,
   A + B ≃ B + A.
@@ -565,7 +584,7 @@ Proof using.
 Qed.
 
 Theorem sum_id_l : forall A,
-  void + A ≃ A.
+  0 + A ≃ A.
 Proof using.
   intros *.
   define exists by (now intros [?|?]).
@@ -576,7 +595,7 @@ Proof using.
 Qed.
   
 Theorem sum_id_r : forall A,
-  A + void ≃ A.
+  A + 0 ≃ A.
 Proof using.
   intros *.
   etransitivity.
@@ -605,6 +624,42 @@ Proof using.
   - now intros [?|[?|?]].
 Qed.
 
+Theorem S_type : forall n: nat,
+  S n ≃ 1 + n.
+Proof using.
+  intros n.
+  induction n.
+  - now rewrite sum_id_r.
+  - reflexivity.
+Qed.
+
+Theorem sum_iso_intro : forall A A' B B',
+  A ≃ A' ->
+  B ≃ B' ->
+  A + B ≃ A' + B'.
+Proof using.
+  intros * ϕA ϕB.
+  inhabit isomorphic__isomorphism in ϕA;
+  inhabit isomorphic__isomorphism in ϕB.
+  apply ex_bijection_iso.
+  define exists; [|split].
+  - intros [a|b].
+    + exact (inl (ϕA a)).
+    + exact (inr (ϕB b)).
+  - intros [a|b] [a'|b'] [=].
+    + f_equal.
+      enow eapply iso_injective.
+    + f_equal.
+      enow eapply iso_injective.
+  - intros [a'|b'].
+    + exists (inl (ϕA⁻¹ a')).
+      f_equal.
+      apply iso_cancel_inv.
+    + exists (inr (ϕB⁻¹ b')).
+      f_equal.
+      apply iso_cancel_inv.
+Qed.
+
 Theorem prod_comm : forall A B,
   A × B ≃ B × A.
 Proof using.
@@ -614,18 +669,17 @@ Proof using.
 Qed.
 
 Theorem prod_id_l : forall A,
-  unit × A ≃ A.
+  1 × A ≃ A.
 Proof using.
   intros *.
   exists (λ '(_, a), a) (λ a, (tt, a)).
   split.
   - easy.
-  - intros [tt a].
-    now destruct tt.
+  - now intros [[] ?].
 Qed.
 
 Theorem prod_id_r : forall A,
-  A × unit ≃ A.
+  A × 1 ≃ A.
 Proof using.
   intros *.
   etransitivity.
@@ -675,14 +729,70 @@ Proof using.
     pattern x.
     now find (fun H => induction H).
   + apply qclass_surjective.
+    apply eq_equivalence.
+Qed.
+
+Theorem quotient_universal_property : forall A R B {equivR: Equivalence R},
+  (A/R -> B) ≃ (exists f: A -> B, forall x y, R x y -> f x = f y).
+Proof using.
+  intros * equivR.
+  apply ex_bijection_iso.
+  define exists.
+  { intro c.
+    admit.
+  }
+Admitted.
+
+Theorem quotient_disjoint_decomposition : forall A R {equivR: Equivalence R},
+  (Σ a, { !c : A/R | In c a}) ≃ A.
+Proof using.
+  intros * equivR.
+  define exists by (now intros [? _]).
+  define exists.
+  { intros a.
+    exists a (qclass R a).
+    split.
+    - now apply in_qclass.
+    - intros.
+      symmetry.
+      now apply qclass_eq.
+  }
+  split.
+  - easy.
+  - intros (? & ? & ? & ?).
+    f_equal.
+    apply exist_eq.
+    symmetry.
+    now apply qclass_eq.
+Qed.
+
+Theorem sigma_binary_sum : forall A B,
+  A + B ≃ Σ b: 2, if b then A else B.
+Proof using.
+  intros *.
+  define exists.
+  { intros [?|?].
+    + now exists (inl tt).
+    + now exists (inr tt).
+  }
+  define exists by (intros [[|] ?]; auto).
+  split.
+  - now intros [[[]|[]] ?].
+  - now intros [?|?].
+Qed.
+
+Theorem pi_binary_prod : forall A B,
+  A × B ≃ Π b: 2, if b then A else B.
+Proof using.
+  intros *.
+  define exists by (now intros [? ?] [[]|[]]).
+  exists (λ f, (f (inl tt), f (inr tt))).
+  split.
+  - intros H.
+    extensionality b.
+    now destruct b as [[]|[]].
+  - now intros [? ?].
 Qed.
 
 
-Theorem quotient_universal_property : forall A R B {equivR: Equivalence R},
-  (A/R -> B) ≃ (Σ f: A -> B, forall x y, R x y -> f x = f y).
-Proof using.
-  intros * equivR.
-Admitted.
-
-    
 Close Scope program_scope.

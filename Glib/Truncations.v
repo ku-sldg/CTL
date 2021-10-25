@@ -1,5 +1,6 @@
 Require Import Notation.
 Require Import GeneralTactics.
+Require Import Axioms.Classical.
 Require Import Axioms.Extensionality.
 
 Require Import Setoid.
@@ -45,7 +46,6 @@ Tactic Notation "einhabitc" hyp(c) "in" hyp(H) :=
   einhabit c in H;
   clear c.
 
-(* Theorem lift_arrow: forall a b, *)
 Theorem inhabited_codomain: forall a b,
   (a -> b) ->
   a -> ‖b‖.
@@ -62,6 +62,26 @@ Proof using.
   intros a b H inhA.
   uninhabit inhA.
   auto.
+Qed.
+
+Theorem lift_trunc_arrow : forall A B,
+  (A -> B) -> 
+  ‖A‖ -> ‖B‖.
+Proof using.
+  intros * f [a].
+  exists (f a).
+Qed.
+
+Theorem domain_truncated_irrelevant : forall A B,
+  (A -> ‖B‖) = (‖A‖ -> ‖B‖).
+Proof using.
+  intros *.
+  extensionality; split.
+  - intros f [a].
+    now apply f.
+  - intros f a.
+    apply f.
+    exists a.
 Qed.
 
 (* Transforms goal from `‖a‖` to `a` *)
@@ -132,11 +152,23 @@ Proof using.
   auto.
 Qed.
 
-Theorem truncated_eq_exists_true : forall x,
-  ‖x‖ = exists _: x, True.
+Theorem truncated_eq_exists_true : forall A,
+  ‖A‖ = exists _: A, True.
 Proof using.
   intros *.
   extensionality H; now destruct H.
+Qed.
+
+Theorem truncated_eq_double_neg : forall A: Type,
+  ‖A‖ = ((A -> False) -> False).
+Proof using.
+  intros *.
+  extensionality H.
+  - intros ?.
+    now uninhabit H.
+  - contradict goal.
+    applyc H.
+    auto.
 Qed.
 
 

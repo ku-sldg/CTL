@@ -3,6 +3,7 @@ Require Import Coq.Logic.ChoiceFacts.
 Require Import Notation.
 Require Import GeneralTactics.
 Require Import Truncations.
+Require Import Axioms.Classical.
 Require Import Axioms.Extensionality.
 
 
@@ -42,6 +43,20 @@ Corollary trunc_comm_arrow : forall A B,
 Proof using.
   intros.
   apply trunc_comm_forall.
+Qed.
+
+Theorem trunc_distr_arrow : forall A B,
+  (‖A‖ -> ‖B‖) = ‖A -> B‖ .
+Proof using.
+  intros *.
+  extensionality; split.
+ - intros f.
+    apply choice.
+    intro a.
+    applyc f.
+    exists a.
+  - intros [f] [a].
+    exists (f a).
 Qed.
 
 Lemma fun_choice : forall A B (R: A -> B -> Prop),
@@ -108,3 +123,47 @@ Proof using.
     + intros *.
       enow destruct (Rltotal x).
 Qed.
+
+Theorem exists_universal_decision_procedure :
+  ‖Π P, {P} + {~P}‖.
+Proof using.
+  apply choice.
+  intro P.
+  destruct classic P as H.
+  - exists (left H).
+  - exists (right H).
+Qed.
+
+(* Warning: this is known to conflict with impredicative set. *)
+Theorem double_neg_classic_set :
+  ((Π P, {P} + {~P}) -> False) -> False.
+Proof using.
+  rewrite <- truncated_eq_double_neg.
+  exact exists_universal_decision_procedure.
+Qed.
+
+Require Import Coq.Relations.Relation_Definitions.
+Require Import Coq.Classes.RelationClasses.
+Require Import Coq.Sets.Ensembles.
+
+Definition antisymmetric {A} (R: relation A) := 
+  forall x y, R x y -> R y x -> x = y.
+
+Definition strongly_connected {A} (R: relation A) :=
+  forall x y, R x y \/ R y x.
+
+Definition total_order {A} (R: relation A) :=
+  Reflexive R /\
+  Transitive R /\
+  antisymmetric R /\ 
+  strongly_connected R.
+
+Definition well_order {A} (R: relation A) :=
+  total_order R /\ 
+  forall subset: Ensemble A,
+    Inhabited A subset ->
+    exists least, forall x, In A subset x -> R least x.
+ 
+(* Theorem ex_well_ordering : forall A,
+  exists R: relation A, well_order R.
+Proof using. *)

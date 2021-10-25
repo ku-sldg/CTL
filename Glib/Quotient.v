@@ -5,95 +5,108 @@ Require Import GeneralTactics.
 Require Import Coq.Logic.FinFun.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Classes.RelationClasses.
+Require Import Coq.Sets.Ensembles.
 Require Import Coq.Program.Basics.
+
+(* Require Export Coq.Sets.Ensembles. *)
 
 Open Scope program_scope.
 
+
+(* This representation of equivalent-class predicates is inspired by 
+   the presentation in the HoTT book (section 6.10)
+ *)
 
 Section Quotient.
 
 Context {A} (R: relation A) {equivR: Equivalence R}.
 
-Notation "x ~ y" := (R x y) (at level 70, no associativity).
+Notation "x ∼ y" := (R x y) (at level 70, no associativity).
+
+Definition In {U} A x := In U A x.
 
 
-Definition all_sat_related (P: A -> Prop) :=
-  forall x y, P x -> P y -> x ~ y.
+Definition equiv_class (e: Ensemble A) :=
+  exists x, forall y, x ∼ y <-> In e y.
 
-Definition all_related_sat (P: A -> Prop) :=
-  forall x y, x ~ y -> P x -> P y.
+Theorem ec_all_in_related : forall e,
+  equiv_class e ->
+  forall x y, In e x -> In e y -> x ∼ y.
+Proof using A R equivR.
+  intros * H * Hx Hy.
+  destruct H as [a H].
+  transitivity a.
+  - symmetry.
+    now apply H.
+  - now apply H.
+Qed.
 
-Definition ex_sat (P: A -> Prop) := 
-  exists x, P x.
+Theorem ec_all_related_in : forall e,
+  equiv_class e ->
+  forall x y, x ∼ y -> In e x -> In e y.
+Proof using A R equivR.
+  intros * H * Heq Hx.
+  destruct H as [a H].
+  apply H.
+  transitivity x.
+  - now apply H.
+  - assumption.
+Qed.
 
-(* P corresponds to a nonempty equivalence class *)
-Definition describes_equiv_class (P: A -> Prop) :=
-  all_sat_related P /\
-  all_related_sat P /\ 
-  ex_sat P.
+Definition quotient := {e | equiv_class e}.
 
-Definition quotient := {P | describes_equiv_class P}.
+Definition class_to_ensemble (c: quotient) : Ensemble A := proj1_sig c.
+Coercion class_to_ensemble : quotient >-> Ensemble.
 
 Definition qclass (a: A) : quotient.
-  refine (exist _ (λ x, a ~ x) _).
+  (* refine (exist _ (λ x, a ∼ x) _). *)
+  refine (exist _ (R a) _).
 Proof.
-  max split.
-  - intros ? ? -> ->. 
-    reflexivity.
-  - intros ? ? -> ->.
-    reflexivity.
-  - exists a.
-    reflexivity.
+  now exists a.
 Defined.
 
-Definition in_class a (c: quotient) : Prop := 
-  match c with 
-  | exist _ P _ => P a
-  end.
-
 Theorem in_qclass : forall a,
-  in_class a (qclass a).
-Proof using.
+  In (qclass a) a.
+Proof using A R equivR.
   intros *.
-  simpl.
+  cbn.
   reflexivity.
 Qed.
 
-Theorem qclass_eq : forall a c,
-  in_class a c -> 
+Theorem qclass_eq : forall a (c: quotient),
+  In c a -> 
   c = qclass a.
-Proof using.
+Proof using A R equivR.
   intros * Hin.
-  destruct c as [P p].
+  destruct c as [e p].
   simpl in Hin.
-  inversion p as (Hall & Honly & Hnonempty).
   apply exist_eq.
-  extensionality.
-  - intros *.
-    extensionality H.
-    + now apply Hall.
-    + enow eapply Honly.
+  extensionality x.
+  extensionality H.
+  - enow eapply ec_all_in_related.
+  - enow eapply ec_all_related_in.
 Qed.
 
 Lemma in_some_class : forall a,
-  exists c, in_class a c.
+  exists c: quotient, In c a.
 Proof using A R equivR.
   intros *.
   exists (qclass a).
   apply in_qclass.
 Qed.
 
-Theorem class_nonempty : forall c,
-  exists x, in_class x c.
-Proof using.
+Theorem class_nonempty : forall c: quotient,
+  exists x, In c x.
+Proof using A R equivR.
   intros *.
-  destruct c as [P p].
-  inversion p as (_ & _ & [a ?]).
-  now exists a.
+  destruct c as (? & a & p).
+  exists a.
+  apply p.
+  reflexivity.
 Qed.
 
 Lemma classes_partition : forall a,
-  exists! c, in_class a c.
+  exists! c: quotient, In c a.
 Proof using A R equivR.
   intros *.
   exists (qclass a).
@@ -104,9 +117,9 @@ Proof using A R equivR.
     now apply qclass_eq.
 Qed.
 
-Lemma class_unique : forall c1 c2 a,
-  in_class a c1 ->
-  in_class a c2 ->
+Lemma class_unique : forall (c1 c2: quotient) a,
+  In c1 a ->
+  In c2 a ->
   c1 = c2.
 Proof using A R equivR.
   intros * Hin Hin'.
@@ -114,9 +127,9 @@ Proof using A R equivR.
   now subst.
 Qed.
 
-Lemma classes_disjoint : forall c1 c2 a,
+Lemma classes_disjoint : forall (c1 c2: quotient) a,
   c1 <> c2 ->
-  in_class a c1 -> ~ in_class a c2.
+  In c1 a -> ~ In c2 a.
 Proof using A R equivR.
   intros * Hneq Hin Hin'.
   applyc Hneq.
@@ -124,7 +137,7 @@ Proof using A R equivR.
 Qed.
 
 Theorem qclass_surjective : Surjective qclass.
-Proof using.
+Proof using A R equivR.
   intros c.
   destruct (class_nonempty c) as [a ?].
   exists a.
@@ -133,8 +146,8 @@ Proof using.
 Qed.
 
 Theorem qclass_spec : forall x y,
-  (qclass x = qclass y) = (x ~ y).
-Proof using.
+  (qclass x = qclass y) = (x ∼ y).
+Proof using A R equivR.
   intros *.
   extensionality H.
   - apply eq_sig_fst in H.
@@ -172,7 +185,7 @@ Theorem quotient_ind :
   forall (P: quotient -> Prop),
     (forall a, P (qclass a)) ->
     forall c, P c.
-Proof using.
+Proof using A R equivR.
   intros * H *.
   destruct c as [Q p].
   eta.
@@ -181,29 +194,29 @@ Proof using.
 Qed.
 
 Definition respects_equiv (f: A -> A) :=
-  forall x y, x ~ y -> (f x) ~ (f y).
+  forall x y, x ∼ y -> (f x) ∼ (f y).
 
 Definition respects_equiv2 (f: A -> A -> A) :=
-  forall x x' y y', x ~ x' -> y ~ y' -> (f x y) ~ (f x' y').
+  forall x x' y y', x ∼ x' -> y ∼ y' -> (f x y) ∼ (f x' y').
 
 Definition liftQ (f: A -> A) (re: respects_equiv f) : quotient -> quotient.
 Proof using A R equivR.
   intros [P p].
-  inversion p as (Hall & Honly & Hnonempty).
-  refine (exist _ (λ a, ∃ x, (f x) ~ a /\ P x) _).
-  max split.
-  - intros x y (x' & <- & px') (y' & <- & py').
-    apply re.
-    now apply Hall.
-  - intros x y H (x' & Heq & px').
-    exists x'.
+  refine (exist _ (λ a, ∃ x, (f x) ∼ a /\ P x) _).
+  destruct p as [a p].
+  exists (f a).
+  intros *.
+  split; intro H.
+  - exists a.
     split.
-    + now transitivity x.
     + assumption.
-  - destruct Hnonempty as [x ?].
-    now exists (f x) x.
+    + apply p.
+      reflexivity.
+  - destruct H as (? & <- & ?).
+    apply re.
+    now apply p.
 Defined.
-
+ 
 Theorem liftQ_qclass : forall (f: A -> A) (re: respects_equiv f) a,
   liftQ f re (qclass a) = qclass (f a).
 Proof using.
@@ -212,7 +225,7 @@ Proof using.
   simpl.
   extensionality x.
   extensionality; split.
-  - intros (x' & <- & H').
+  - intros (? & <- & ?).
     now apply re.
   - intros ?.
     now exists a.
@@ -222,22 +235,20 @@ Definition liftQ2 (f: A -> A -> A) (re: respects_equiv2 f) :
   quotient -> quotient -> quotient.
 Proof using A R equivR.
   intros [P p] [Q q].
-  inversion p as (HallP & HonlyP & HnonemptyP).
-  inversion q as (HallQ & HonlyQ & HnonemptyQ).
-  refine (exist _ (λ a, ∃ x y, R (f x y) a /\ P x /\ Q y) _).
-  max split.
-  - intros x y (x' & y' & <- & Hx' & Hy') (x'' & y'' & <- & Hx'' & Hy'').
-    apply re.
-    + now apply HallP.
-    + now apply HallQ.
-  - intros x y Heq (x' & y' & Heq' & Hx' & Hy').
-    exists x' y'.
+  refine (exist _ (λ a, ∃ x y, (f x y) ∼ a /\ P x /\ Q y) _).
+  destruct p as [a p], q as [a' q].
+  exists (f a a').
+  intros *.
+  split; intro H.
+  - exists a a'.
     max split.
-    + now transitivity x.
     + assumption.
-    + assumption.
-  - destruct HnonemptyP as [x ?], HnonemptyQ as [y ?].
-    now exists (f x y) x y.
+    + now apply p.
+    + now apply q.
+  - destruct H as (? & ? & <- & ? & ?).
+    apply re.
+    + now apply p.
+    + now apply q.
 Defined.
 
 Theorem liftQ2_qclass : forall (f: A -> A -> A) (re: respects_equiv2 f) x y,
@@ -259,7 +270,7 @@ End Quotient.
 Arguments quotient A R : clear implicits.
 Notation "A / R" := (quotient A R) : type_scope.
 
-Notation "f 'respects' R"  := (respects_equiv R f) (at level 50).
+Notation "f 'respects' R"  := (respects_equiv  R f) (at level 50).
 Notation "f 'respects2' R" := (respects_equiv2 R f) (at level 50).
 
 Close Scope program_scope.
