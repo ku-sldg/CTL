@@ -385,10 +385,10 @@ Tactic Notation "setoid_subst" :=
 Ltac clear_reflexives :=
   repeat match goal with 
   | H : ?R ?A ?x ?x |- _ =>
-      has_instance Symmetric (R A);
+      has_instance Reflexive (R A);
       clear H
   | H : ?R ?x ?x |- _ =>
-      has_instance Symmetric R;
+      has_instance Reflexive R;
       clear H
   end.
 
