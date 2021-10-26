@@ -1,6 +1,9 @@
 Require Import Notation.
 Require Import TacticCombinators.
 
+Require Import Coq.Relations.Relation_Definitions.
+Require Import Coq.Classes.RelationClasses.
+
 
 (* expanded exists tactic to work with inhabited type *)
 Tactic Notation "_exists" uconstr(u) := 
@@ -21,13 +24,6 @@ Tactic Notation "exists" uconstr(x1) uconstr(x2) uconstr(x3) uconstr(x4) :=
 
 (* destruct variants *)
 
-Tactic Notation "destruct" "multi" hyp(h1) hyp(h2) :=
-  destruct h1; destruct h2.
-Tactic Notation "destruct" "multi" hyp(h1) hyp(h2) hyp(h3) :=
-  destruct multi h1 h2; destruct h3.
-Tactic Notation "destruct" "multi" hyp(h1) hyp(h2) hyp(h3) hyp(h4) :=
-  destruct multi h1 h2 h3; destruct h4.
-
 Tactic Notation "destruct" "exists" hyp(H) ident(id) :=
   destruct H as [id H].
 Tactic Notation "destruct" "exists" hyp(H) ident(id1) ident(id2) :=
@@ -38,6 +34,7 @@ Tactic Notation "destruct" "exists" hyp(H) ident(id1) ident(id2) ident(id3) iden
   destruct H as [id1 [id2 [id3 [id4 H]]]].
 
 Tactic Notation "destruct" "or" hyp(H) := destruct H as [H|H].
+
 
 (* Clear variants. Tactics postfixed with "c" clear a hypothesis
    after using it.
@@ -118,11 +115,6 @@ Tactic Notation "transform" hyp(H) uconstr(c) "by" tactic(tac) :=
 Ltac unset x := unfold x in *; clear x.
 
 
-(* (* A sylistic alias for `admit`. Used to distinguish admitted goals
-   which you know how to solve and that you plan come back to once the 
-   difficult proof goals are solved.
- *)
-Ltac todo := admit. *)
 (* Synonymous with `admit` (although the unification variable will be named 
    TODOx)
  *)
@@ -133,6 +125,7 @@ Ltac todo :=
       evar (i : goal);
       exact i
   end.
+
 
 (* `forward` conducts forward reasoning by eliminating the assumption 
    in an implication. Optionally, you can supply a tactic with the `by` clause.
@@ -352,12 +345,66 @@ Tactic Notation "assumption!" :=
   solve [find apply].
 
 
-Tactic Notation "subst!" :=
+(* Improved substitution *)
+
+Definition get_instance {A} (class: A -> Prop) (a: A) {instance: class a}
+  : class a := instance.
+
+(* Note, this fails if it cannot resolve *all* implicits. *)
+Tactic Notation "has_instance" uconstr(class) uconstr(a) :=
+  let _ := constr:(get_instance class a) in
+  idtac.
+
+Tactic Notation "setoid_subst" hyp(H) :=
+  match type of H with 
+  | ?R ?A ?x ?y =>
+      has_instance RewriteRelation (R A);
+      ( is_var x;
+        try rewrite H in *;
+        clear H x
+      ) + (
+        is_var y;
+        try rewrite <- H in *;
+        clear H y
+      )
+  | ?R ?x ?y =>
+      has_instance RewriteRelation R;
+      ( is_var x;
+        try rewrite H in *;
+        clear H x
+      ) + (
+        is_var y;
+        try rewrite <- H in *;
+        clear H y
+      )
+  end.
+
+Tactic Notation "setoid_subst" :=
+  repeat find (fun H => setoid_subst H).
+
+Ltac clear_reflexives :=
+  repeat match goal with 
+  | H : ?R ?A ?x ?x |- _ =>
+      has_instance Symmetric (R A);
+      clear H
+  | H : ?R ?x ?x |- _ =>
+      has_instance Symmetric R;
+      clear H
+  end.
+
+Tactic Notation "setoid_subst!" :=
+  setoid_subst;
+  clear_reflexives.
+
+(* No reason to provide a strict equality version when setoid_subst seems 
+   adequately performant. *)
+(* Tactic Notation "subst!" :=
   subst;
   repeat match goal with 
   | H : ?x = ?x |- _ => clear H
-  end.
+  end. *)
 
+Tactic Notation "subst!" := setoid_subst!.
 
 (* Improved inversion *)
 
