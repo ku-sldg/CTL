@@ -213,3 +213,11 @@ Proof using.
     now destruct H; [left|right].
   - now destruct H; inhabit; [left|right].
 Qed.
+
+Theorem sig_factor_trunc : forall (A: Type) (B: A -> Type),
+  (Σ x, ‖B x‖) -> ‖Σ x, B x‖.
+Proof using.
+  intros * [x H].
+  uninhabit H.
+  exists ⟨x, H⟩.
+Qed.
