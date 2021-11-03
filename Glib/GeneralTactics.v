@@ -216,7 +216,7 @@ Tactic Notation "define" uconstr(c) :=
 Tactic Notation "define" uconstr(c) "by" tactic(tac) :=
   define c; [solve[tac]|].
 
-Ltac _define_exists_aux :=
+(* Ltac _define_exists_aux :=
   let def_ex_with := fun A => 
         let _temp := fresh in 
         define A as _temp; 
@@ -241,7 +241,10 @@ Ltac _define_exists :=
     _define_exists
   ).
 Tactic Notation "define" "exists" :=
-  _define_exists.
+  _define_exists. *)
+
+Tactic Notation "define" "exists" :=
+  unshelve eexists.
 
 Tactic Notation "define" "exists" "by" tactic(tac) :=
   define exists; [solve[tac]|].
@@ -288,11 +291,6 @@ Tactic Notation "destruct_term" hyp(H) "eqn" ":" ident(i) :=
 (* repeat one or more times *)
 Tactic Notation "repeat+" tactic(tac) :=
   tac; repeat tac.
-
-
-(* `now` tactic with support for easy goals with existentials *)
-Tactic Notation "enow" tactic(tac) :=
-  (now tac) + (tac; solve [eassumption + eauto + now eexists]).
 
 
 (* Find a hypothesis to apply the tactic to. Fails on non-progress. *)
@@ -345,6 +343,62 @@ Tactic Notation "assumption!" :=
   solve [find apply].
 
 
+(* goal is a *value* tactic *)
+Ltac goal := 
+  match goal with 
+  | |- ?goal => goal
+  end.
+ 
+
+(* `tedious`/`follows` are more powerful alternatives to `easy`/`now`. *)
+
+(* Induction failure occasionally produces odd warnings:
+     https://github.com/coq/coq/issues/10766
+   We silence these warnings with the following setting.
+ *)
+Global Set Warnings "-cannot-remove-as-expected".
+
+Ltac _etedious_step n := 
+  match n with 
+  | 0 => fail 1 "Ran out of gas"
+  | S ?n' => intros; (
+      eassumption +
+      solve[eauto] +
+      easy +
+      (constructor; _etedious_step n') +
+      (econstructor; _etedious_step n') +
+      ((find (fun H => induction H + destruct H)); _etedious_step n') +
+      (fail 1 "Cannot solve goal")
+    )
+  end.
+
+Ltac _tedious_step n := 
+  match n with 
+  | 0 => fail 1 "Ran out of gas"
+  | S ?n' => intros; (
+      easy +
+      (constructor; _tedious_step n') +
+      (econstructor; _etedious_step n') +
+      ((find (fun H => induction H + destruct H)); _tedious_step n') +
+      (fail 1 "Cannot solve goal")
+    )
+  end.
+
+Ltac _tedious n :=
+  if has_evar goal then
+    _etedious_step n
+  else 
+    _tedious_step n
+  end.
+
+Ltac tedious := _tedious 8.
+  
+Tactic Notation "follows" tactic(tac) :=
+  tac; tedious.
+
+Tactic Notation "auto" tactic(tac) := tac; try tedious.
+
+
 (* Improved substitution *)
 
 Definition get_instance {A} (class: A -> Prop) (a: A) {instance: class a}
@@ -392,19 +446,19 @@ Ltac clear_reflexives :=
       clear H
   end.
 
-Tactic Notation "setoid_subst!" :=
-  setoid_subst;
-  clear_reflexives.
-
-(* No reason to provide a strict equality version when setoid_subst seems 
-   adequately performant. *)
-(* Tactic Notation "subst!" :=
-  subst;
+Ltac clear_redundant := 
   repeat match goal with 
-  | H : ?x = ?x |- _ => clear H
-  end. *)
+  | H : ?x, H' : ?x |- _ => 
+      match type of x with 
+      | Prop => clear H' + clear H
+      end
+  end.
 
-Tactic Notation "subst!" := setoid_subst!.
+Tactic Notation "subst!" :=
+  setoid_subst;
+  clear_reflexives;
+  clear_redundant.
+
 
 (* Improved inversion *)
 

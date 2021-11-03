@@ -10,6 +10,7 @@ Glib/Axioms/Extensionality.v
 Glib/Truncations.v
 Glib/Axioms/Choice.v
 Glib/Axioms/Axioms.v
+Glib/PropNormalize.v
 Glib/Gen.v
 Glib/Induct.v
 Glib/Quotient.v

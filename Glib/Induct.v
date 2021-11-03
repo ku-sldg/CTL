@@ -35,13 +35,9 @@ Ltac intro_try_rew :=
   intro.
 
 Ltac _induct_by H inductStep :=
-  repeat_count progress gen_eq_something H
-  then fun n => 
-    (* It seem like there is sometimes an off by one error. S n is sometimes 
-       one too many, and n is sometimes one too few. *)
-    (* inductStep H; do_u (S n) intro_try_rew *)
-    inductStep H; repeat intro_try_rew
-  end.
+  repeat progress gen_eq_something H;
+  inductStep H;
+  repeat intro_try_rew.
   
 Tactic Notation "induct" hyp(H) :=
   _induct_by H ltac:(fun hyp => induction hyp).
@@ -74,23 +70,13 @@ Ltac ecut_eq_aux IH :=
       end
     | especialize IH;
       ecut_eq_aux IH].
+    
+Ltac has_no_evar t := assert_fails (has_evar t).
 
 Ltac ecut_eq IH :=
   ecut_eq_aux IH;
   let t := type of IH in 
-  assert_fails `has_evar t.
-
-(* Ltac foo IH :=
-  let ecut_eq_aux IH := first
-    [ match type of IH with 
-      | _ = _ -> _ =>
-          try forward IH by exact eq_refl
-      end
-    | especialize IH;
-      ecut_eq_aux IH] in
-  ecut_eq_aux IH;
-  let t := type of IH in 
-  assert_fails `has_evar t. *)
+  `has_no_evar t.
 
 Ltac find_ecut_eqs :=
   repeat match goal with 
@@ -98,28 +84,22 @@ Ltac find_ecut_eqs :=
       ecut_eq IH
   end.
 
-Ltac _induct_star_by H inductStep :=
-  repeat_count progress gen_eq_something H
-  then fun n => 
-    inductStep H; repeat intro_try_rew
-  end;
+Ltac _induct_excl_by H inductStep :=
+  _induct_by H inductStep;
   find_ecut_eqs;
-  subst;
-  repeat match goal with 
-  | H: ?x = ?x |- _ => clear H
-  end.
+  subst!.
 
 Tactic Notation "induct!" hyp(H) :=
-  _induct_star_by H ltac:(fun hyp => induction hyp).
+  _induct_excl_by H ltac:(fun hyp => induction hyp).
 
 Tactic Notation "induct!" hyp(H) "as" simple_intropattern(pat) :=
-  _induct_star_by H ltac:(fun hyp => induction hyp as pat).
+  _induct_excl_by H ltac:(fun hyp => induction hyp as pat).
 
 Tactic Notation "induct!" hyp(H) "using" uconstr(c) :=
-  _induct_star_by H ltac:(fun hyp => induction hyp using c).
+  _induct_excl_by H ltac:(fun hyp => induction hyp using c).
 
 Tactic Notation "induct!" hyp(H) "as" simple_intropattern(pat) "using" uconstr(c) :=
-  _induct_star_by H ltac:(fun hyp => induction hyp as pat using c).
+  _induct_excl_by H ltac:(fun hyp => induction hyp as pat using c).
 
 
 Ltac hyp_eq H H' :=
@@ -128,39 +108,16 @@ Ltac hyp_eq H H' :=
   end.
 
 Ltac revert_all_but H :=
-  repeat match goal with 
-  | H': _ |- _ =>
-      ifnot `hyp_eq H H' then
-      revert H'
-  end.
-
-Ltac revert_bl bl :=
-  foreach_bl bl fun H => revert H.
-
-(* Not working as expected *)
-Ltac revert_all_but_do_intros H tac :=
-  repeat_accum ([]: list Box) fun a cont =>
-    match goal with 
-    | H': _ |- _ =>
-        ifnot `hyp_eq H H' then quote(
-          revert H';
-          cont (box H' :: a))
-    end +
-    (tac; revert_bl a).
+  repeat find (fun H' =>
+    assert_fails (`hyp_eq H H');
+    revert H'
+  ).
 
 Ltac _max_induction_by H inductStep :=
   move H at top;
-  repeat_count `match goal with
-  | H': _ |- _ =>
-      ifnot `hyp_eq H H' then
-      revert H'
-  end then fun n =>
-    inductStep H; do_u n intro
-  end.
-
-(* Ltac _max_induction_by H inductStep :=
-  move H at top;
-  revert_all_but_do_intros H ltac:(`inductStep H). *)
+  revert_all_but H;
+  inductStep H;
+  intros.
 
 Tactic Notation "max" "induction" hyp(H) :=
   _max_induction_by H ltac:(fun hyp => induction hyp).
@@ -173,15 +130,6 @@ Tactic Notation "max" "induction" hyp(H) "using" constr(c) :=
 
 Tactic Notation "max" "induction" hyp(H) "as" simple_intropattern(pat) "using" constr(c) :=
   _max_induction_by H ltac:(fun hyp => induction hyp as pat using c).
-
-
-(* Can't call this? *)
-Tactic Notation "max" "dependent" "induction" hyp(H) :=
-  _max_induction_by H ltac:(fun hyp => dependent induction hyp).
-
-(* Why is this not parsing? *)
-(* Tactic Notation "max" "dependent" "induction" hyp(H) "using" uconstr(c) :=
-  _max_induction_by H ltac:(fun hyp => dependent induction hyp using c). *)
 
 Tactic Notation "max" "induct" hyp(H) :=
   _induct_by H ltac:(fun hyp => max induction hyp).
@@ -196,40 +144,33 @@ Tactic Notation "max" "induct" hyp(H) "as" simple_intropattern(pat) "using" ucon
   _induct_by H ltac:(fun hyp => max induction hyp as pat using c).
 
 Tactic Notation "max" "induct!" hyp(H) :=
-  _induct_star_by H ltac:(fun hyp => max induction hyp).
+  _induct_excl_by H ltac:(fun hyp => max induction hyp).
 
 Tactic Notation "max" "induct!" hyp(H) "as" simple_intropattern(pat) :=
-  _induct_star_by H ltac:(fun hyp => max induction hyp as pat).
+  _induct_excl_by H ltac:(fun hyp => max induction hyp as pat).
 
 Tactic Notation "max" "induct!" hyp(H) "using" uconstr(c) :=
-  _induct_star_by H ltac:(fun hyp => max induction hyp using c).
+  _induct_excl_by H ltac:(fun hyp => max induction hyp using c).
 
 Tactic Notation "max" "induct!" hyp(H) "as" simple_intropattern(pat) "using" uconstr(c) :=
-  _induct_star_by H ltac:(fun hyp => max induction hyp as pat using c).
+  _induct_excl_by H ltac:(fun hyp => max induction hyp as pat using c).
 
 
 (* destruction *)
 
 Tactic Notation "destruction" constr(H) :=
   _induct_by H ltac:(fun hyp => destruct H);
-  subst.
+  subst!.
 
 Tactic Notation "destruction" constr(H) "as" simple_intropattern(pat) :=
   _induct_by H ltac:(fun hyp => destruct H as pat);
-  subst.
+  subst!.
 
 Tactic Notation "destruction" constr(H) "eqn" ":" ident(I) :=
   _induct_by H ltac:(fun hyp => destruct H eqn:I);
-  subst.
+  subst!.
 
 Tactic Notation "destruction" constr(H) "as" simple_intropattern(pat)
   "eqn" ":" ident(I) :=
   _induct_by H ltac:(fun hyp => destruct H as pat eqn:I);
-  subst.
-
-
-(* For some reason, this doesn't do the same as inversion for some terms *)
-(* Ltac inv H :=
-  let H' := fresh H in 
-  copy H H';
-  destruction H'. *)
+  subst!.

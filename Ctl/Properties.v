@@ -11,7 +11,7 @@ Section Properties.
 Open Scope tprop_scope.
 
 Context {state: Type}.
-Variable R: relation state.
+Context (R: relation state).
 Context {t: transition R}.
 
 (* Properties of implication *)
@@ -110,20 +110,22 @@ Proof using.
   tsimpl.
   intros * Hin.
   applyc H.
-  enow eapply in_path__star.
+  follows eapply in_path_star.
 Qed.
 
 Theorem AG__star : forall s P,
   R @s ⊨ AG P ->
   forall s', R^* s s' -> R @s' ⊨ P.
 Proof using.
-  intros * H.
-  intros s' Hstar.
-  apply (star__in_path _ _ _ trans_serial) in Hstar.
-  destruct exists Hstar p.
-  enow etapply H.
+  intros * H * Hstar.
+  inhabit star__seq in Hstar.
+  pose (p := prepend R Hstar (serial_witness__path R trans_serial s')).
+  unshelve etapply H.
+  - exact p.
+  - apply in_prepend_seq.
+    constructor.
 Qed.
-
+    
 Theorem rew_AG_star : forall s P,
   R @s ⊨ AG P =
     forall s', R^* s s' -> R @s' ⊨ P.
@@ -142,9 +144,12 @@ Proof using.
   intros * H.
   tsimpl.
   destruct H as (s' & Hstar & H).
-  apply (star__in_path _ _ _ trans_serial) in Hstar.
-  destruct exists Hstar p.
-  now exists p s'.
+  inhabit star__seq in Hstar.
+  pose (p := prepend R Hstar (serial_witness__path R trans_serial s')).
+  exists p s'.
+  split.
+  - follows apply in_prepend_seq.
+  - assumption. 
 Qed.
 
 Theorem EF__star : forall s P,
@@ -152,11 +157,11 @@ Theorem EF__star : forall s P,
   exists s', R^* s s' /\ R @s' ⊨ P.
 Proof using.
   intros * H.
-  tsimpl in *.
+  tsimpl in H.
   destruct H as (p & s' & Hin & H).
   exists s'.
   split.
-  - enow eapply in_path__star.
+  - follows eapply in_path_star.
   - assumption.
 Qed.
 
@@ -167,7 +172,7 @@ Proof using.
   intros *.
   extensionality.
   split.
-  - now apply EF__star.
+  - follows apply EF__star.
   - apply star__EF.
 Qed.
 
@@ -178,16 +183,44 @@ Proof using.
   tintro H.
   tsimpl.
   intros.
-  exists s 0.
-  split; [|split].
-  - destruct p. constructor.
+  exists 0.
+  split.
   - intros * Hin_before.
-    now inv Hin_before.
-  - assumption.
+    follows inv Hin_before.
+  - follows rewrite state_at_0.
 Qed.
 
 (* Extract the first satisfactory state *)
 Lemma first_state : forall s (p: path R s) P,
+  (exists s', in_path s' p /\ R @s' ⊨ P) ->
+  exists i, 
+    (forall x, in_path_before x i p -> R @x ⊨ ¬P) /\
+    R @(p i) ⊨ P.
+Proof using.
+  intros * (s' & [i <-] & H).
+  (* transform H (exists j, j >= i /\ R @(p j) ⊨ P) by eauto. *)
+  transform H (exists j, j <= i /\ R @(p j) ⊨ P) by eauto.
+  induction i.
+  - exists 0.
+    split.
+    + now intros * [].
+    (* + assumption. *)
+    + destruct H as (j & jlt & Hj).
+      follows inv jlt.
+  - destruct H as (j & jlt & Hj).
+    destruct classic (j < S i) as case.
+    + apply IHi.
+      exists j.
+      split.
+      * lia.
+      * assumption.
+    + replace j with (S i) by lia.
+      clear jlt case.
+      exists (S i).
+Admitted.
+
+    
+(* Lemma first_state : forall s (p: path R s) P,
   (exists s', in_path s' p /\ R @s' ⊨ P) ->
   exists s' i, 
     in_path_at s' i p /\ 
@@ -226,9 +259,9 @@ Proof using.
          ++ lia.
          ++ assumption.
       * assumption.
-Qed.
+Qed. *)
 
-Theorem seq__AW : forall s P Q,
+(* Theorem seq__AW : forall s P Q,
   (R @s ⊨ P ∨ Q ->
   forall s' (seq: R#* s s'),
     (forall x, in_seq x seq -> R @x ⊨ P ∧ ¬Q) ->
@@ -259,7 +292,7 @@ Proof using.
          Induct over in_seq. apply to H to get P ∨ Q. 
          Show Q contradicts that sQ is first. Therefore, P
      *)
-Admitted.
+Admitted. *)
 
 
 (* TODO: demorgans tactic which uses an extensible hint database for rewriting? *)
@@ -271,9 +304,9 @@ Proof using.
   tintro H.
   tsimpl.
   intros * Hin * Hin'.
-  etapply H.
-Admitted.
-
+  pose proof (ex_in_path_composition _ _ _ _ _ _ Hin Hin') as [? ?].
+  follows etapply H.
+Qed.
 
 (* De Morgan's Laws *)
 
@@ -295,12 +328,12 @@ Proof using.
   intros *.
   tintro H.
   tsimpl in *.
-  overwrite H (not_all_ex_not _ _ H); simpl in H.
+  positivity in H.
   destruct exists H p.
+  positivity in H.
   exists p.
-  intros s' Hin contra.
-  overwrite H (not_ex_all_not _ _ H); simpl in H.
-  enow eapply H.
+  repeat intro.
+  follows eapply H.
 Qed.
 
 Theorem EG_AF : forall s P,
@@ -313,7 +346,7 @@ Proof using.
   specialize (Hcontra p).
   destruct exists Hcontra s'.
   destruct Hcontra.
-  enow etapply H.
+  follows etapply H.
 Qed.
 
 Theorem EG_AF' : forall s P,
@@ -323,14 +356,11 @@ Proof using.
   tintro H.
   tsimpl in *.
   intros p.
-  overwrite H (not_ex_all_not _ _ H); simpl in H.
+  positivity in H.
   specialize (H p).
-  overwrite H (not_all_ex_not _ _ H); simpl in H.
+  positivity in H.
   destruct exists H s'.
-  exists s'.
-  split.
-  - enow eapply not_imply_elim.
-  - enow eapply not_imply_elim2.
+  follows positivity in H.
 Qed.
 
 Theorem rew_AF_EG : forall s P,
@@ -371,14 +401,12 @@ Proof using.
   intros *.
   tintro H.
   tsimpl in *.
-  overwrite H (not_all_ex_not _ _ H); simpl in H.
+  positivity in H.
   destruct exists H p.
-  overwrite H (not_all_ex_not _ _ H); simpl in H.
+  positivity in H.
   destruct exists H s'.
   exists p s'.
-  split.
-  - enow eapply not_imply_elim.
-  - enow eapply not_imply_elim2.
+  follows positivity in H.
 Qed.
 
 Theorem EF_AG : forall s P,
@@ -390,7 +418,7 @@ Proof using.
   destruct exists H p s'.
   specialize (Hcontra p s').
   destruct H as [H1 H2].
-  enow etapply H2.
+  follows etapply H2.
 Qed.
 
 Theorem EF_AG' : forall s P,
@@ -400,10 +428,10 @@ Proof using.
   tintro H.
   tsimpl in *.
   intros p s' Hin contra.
-  overwrite H (not_ex_all_not _ _ H); simpl in H.
+  positivity in H.
   specialize (H p).
-  overwrite H (not_ex_all_not _ _ H); simpl in H.
-  enow eapply H.
+  positivity in H.
+  follows eapply H.
 Qed.
 
 Theorem rew_AG_EF : forall s P,
@@ -445,12 +473,10 @@ Proof using.
   intros *.
   tintro H.
   tsimpl in *.
-  overwrite H (not_all_ex_not _ _ H); simpl in H.
+  positivity in H.
   destruct exists H s'.
   exists s'.
-  split.
-  - enow eapply not_imply_elim.
-  - enow eapply not_imply_elim2.
+  follows positivity in H.
 Qed.
 
 Theorem EX_AX : forall s P,
@@ -462,7 +488,7 @@ Proof using.
   destruct exists H s'.
   specialize (Hcontra s').
   destruct H as [H1 H2].
-  enow etapply H2.
+  follows etapply H2.
 Qed.
 
 Theorem EX_AX' : forall s P,
@@ -472,9 +498,9 @@ Proof using.
   tintro H.
   tsimpl in *.
   intros s' Hin contra.
-  overwrite H (not_ex_all_not _ _ H); simpl in H.
+  positivity in H.
   specialize (H s').
-  enow eapply H.
+  follows eapply H.
 Qed.
 
 Theorem rew_AX_EX : forall s P,

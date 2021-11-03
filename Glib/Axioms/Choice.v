@@ -121,7 +121,7 @@ Proof using.
       destruct (Rltotal x).
       now subst.
     + intros *.
-      enow destruct (Rltotal x).
+      follows destruct (Rltotal x).
 Qed.
 
 Theorem exists_universal_decision_procedure :

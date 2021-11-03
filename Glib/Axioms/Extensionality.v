@@ -80,7 +80,35 @@ Qed.
 
 (* convenient rewrite rules from LEM + prop extensionality *)
 
-Theorem rew_NNPP: forall P: Prop,
+Theorem rew_and_comm : forall P Q: Prop,
+  (P /\ Q) = (Q /\ P).
+Proof using.
+  intros *.
+  follows extensionality.
+Qed.
+
+Theorem rew_and_assoc : forall P Q R: Prop,
+  ((P /\ Q) /\ R) = (P /\ Q /\ R).
+Proof using.
+  intros *.
+  follows extensionality.
+Qed.
+
+Theorem rew_or_comm : forall P Q: Prop,
+  (P \/ Q) = (Q \/ P).
+Proof using.
+  intros *.
+  follows extensionality.
+Qed.
+
+Theorem rew_or_assoc : forall P Q R: Prop,
+  ((P \/ Q) \/ R) = (P \/ Q \/ R).
+Proof using.
+  intros *.
+  follows extensionality.
+Qed.
+
+Theorem rew_not_not: forall P: Prop,
   (~~P) = P.
 Proof using.
   intros *.
@@ -109,12 +137,30 @@ Proof using.
 Qed.
 
 Theorem rew_imply_or : forall P Q: Prop,
-  (P -> Q) = ~P \/ Q.
+  (P -> Q) = (~P \/ Q).
 Proof using.
   intros *.
   extensionality H.
   - now apply imply_to_or.
   - now apply or_to_imply.
+Qed.
+
+Corollary rew_imply_or' : forall P Q: Prop,
+  (P -> Q) = (Q \/ ~P).
+Proof using.
+  intros *.
+  rewrite rew_or_comm.
+  apply rew_imply_or.
+Qed.
+
+Theorem rew_not_imply : forall P Q: Prop,
+  (~ (P -> Q)) = (P /\ ~Q).
+Proof using.
+  intros *.
+  rewrite <- (rew_not_not P) at 2.
+  rewrite <- rew_not_or.
+  f_equal.
+  apply rew_imply_or.
 Qed.
 
 Theorem rew_not_all : forall U (P:U -> Prop),
@@ -134,6 +180,25 @@ Proof using.
   - now apply not_ex_all_not.
   - now apply all_not_not_ex.
 Qed.
+
+Create HintDb positivity.
+Hint Rewrite rew_not_not   : positivity.
+Hint Rewrite rew_not_and   : positivity.
+Hint Rewrite rew_not_or    : positivity.
+Hint Rewrite rew_not_all   : positivity.
+Hint Rewrite rew_not_ex    : positivity.
+Hint Rewrite rew_not_imply : positivity.
+
+Tactic Notation "positivity" :=
+  autorewrite with positivity.
+
+Tactic Notation "positivity" "in" hyp(H) :=
+  autorewrite with positivity in H.
+
+Tactic Notation "positivity" "in" "*" :=
+  positivity;
+  repeat find (fun H => positivity in H).
+
 
 Lemma sig_eq : forall A (P Q: A -> Prop),
   P = Q -> 

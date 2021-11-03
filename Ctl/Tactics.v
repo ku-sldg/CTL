@@ -8,7 +8,9 @@ Require Import Glib.Glib.
 
 Ltac tentails :=
   match goal with 
-  | |- ?R @?s ⊨ ⟨?P⟩ => change_no_check (P s)
+  | |- ?R @?s ⊨ ⟨?P⟩   => change (P s)
+  | |- ?R @?s ⊭ ⟨?P⟩   => change (¬ P s)
+  | |- ?R @?s ⊨ ¬ ⟨?P⟩ => change (¬ P s)
   end.
 
 Tactic Notation "tentails!" :=
@@ -16,67 +18,29 @@ Tactic Notation "tentails!" :=
   repeat match goal with 
   | |- ?R @?s ⊨ ?P => unfold P
   end;
-  change_no_check (?R @?s ⊨ ⟨?P⟩) with (P s);
+  tentails;
   cbn.
 
 Tactic Notation "tentails" "in" hyp(H) :=
-  change (?R @?s ⊨ ⟨?P⟩) with (P s) in H.
+  change (?R @?s ⊨ ⟨?P⟩)   with (P s) in H +
+  change (?R @?s ⊭ ⟨?P⟩)   with (¬ P s) in H +
+  change (?R @?s ⊨ ¬ ⟨?P⟩) with (¬ P s) in H.
 
 Tactic Notation "tentails!" "in" hyp(H) :=
   cbn in H;
   repeat match type of H with 
   | ?R @?s ⊨ ?P => unfold P in H
   end;
-  progress change (?R @?s ⊨ ⟨?P⟩) with (P s) in H;
+  progress tentails in H;
   cbn in H.
 
 Tactic Notation "tentails" "in" "*" :=
   tentails;
-  repeat match goal with 
-  | H : _ |- _ => tentails in H
-  end.
+  repeat find (fun H => tentails in H).
 
 Tactic Notation "tentails!" "in" "*" :=
   tentails!;
-  repeat match goal with 
-  | H : _ |- _ => tentails! in H
-  end.
-
-
-
-(*
-Tactic Notation "unfold_timpl" :=
-  progress change_no_check (?R @?s ⊨ ?p ⟶ ?q) with (R @s ⊨ p -> R @s ⊨ q).
-Tactic Notation "unfold_timpl" "in" hyp(H) :=
-  progress change_no_check (?R @?s ⊨ ?p ⟶ ?q) with (R @s ⊨ p -> R @s ⊨ q) in H.
-
-Tactic Notation "unfold_tnot" := 
-  progress change_no_check (?R @?s ⊨ ¬?P) with (R @s ⊭ P).
-Tactic Notation "unfold_tnot" "in" hyp(H) := 
-  progress change_no_check (?R @?s ⊨ ¬?P) with (R @s ⊭ P) in H.
-
-Tactic Notation "unfold_tconj" := 
-  progress change_no_check (?R @?s ⊨ ?P ∧ ?Q) with (R @s ⊨ P /\ R @s ⊨ Q).
-Tactic Notation "unfold_tconj" "in" hyp(H) := 
-  progress change_no_check (?R @?s ⊨ ?P ∧ ?Q) with (R @s ⊨ P /\ R @s ⊨ Q) in H.
-
-Tactic Notation "unfold_tbiimpl" := 
-  progress change_no_check (?R @?s ⊨ ?P ⟷ ?Q) with (R @s ⊨ P <-> R @s ⊨ Q).
-Tactic Notation "unfold_tbiimpl" "in" hyp(H) := 
-  progress change_no_check (?R @?s ⊨ ?P ⟷ ?Q) with (R @s ⊨ P <-> R @s ⊨ Q) in H.
-
-Tactic Notation "unfold_AX" := 
-  progress change_no_check (?R @?s ⊨ AX ?P) with (forall s', R s s' -> R @s' ⊨ P).
-Tactic Notation "unfold_AX" "in" hyp(H) := 
-  progress change_no_check (?R @?s ⊨ AX ?P) with (forall s', R s s' -> R @s' ⊨ P) in H.
-
-Tactic Notation "unfold_AG" := 
-  progress change_no_check (?R @?s ⊨ AG ?P) with 
-    (forall n (p: path R n s) s', in_path s' p -> R @s' ⊨ P).
-Tactic Notation "unfold_AG" "in" hyp(H) := 
-  progress change_no_check (?R @?s ⊨ AG ?P) with 
-    (forall n (p: path R n s) s', in_path s' p -> R @s' ⊨ P) in H.
-*)
+  repeat find (fun H => tentails! in H).
 
 Tactic Notation "unfold_timpl" :=
   progress change_no_check (?R @?s ⊨ ?p ⟶ ?q) with (R @s ⊨ p -> R @s ⊨ q) +
@@ -196,56 +160,50 @@ Tactic Notation "unfold_EF" "in" hyp(H) :=
 
 Tactic Notation "unfold_AU" := 
   progress change_no_check (?R @?s ⊨ A[?P U ?Q]) with 
-    (forall p: path R s, exists sQ i,
-      in_path_at sQ i p /\ 
-      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-      R @sQ ⊨ Q) +
+    (forall p: path R s, exists i,
+      (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+      R @(p i) ⊨ Q) +
   rewrite rew_AU +
   setoid_rewrite rew_AU.
 Tactic Notation "unfold_AU" "in" hyp(H) := 
   progress change_no_check (?R @?s ⊨ A[?P U ?Q]) with 
-    (forall p: path R s, exists sQ i,
-      in_path_at sQ i p /\ 
-      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-      R @sQ ⊨ Q) in H +
+    (forall p: path R s, exists i,
+      (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+      R @(p i) ⊨ Q) +
   rewrite rew_AU in H +
   setoid_rewrite rew_AU in H.
 
 Tactic Notation "unfold_EU" := 
   progress change_no_check (?R @?s ⊨ E[?P U ?Q]) with 
-    (exists (p: path R s) sQ i,
-      in_path_at sQ i p /\ 
-      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-      R @sQ ⊨ Q) +
+    (exists (p: path R s) i,
+      (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+      R @(p i) ⊨ Q) +
   rewrite rew_EU +
   setoid_rewrite rew_EU.
 Tactic Notation "unfold_EU" "in" hyp(H) := 
   progress change_no_check (?R @?s ⊨ E[?P U ?Q]) with 
-    (exists (p: path R s) sQ i,
-      in_path_at sQ i p /\ 
-      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-      R @sQ ⊨ Q) in H +
+    (exists (p: path R s) i,
+      (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+      R @(p i) ⊨ Q) +
   rewrite rew_EU in H +
   setoid_rewrite rew_EU in H.
 
 Tactic Notation "unfold_AW" := 
   progress change_no_check (?R @?s ⊨ A[?P W ?Q]) with 
     (forall p: path R s,
-      (forall s', in_path s' p -> R @s' ⊨ P ∧ ¬Q) \/
-      (exists sQ i,
-        in_path_at sQ i p /\ 
-        (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-        R @sQ ⊨ Q)) +
+      (forall x, in_path x p -> R @x ⊨ P ∧ ¬Q) \/
+      (exists i,
+        (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+        R @(p i) ⊨ Q)) +
   rewrite rew_AW +
   setoid_rewrite rew_AW.
 Tactic Notation "unfold_AW" "in" hyp(H) := 
   progress change_no_check (?R @?s ⊨ A[?P W ?Q]) with 
     (forall p: path R s,
-      (forall s', in_path s' p -> R @s' ⊨ P ∧ ¬Q) \/
-      (exists sQ i,
-        in_path_at sQ i p /\ 
-        (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-        R @sQ ⊨ Q)) in H +
+      (forall x, in_path x p -> R @x ⊨ P ∧ ¬Q) \/
+      (exists i,
+        (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+        R @(p i) ⊨ Q)) +
   rewrite rew_AW in H +
   setoid_rewrite rew_AW in H.
  

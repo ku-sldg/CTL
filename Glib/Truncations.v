@@ -190,8 +190,8 @@ Proof using.
   intros *.
   extensionality H.
   - uninhabit H.
-    enow destruct H.
-  - enow destruct H.
+    follows destruct H.
+  - follows destruct H.
 Qed.
 
 Lemma trunc_sigma_eq_exists : forall A (P: A -> Type),
@@ -200,8 +200,8 @@ Proof using.
   intros *.
   extensionality H.
   - uninhabit H.
-    enow destruct H.
-  - enow destruct H as [? [?]].
+    follows destruct H.
+  - follows destruct H as [? [?]].
 Qed.
 
 Lemma trunc_sum_eq_disj : forall P Q: Prop,

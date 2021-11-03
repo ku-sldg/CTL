@@ -83,8 +83,8 @@ Proof using A R equivR.
   apply exist_eq.
   extensionality x.
   extensionality H.
-  - enow eapply ec_all_in_related.
-  - enow eapply ec_all_related_in.
+  - follows eapply ec_all_in_related.
+  - follows eapply ec_all_related_in.
 Qed.
 
 Lemma in_some_class : forall a,
@@ -133,7 +133,7 @@ Lemma classes_disjoint : forall (c1 c2: quotient) a,
 Proof using A R equivR.
   intros * Hneq Hin Hin'.
   applyc Hneq.
-  enow eapply class_unique.
+  follows eapply class_unique.
 Qed.
 
 Theorem qclass_surjective : Surjective qclass.

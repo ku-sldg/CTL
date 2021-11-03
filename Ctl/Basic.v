@@ -107,28 +107,25 @@ Proof using. reflexivity. Qed.
 
 Theorem rew_AU : forall P Q,
   R @s ⊨ A[P U Q] =  
-  forall p: path R s, exists sQ i,
-    in_path_at sQ i p /\ 
-    (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-    R @sQ ⊨ Q.
+  forall p: path R s, exists i,
+    (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+    R @(p i) ⊨ Q.
 Proof using. reflexivity. Qed.
 
 Theorem rew_EU : forall P Q,
   R @s ⊨ E[P U Q] =
-  exists (p: path R s) sQ i,
-    in_path_at sQ i p /\ 
-    (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-    R @sQ ⊨ Q.
+  exists (p: path R s) i,
+    (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+    R @(p i) ⊨ Q.
 Proof using. reflexivity. Qed.
 
 Theorem rew_AW : forall P Q,
   R @s ⊨ A[P W Q] =
   forall p: path R s,
-    (forall s', in_path s' p -> R @s' ⊨ P ∧ ¬Q) \/
-    (exists sQ i,
-      in_path_at sQ i p /\ 
-      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-      R @sQ ⊨ Q).
+    (forall x, in_path x p -> R @x ⊨ P ∧ ¬Q) \/
+    (exists i,
+      (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+      R @(p i) ⊨ Q).
 Proof using. reflexivity. Qed.
 
 End Basic.

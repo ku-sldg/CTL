@@ -88,11 +88,11 @@ Export UipTheory.
 Hint Resolve inj_pair2 inj_pairT2: eqdep.
 
 
-Lemma hproof_irrelevance : forall (P Q: Prop) (p: P) (q: Q),
+Lemma JMproof_irrelevance : forall (P Q: Prop) (p: P) (q: Q),
   P = Q ->
   p ~= q.
 Proof using.
   intros * <-.
-  apply eq_heq.
+  apply eq_JMeq.
   apply proof_irrelevance.
 Qed.

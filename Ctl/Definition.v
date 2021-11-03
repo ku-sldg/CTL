@@ -93,24 +93,21 @@ Definition EF (P: tprop state) : tprop state :=
   fun R _ s => exists (p: path R s) s', in_path s' p /\ R @s' ⊨ P.
 
 Definition AU (P Q: tprop state) : tprop state :=
-  fun R _ s => forall p: path R s, exists sQ i,
-    in_path_at sQ i p /\ 
-    (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-    R @sQ ⊨ Q.
+  fun R _ s => forall p: path R s, exists i,
+    (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+    R @(p i) ⊨ Q.
 
 Definition EU (P Q: tprop state) : tprop state :=
-  fun R _ s => exists (p: path R s) sQ i,
-    in_path_at sQ i p /\ 
-    (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-    R @sQ ⊨ Q.
+  fun R _ s => exists (p: path R s) i,
+    (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+    R @(p i) ⊨ Q.
 
 Definition AW {state} (P Q: tprop state) : tprop state :=
   fun R _ s => forall p: path R s,
-    (forall s', in_path s' p -> R @s' ⊨ P ∧ ¬Q) \/
-    (exists sQ i,
-      in_path_at sQ i p /\ 
-      (forall sP, in_path_before sP i p -> R @sP ⊨ P) /\ 
-      R @sQ ⊨ Q).
+    (forall x, in_path x p -> R @x ⊨ P ∧ ¬Q) \/
+    (exists i,
+      (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
+      R @(p i) ⊨ Q).
 
 End PathProps.
 

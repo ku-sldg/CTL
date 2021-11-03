@@ -4,8 +4,9 @@ Require Export Gen.
 Require Export GeneralTactics.
 Require Export Induct.
 Require Export Isomorphisms.
+Require Export Misc.
 Require Export Notation.
+Require Export PropNormalize.
 Require Export Quotient.
 Require Export TacticCombinators.
 Require Export Truncations.
-Require Export Misc.

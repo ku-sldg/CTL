@@ -132,7 +132,7 @@ Proof using.
   intros * Hxy Hyz.
   induction Hyz.
   - assumption.
-  - enow econstructor.
+  - follows econstructor.
 Qed.
 
 Lemma star_lift : forall x y, 
@@ -183,7 +183,7 @@ Proof using.
   intros * H.
   induction H.
   - constructor.
-  - enow econstructor.
+  - follows econstructor.
 Qed.
 
 Theorem star__seq : forall x y,
@@ -195,7 +195,7 @@ Proof using.
   - repeat constructor.
   - find uninhabit.
     constructor.
-    enow econstructor.
+    follows econstructor.
 Qed.
 
 Definition seq_singleton {x y} (r: R x y)
@@ -658,6 +658,20 @@ Proof using.
     + constructor.
       assumption.
 Qed. 
+
+Definition nseq_singleton {x y} (r: R x y) : R#1 x y.
+  tedious.
+Defined.
+
+Definition nseq_prepend (x y z: A) n:
+  R x y ->
+  R#n y z ->
+  R#(S n) x z.
+Proof using.
+  intros ? Ryz.
+  follows induction Ryz.
+Defined.
+
 
 (*
 Theorem in_seq__in_nseq : forall x a b (r: R#* a b),

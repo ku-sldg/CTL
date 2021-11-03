@@ -411,7 +411,7 @@ Proof using.
     now apply Hinj in H.
   }
   pose proof (fun_choice _ _ (fun i a => f_image f a = i)) as g.
-  forward g by (enow intros (? & ? & <-)).
+  forward g by follows intros (? & ? & <-).
   destruct g as [g H].
   exists g.
   split; [assumption|].
@@ -495,7 +495,7 @@ Corollary ex_bijection_iso : forall A B,
   A ≃ B.
 Proof using.
   intros * [? ?].
-  enow eapply bijection_iso.
+  follows eapply bijection_iso.
 Qed.
 
 Theorem iso_prop : forall P Q: Prop,
@@ -648,9 +648,9 @@ Proof using.
     + exact (inr (ϕB b)).
   - intros [a|b] [a'|b'] [=].
     + f_equal.
-      enow eapply iso_injective.
+      follows eapply iso_injective.
     + f_equal.
-      enow eapply iso_injective.
+      follows eapply iso_injective.
   - intros [a'|b'].
     + exists (inl (ϕA⁻¹ a')).
       f_equal.

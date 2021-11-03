@@ -323,7 +323,7 @@ Proof using.
     + now apply exist_eq'.
   - intros [? ?].
     eexists.
-    enow apply injection_image.
+    follows apply injection_image.
 Qed.
 
 Theorem card_ord_refl : reflexive Type card_ord.
@@ -462,7 +462,7 @@ Proof using.
   ) as Hind.
   max forward Hind; clear Hind.
   - intros * Heq H'.
-    enow econstructor.
+    follows econstructor.
   - intros * Heq.
     intros.
     econstructor.
@@ -509,7 +509,7 @@ Proof using.
   - assumption.
   - econstructor.
     + eassumption.
-    + enow eapply same_seq_aa_ab_trans.
+    + follows eapply same_seq_aa_ab_trans.
 Qed. *)
 
 (* Anti-symmetry of the cardinal ordering *)
