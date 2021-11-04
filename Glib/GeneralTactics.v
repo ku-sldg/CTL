@@ -366,7 +366,7 @@ Ltac _etedious n :=
       easy +
       (constructor; _etedious n') +
       (econstructor; _etedious n') +
-      ((find (fun H => induction H + destruct H)); _etedious n') +
+      ((find (fun H => injection H + induction H + destruct H)); _etedious n') +
       (fail 1 "Cannot solve goal")
     )
   end.
