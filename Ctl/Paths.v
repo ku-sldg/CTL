@@ -54,7 +54,7 @@ Qed.
 
 Definition path_drop {s} (p: path s) (n: nat) : path (p n).
   exists (λ i, p (i + n)).
-  auto split.
+  after split.
   intro i.
   simpl!.
   follows destruct p.
@@ -93,7 +93,7 @@ Proof using.
   - destruct p as (π & Hπ0 & HπS); simpl!.
     apply exist_eq.
     extensionality i.
-    auto destruct i.
+    after destruct i.
     simpl!.
     f_equal.
     lia.
@@ -177,7 +177,7 @@ Theorem in_prefix_at : forall s (p: path s) n x i,
   p i = x.
 Proof using. 
   intros * H.
-  auto induction H.
+  after induction H.
 Admitted.
 
 Theorem inv_in_prefix : forall s (p: path s) n x,

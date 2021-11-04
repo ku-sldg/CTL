@@ -33,9 +33,9 @@ Theorem or_inv : forall P: Prop,
 Proof using.
   intros *.
   extensionality.
-  auto split.
-  - intro.
-    apply classic.
+  after split.
+  intro.
+  apply classic.
 Qed.
 Hint Rewrite or_inv : prop_simpl.
 

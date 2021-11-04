@@ -65,16 +65,9 @@ Tactic Notation "econtradiction" uconstr(u) := exfalso; eapply u.
 Ltac assumed H :=
   let t := type of H in
   match goal with 
-  | _: t |- _ => idtac
+  | _: t |- _ => true
   end + 
   fail "Hypothesis not assumed".
-
-(* Ltac fail_if_in_hyps H :=
-  let t := type of H in
-  lazymatch goal with 
-  | [_: t |- _] => fail "This proposition is already assumed"
-  | [_: _ |- _] => idtac
-  end. *)
 
 Tactic Notation "pose" "new" "proof" constr(H) :=
   not assumed H;
@@ -365,44 +358,71 @@ Ltac goal :=
  *)
 Global Set Warnings "-cannot-remove-as-expected".
 
-Ltac _etedious_step n := 
+Ltac _etedious n := 
   match n with 
   | 0 => fail 1 "Ran out of gas"
   | S ?n' => intros; (
       eassumption +
       solve[eauto] +
       easy +
-      (constructor; _etedious_step n') +
-      (econstructor; _etedious_step n') +
-      ((find (fun H => induction H + destruct H)); _etedious_step n') +
+      (constructor; _etedious n') +
+      (econstructor; _etedious n') +
+      ((find (fun H => induction H + destruct H)); _etedious n') +
       (fail 1 "Cannot solve goal")
     )
   end.
 
-Ltac _tedious_step n := 
+Ltac _tedious n := 
   match n with 
   | 0 => fail 1 "Ran out of gas"
   | S ?n' => intros; (
       easy +
-      (constructor; _tedious_step n') +
-      (econstructor; _etedious_step n') +
-      ((find (fun H => induction H + destruct H)); _tedious_step n') +
+      (constructor; _tedious n') +
+      (econstructor; _etedious n') +
+      ((find (fun H => induction H + destruct H)); _tedious n') +
       (fail 1 "Cannot solve goal")
     )
   end.
 
-Ltac _tedious n :=
-  if has_evar goal then
-    _etedious_step n
+(* Slows exponentially with gas. Wouldn't suggest higher than 10. *)
+Tactic Notation "tedious" constr(n) :=
+  if has_evar goal then 
+    _etedious n
   else 
-    _tedious_step n.
+    _tedious n.
 
-Ltac tedious := _tedious 8.
-  
-Tactic Notation "follows" tactic(tac) :=
+Tactic Notation "tedious" :=
+  tedious 5.
+
+Tactic Notation "follows" tactic3(tac) :=
   tac; tedious.
 
-Tactic Notation "auto" tactic(tac) := tac; try tedious.
+Tactic Notation "after" tactic3(tac) :=
+  tac; try tedious.
+  
+
+(* `force` (short for "brute force") is similar to `tedious`, but sacrifices 
+   performance for deeper search.
+ *)
+
+Ltac _force n := 
+  match n with 
+  | 0 => fail 1 "Ran out of gas"
+  | S ?n' => intros; (
+      solve[intuition (auto with *; easy)] +
+      solve[intuition (eauto with *; easy)] +
+      (constructor; _force n') +
+      (econstructor; _force n') +
+      ((find (fun H => induction H + destruct H)); _force n') +
+      (fail 1 "Cannot solve goal")
+    )
+  end.
+
+Tactic Notation "force" constr(n) :=
+  _force n.
+
+Tactic Notation "force" :=
+  force 5.
 
 
 (* Improved substitution *)
