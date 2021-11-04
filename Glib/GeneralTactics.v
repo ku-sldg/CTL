@@ -62,19 +62,26 @@ Tactic Notation "econtradiction" uconstr(u) := exfalso; eapply u.
    context with generated facts
  *)
 
-Ltac fail_if_in_hyps H :=
+Ltac assumed H :=
+  let t := type of H in
+  match goal with 
+  | _: t |- _ => idtac
+  end + 
+  fail "Hypothesis not assumed".
+
+(* Ltac fail_if_in_hyps H :=
   let t := type of H in
   lazymatch goal with 
   | [_: t |- _] => fail "This proposition is already assumed"
   | [_: _ |- _] => idtac
-  end.
+  end. *)
 
 Tactic Notation "pose" "new" "proof" constr(H) :=
-  fail_if_in_hyps H;
+  not assumed H;
   pose proof H.
 
 Tactic Notation "pose" "new" "proof" constr(H) "as" ident(H2) :=
-  fail_if_in_hyps H;
+  not assumed H;
   pose proof H as H2.
 
 
@@ -388,8 +395,7 @@ Ltac _tedious n :=
   if has_evar goal then
     _etedious_step n
   else 
-    _tedious_step n
-  end.
+    _tedious_step n.
 
 Ltac tedious := _tedious 8.
   
@@ -407,7 +413,7 @@ Definition get_instance {A} (class: A -> Prop) (a: A) {instance: class a}
 (* Note, this fails if it cannot resolve *all* implicits. *)
 Tactic Notation "has_instance" uconstr(class) uconstr(a) :=
   let _ := constr:(get_instance class a) in
-  idtac.
+  true.
 
 Tactic Notation "setoid_subst" hyp(H) :=
   match type of H with 

@@ -1,9 +1,11 @@
 Require Import Coq.Lists.List.
 Import ListNotations.
 
-(* Set Ltac Backtrace. *)
 
-(* Control flow tactics *)
+(* Control flow tactics
+
+   These tactics are largely *experimental*.
+*)
 
 (* Ltac's execution semantics can be unclear. Sometimes, an ltac expression
    being passed to a higher-order combinator isn't delayed as expected.
@@ -11,33 +13,26 @@ Import ListNotations.
    execution in such cases.
  *)
 Tactic Notation "quote" tactic(tac) := tac.
-(* Tactic Notation "'" tactic(tac) := tac. *)
-(* In Lisp, "'" is used, but this conflicts visually with the common 
-   pattern of including the quote in derived names
- *)
 Tactic Notation "`" tactic(tac) := tac.
 
-Ltac not tac :=
+
+Ltac true := idtac.
+Ltac false := fail.
+
+Tactic Notation "not" tactic3(tac) :=
   assert_fails tac.
 
-(* Note, on tactics such as this where it ends with a parsed tactic,
-   the parsing will extend passed semicolons. I.e.
+Tactic Notation "both" tactic3(tac1) "and" tactic3(tac2) :=
+  tac1; tac2.
 
-   `ifnot foo then a; b` is equivalent to 
-   `ifnot foo then (a; b)`, not 
-   `(ifnot foo then a); b)`.
- *)
-Tactic Notation "ifnot" tactic(tCond) "then" tactic(tThen) :=
-  not tCond;
-  tThen.
-(* Tactic Notation "ifnot" tactic(tCond) "then" tactic(tThen) :=
-  first [tCond|tThen]. *)
+Tactic Notation "either" tactic3(tac1) "or" tactic3(tac2) :=
+  tac1 + tac2.
 
-Tactic Notation "if" tactic(tCond) "then" tactic(tThen) "else" tactic(tElse) :=
+Tactic Notation "if" tactic3(tCond) "then" tactic3(tThen) "else" tactic3(tElse) :=
   tryif tCond then tThen else tElse.
 
-Tactic Notation "if" tactic(tCond) "then" tactic(tThen) "else" tactic(tElse) "end" :=
-  if tCond then tThen else tElse.
+Tactic Notation "while" tactic3(tCond) tactic3(tDo) :=
+  repeat (tCond; tDo).
 
 
 (* `repeat_count` behaves as `repeat`, but it counts the number of successful 
@@ -48,11 +43,8 @@ Ltac repeat_count_then_aux tac cont n :=
   first [ tac; repeat_count_then_aux tac cont (S n)
         | cont n].
 
-Tactic Notation "repeat_count" tactic(tac) "then" tactic(cont) := 
+Tactic Notation "repeat_count" tactic3(tac) "then" tactic3(cont) := 
   repeat_count_then_aux tac cont 0.
-
-Tactic Notation "repeat_count" tactic(tac) "then" tactic(cont) "end" := 
-  repeat_count tac then cont.
 
 
 (* This idiom was taken from Chargueraud's TLC library.
@@ -83,7 +75,7 @@ Ltac _do_u n tac :=
   | _ => fail "Argument to _do_u is not a boxed natural"
   end.
 
-Tactic Notation "do_u" uconstr(n) tactic(tac) :=
+Tactic Notation "do_u" uconstr(n) tactic3(tac) :=
   _do_u (box n) tac.
 
 
@@ -95,8 +87,9 @@ Ltac _do_upto n tac :=
   | box 0 => idtac 
   end.
 
-Tactic Notation "do_upto" uconstr(n) tactic(tac) :=
+Tactic Notation "do_upto" uconstr(n) tactic3(tac) :=
   _do_upto (box n) tac.
+
 
 (* Might be though of as a scan *)
 (* repeat_accum : A -> (A -> (A -> ltac) -> ltac) -> ltac *)
@@ -104,18 +97,16 @@ Ltac repeat_accum a tac :=
   let cont := fun a => repeat_accum a tac in 
   try tac a cont.
 
-Tactic Notation "repeat_accum" constr(a) tactic(tac) :=
+Tactic Notation "repeat_accum" constr(a) tactic3(tac) :=
   repeat_accum a tac.
 
-Tactic Notation "repeat_accum" constr(a) tactic(tac) "end" :=
-  repeat_accum a tac.
 
 Ltac foreach l tac :=
   match l with 
   | ?h :: ?t => tac h; foreach t tac
   | [] => idtac
   end.
-Tactic Notation "foreach" constr(l) tactic(tac) :=
+Tactic Notation "foreach" constr(l) tactic3(tac) :=
   foreach l tac.
 
 Ltac foreach_bl l tac :=
@@ -123,11 +114,7 @@ Ltac foreach_bl l tac :=
   | box ?h :: ?t => tac h; foreach_bl t tac
   | [] => idtac
   end.
-Tactic Notation "foreach_bl" constr(l) tactic(tac) :=
+Tactic Notation "foreach_bl" constr(l) tactic3(tac) :=
   foreach_bl l tac.
 
-Tactic Notation "while" tactic(tCond) tactic(tDo) :=
-  repeat (tCond; tDo).
 
-Ltac true := idtac.
-Ltac false := fail.

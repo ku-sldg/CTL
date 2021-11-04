@@ -20,7 +20,7 @@ Import ListNotations.
 Ltac gen_eq_something H :=
   repeat match type of H with
   | context[_ ?x] => 
-      ifnot is_var x then
+      not (is_var x);
       (* Should this be `in H`?
          Perhaps in any situation where it would matter, we would 
          want it this general.
@@ -71,12 +71,10 @@ Ltac ecut_eq_aux IH :=
     | especialize IH;
       ecut_eq_aux IH].
     
-Ltac has_no_evar t := assert_fails (has_evar t).
-
 Ltac ecut_eq IH :=
   ecut_eq_aux IH;
   let t := type of IH in 
-  `has_no_evar t.
+  not (`has_evar t).
 
 Ltac find_ecut_eqs :=
   repeat match goal with 
@@ -104,12 +102,12 @@ Tactic Notation "induct!" hyp(H) "as" simple_intropattern(pat) "using" uconstr(c
 
 Ltac hyp_eq H H' :=
   match H with 
-  | H' => idtac
+  | H' => true
   end.
 
 Ltac revert_all_but H :=
   repeat find (fun H' =>
-    assert_fails (`hyp_eq H H');
+    not (`hyp_eq H H');
     revert H'
   ).
 

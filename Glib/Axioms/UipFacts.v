@@ -204,8 +204,16 @@ Proof using.
   follows intros * <-.
 Qed.
 
+(* Theorem JMeq_rew {A B} {a: A} {b: B}: 
+  a ~= b ->
+  exists H: A = B, rew H in a = b.
+Proof using.
+  intros [].
+  follows exists eq_refl.
+Qed. *)
 
-Definition transport {A B} (H: A = B) (a: A) : B := rew [λ x, x] H in a.
+
+Definition transport {A B} (H: A = B) (a: A) : B := rew H in a.
 
 Theorem transport_JMeq {A B} : forall (H: A = B) a,
   transport H a ~= a.
@@ -235,11 +243,8 @@ Theorem transport_eq_by_JMeq {A B}: forall (x: A) (y: B),
   x ~= y ->
   exists H, transport H x = y.
 Proof using.
-  intros * Heq.
-  assert (H: A = B) by tedious.
-  exists H.
-  destruct H.
-  follows apply JMeq_eq in Heq.
+  intros * [].
+  follows exists eq_refl.
 Qed.
 
 Theorem JMeq_by_transport_eqr {A B}: forall (H: B = A) (x: A) (y: B),
@@ -256,11 +261,8 @@ Theorem transport_eqr_by_JMeq {A B}: forall (x: A) (y: B),
   x ~= y ->
   exists H, x = transport H y.
 Proof using.
-  intros * Heq.
-  assert (H: B = A) by tedious.
-  exists H.
-  destruct H.
-  follows apply JMeq_eq in Heq.
+  intros * [].
+  follows exists eq_refl.
 Qed.
 
 Theorem transport_eq_refl_cancel : forall A (x: A),
