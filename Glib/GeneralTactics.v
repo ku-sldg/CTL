@@ -362,8 +362,7 @@ Ltac _etedious n :=
   match n with 
   | 0 => fail 1 "Ran out of gas"
   | S ?n' => intros; (
-      solve[eauto] +
-      easy +
+      (eauto; easy) +
       (constructor; _etedious n') +
       (econstructor; _etedious n') +
       ((find (fun H => injection H + induction H + destruct H)); _etedious n') +
@@ -375,7 +374,7 @@ Ltac _tedious n :=
   match n with 
   | 0 => fail 1 "Ran out of gas"
   | S ?n' => intros; (
-      easy +
+      (auto; easy) +
       (constructor; _tedious n') +
       (econstructor; _etedious n') +
       ((find (fun H => injection H + induction H + destruct H)); _tedious n') +
