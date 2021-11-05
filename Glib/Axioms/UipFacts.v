@@ -204,80 +204,81 @@ Proof using.
   follows intros * <-.
 Qed.
 
-(* Theorem JMeq_rew {A B} {a: A} {b: B}: 
+Theorem JMeq_type_eq {A B} {a: A} {b: B}: 
   a ~= b ->
-  exists H: A = B, rew H in a = b.
+  A = B.
 Proof using.
-  intros [].
-  follows exists eq_refl.
-Qed. *)
+  follows intros [].
+Defined.
 
 
-Definition transport {A B} (H: A = B) (a: A) : B := rew H in a.
-
-Theorem transport_JMeq {A B} : forall (H: A = B) a,
-  transport H a ~= a.
+Lemma rew_JMeq {A B} : forall (H: A = B) (a: A),
+  rew H in a ~= a.
 Proof using.
   intros *.
   now destruct H.
 Qed.
 
-Definition JMcast {A B} (H: A = B) (a: A) : {b: B | a ~= b}.
-  exists (transport H a).
+Corollary rew_JMeq_sym {A B} : forall (H: A = B) (a: A),
+  a ~= rew H in a.
+Proof using.
   symmetry.
-  apply transport_JMeq.
-Defined.
+  apply rew_JMeq.
+Qed.
 
-Theorem JMeq_by_transport_eq {A B}: forall (H: A = B) (x: A) (y: B),
-  transport H x = y ->
+Definition JMcast {A B} (H: A = B) (a: A) : {b: B | a ~= b} :=
+  exist _ (rew H in a) (rew_JMeq_sym H a).
+
+Theorem JMeq_by_rew_eq {A B}: forall (H: A = B) (x: A) (y: B),
+  rew H in x = y ->
   x ~= y.
 Proof using.
   intros * Heq.
-  apply JMeq_trans with (b := transport H x).
-  - symmetry.
-    apply transport_JMeq.
+  apply JMeq_trans with (b := rew H in x).
+  - apply rew_JMeq_sym.
   - follows rewrite Heq.
 Qed.
 
-Theorem transport_eq_by_JMeq {A B}: forall (x: A) (y: B),
-  x ~= y ->
-  exists H, transport H x = y.
+Theorem rew_eq_by_JMeq {A B}: forall (x: A) (y: B),
+  forall h: x ~= y,
+  rew JMeq_type_eq h in x = y.
 Proof using.
-  intros * [].
-  follows exists eq_refl.
+  intros *.
+  follows destruct h.
 Qed.
 
-Theorem JMeq_by_transport_eqr {A B}: forall (H: B = A) (x: A) (y: B),
-  x = transport H y ->
+Theorem JMeq_by_rew_eqr {A B}: forall (H: B = A) (x: A) (y: B),
+  x = rew H in y ->
   x ~= y.
 Proof using.
   intros * Heq.
-  apply JMeq_trans with (b := transport H y).
+  apply JMeq_trans with (b := rew H in y).
   - follows rewrite Heq.
-  - apply transport_JMeq. 
+  - apply rew_JMeq. 
 Qed.
 
-Theorem transport_eqr_by_JMeq {A B}: forall (x: A) (y: B),
-  x ~= y ->
-  exists H, x = transport H y.
+Theorem rew_eqr_by_JMeq {A B}: forall (x: A) (y: B),
+  forall h: x ~= y,
+  x = rew eq_sym (JMeq_type_eq h) in y.
 Proof using.
-  intros * [].
-  follows exists eq_refl.
+  intros *.
+  follows destruct h.
 Qed.
 
-Theorem transport_eq_refl_cancel : forall A (x: A),
-  transport eq_refl x = x.
+Theorem rew_eq_refl_cancel : forall A (x: A),
+  rew eq_refl A in x = x.
 Proof using.
   tedious.
 Qed.
 
-Theorem transport_cancel: forall A (H: A = A) x,
-  transport H x = x.
+Theorem rew_cancel: forall A (H: A = A) (x: A),
+  rew H in x = x.
 Proof using.
   intros.
   rewrite (uip_refl _ _ H).
-  apply transport_eq_refl_cancel.
+  apply rew_eq_refl_cancel.
 Qed.
+
 
 Theorem existT_eq_intro :
   forall (A: Type) (B: A -> Type) (a a': A) (b: B a) (b': B a'),

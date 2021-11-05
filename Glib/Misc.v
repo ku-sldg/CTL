@@ -33,11 +33,14 @@ Proof using.
 Qed.
 
 Require Import FinFun.
-Lemma injective_neq : forall A B (f: A -> B) (x y: A),
-  Injective f -> 
-  x <> y ->
-  f x <> f y.
+Lemma injective_neg_defn : forall A B (f: A -> B),
+  Injective f =
+  forall x y: A, x <> y -> f x <> f y.
 Proof using.
-  intros * f_inj Hneq Hcontra.
-  follows apply f_inj in Hcontra.
+  intros *.
+  extensionality.
+  after split.
+  intros inj_neg x y f_eq.
+  contradict goal contra.
+  follows eapply inj_neg.
 Qed.
