@@ -202,6 +202,28 @@ Definition seq_singleton {x y} (r: R x y)
   : R#* x y :=
   seq_step R x x y r (seq_refl R x).
 
+(* Require Import Coq.Init.Nat.
+Check PeanoNat.Nat.ltb_lt. *)
+(* Definition refl_lt_ltb {n m} (n < m) : {} *)
+
+Definition seq_tail {x z} (r: R#* x z) (p: seq_length r > 0) : Σ y, R#* y z.
+  induction r.
+  - follows exfalso.
+  - destruct r0.
+    + exists x.
+      follows apply seq_singleton.
+    + forward IHr by (cbn; lia).
+      destruct exists IHr s.
+      exists s.
+      tedious.
+Defined.
+
+(* Fixpoint get_seq_at {x y} (r: R#* x y) (n: nat) (p: n < seq_length r): A :=
+  match n with 
+  | 0 => x
+  | S n' => get_seq_at
+  end. *)
+
 Theorem in_seq_first : forall x y (r: R#* x y),
   in_seq x r.
 Proof using.
@@ -221,7 +243,103 @@ Proof using.
   - now constructor.
 Qed.
 
+Theorem inv_in_seq_at_0 : forall x y (r: R#* x y) s,
+  in_seq_at s 0 r ->
+  s = x.
+Proof using.
+  intros * H.
+  after induct! H as [z r|].
+  follows destruct r.
+Qed.
 
+Theorem in_seq_at_unique : forall x y (r: R#* x y) s s' i,
+  in_seq_at s i r ->
+  in_seq_at s' i r ->
+  s = s'.
+Proof using.
+  intros * H H'.
+  induction i.
+  - follows apply inv_in_seq_at_0 in H, H'.
+  -
+Admitted.
+
+Lemma in_seq_at__in_seq {x y z}: forall (r: R#* x z) i,
+  in_seq_at y i r ->
+  in_seq y r.
+Proof using.
+  tedious.
+Qed.
+
+Lemma in_seq__in_seq_at {x y z}: forall (r: R#* x z),
+  in_seq y r ->
+  exists i, in_seq_at y i r.
+Proof using.
+  intros * H.
+  follows induction H.
+Qed.
+
+Lemma ex_in_seq_at_lt_length {x z}: forall (r: R#* x z) i,
+  i < seq_length r ->
+  exists y, in_seq_at y i r.
+Proof using.
+  intros * ilt.
+  induction r.
+  - inv ilt.
+  - simpl! in ilt.
+    follows inv ilt.
+Qed.
+
+Lemma in_seq_at_length {x z}: forall (r: R#* x z) y i,
+  in_seq_at y i r ->
+  i < seq_length r.
+Proof using.
+  intros *.
+Admitted.
+
+Lemma in_seq_at_succ_related {w z}: forall (r: R#* w z) x y i,
+  in_seq_at x i r ->
+  in_seq_at y (S i) r ->
+  R x y.
+Proof using.
+  intros * Hin Hin'.
+Admitted.
+
+Lemma ex_seq_prefix {x y z} : forall (r: R#* x z),
+  in_seq y r ->
+  exists prefix: R#* x y, 
+    forall s i, in_seq_at s i prefix -> in_seq_at s i r.
+Proof using.
+  (* Wow, `tedious` is impressive! *)
+  (* time tedious. *)
+  tedious.
+
+  (* intros * Hin.
+  induction Hin.
+  - exists seq0.
+    easy.
+  - destruct exists IHHin prefix.
+    exists prefix.
+    intros.
+    constructor.
+    auto. *)
+
+ (* intros * Hin.
+  induction Hin.
+  - follows define exists by assumption.
+  - follows destruct exists IHHin prefix. *)
+Qed.
+
+Lemma ex_seq_at_prefix {x y z} : forall (r: R#* x z) n,
+  in_seq_at y n r ->
+  exists prefix: R#* x y, 
+    seq_length prefix = n /\
+    forall s i, in_seq_at s i prefix -> in_seq_at s i r.
+Proof using.
+  intros * Hin.
+  induction Hin.
+  - follows define exists by assumption.
+  - follows destruct exists IHHin prefix.
+Qed.
 
 (* Note equivalence to transitivity under Curry-Howard reflection to star *)
 Definition seq_concat {x y z} (Rxy: R#* x y) (Ryz: R#* y z)
@@ -485,27 +603,11 @@ Inductive in_seq_rev_at {a}
       in_seq_rev_at y n seqr ->
       in_seq_rev_at y (S n) (seq_rev_step a x x' r seqr).
  
-      
-(* Inductive in_seq_rev {a}
-  : forall {a'}, A -> seq_rev a a' -> Prop :=
-  | in_seq_rev_head_refl :
-      in_seq_rev a (seq_rev_refl a)
-  | in_seq_rev_head_step : forall x x' r p,
-      in_seq_rev a (seq_rev_step a x x' r p)
-  | in_seq_rev_tail : forall x x' y r p,
-      in_seq_rev y p ->
-      in_seq_rev y (seq_rev_step a x x' r p).
-Print in_seq_at.
-Inductive in_seq_rev_at {a}
-  : forall {a'}, A -> nat -> seq_rev a a' -> Prop :=
-  | in_seq_rev_head_refl :
-      in_seq_rev a 0 (seq_rev_refl a)
-  | in_seq_rev_head_step : forall n x x' r p,
-      in_seq_rev a (seq_rev_step a x x' r p)
-  | in_seq_rev_tail : forall x x' y r p,
-      in_seq_rev y p ->
-      in_seq_rev y (seq_rev_step a x x' r p). *)
 
+(* Definition get_seq_rev_at ()
+
+Definition get_seq_at *)
+      
 Theorem in_seq_iso_in_seq_rev_flip : forall x y z,
   forall b: seq_rev x y, in_seq_rev z b = in_seq z ((ϕ_seq__seq_rev x y)⁻¹ b).
 Proof using.

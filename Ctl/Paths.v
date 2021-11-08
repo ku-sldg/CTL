@@ -127,7 +127,7 @@ Definition prepend {x y} (seq: R#* x y) (p: path y) : path x.
     follows eapply path_cons.
 Defined.
 
-Definition prefix {s} (p: path s) n : R#n s (p n).
+Definition prefix {s} (p: path s) n : R#* s (p n).
   induction n.
   - rewrite state_at_0.
     constructor.
@@ -138,7 +138,7 @@ Definition prefix {s} (p: path s) n : R#n s (p n).
 Defined.
 
 Theorem prefix_nil : forall s (p: path s),
-  prefix p 0 ~= nseq_refl R s.
+  prefix p 0 ~= seq_refl R s.
 Proof using.
   intros *.
   follows simpl!.
@@ -156,7 +156,7 @@ Proof using.
 Qed.
 
 Theorem prefix_cons : forall n x y (p: path y) (r: R x y),
-  prefix (path_cons x r p) (S n) = nseq_prepend R x y (p n) n r (prefix p n).
+  prefix (path_cons x r p) (S n) = seq_prepend R x y (p n) r (prefix p n).
 Proof using.
   intro n.
   induction n.
@@ -166,14 +166,14 @@ Proof using.
   - intros.
 Admitted.
 
-Theorem in_nseq_at_prefix : forall x y z (p: path y) n i (r: R x y),
-  in_nseq_at z (S i) (prefix (path_cons x r p) (S n)) ->
-  in_nseq_at z i (prefix p n).
+Theorem in_seq_at_prefix : forall x y z (p: path y) n i (r: R x y),
+  in_seq_at z (S i) (prefix (path_cons x r p) (S n)) ->
+  in_seq_at z i (prefix p n).
 Proof using.
 Admitted.
 
 Theorem in_prefix_at : forall s (p: path s) n x i,
-  in_nseq_at x i (prefix p n) ->
+  in_seq_at x i (prefix p n) ->
   p i = x.
 Proof using. 
   intros * H.
@@ -181,9 +181,14 @@ Proof using.
 Admitted.
 
 Theorem inv_in_prefix : forall s (p: path s) n x,
+  in_seq x (prefix p n) ->
+  in_path_before x (S n) p.
+Admitted.
+
+(* Theorem inv_in_prefix : forall s (p: path s) n x,
   in_nseq x (prefix p n) ->
   in_path x p.
-Admitted. 
+Admitted.  *)
 
 Theorem in_prepend_seq : forall x y z (seq: R#* x z) (p: path z),
   in_seq y seq ->

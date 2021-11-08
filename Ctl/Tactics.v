@@ -3,7 +3,6 @@ Require Import Ctl.Definition.
 Require Import Ctl.Basic.
 Open Scope tprop_scope.
 
-Require Import Setoid.
 Require Import Glib.Glib.
 
 Ltac tentails :=

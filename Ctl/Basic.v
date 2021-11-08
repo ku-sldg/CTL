@@ -19,9 +19,9 @@ Theorem ntentails_tbot :
 Proof using. auto. Qed.
 
 Theorem tentails_tconj : forall P Q,
-  R @s ⊨ P ->
-  R @s ⊨ Q ->
-  R @s ⊨ P ∧ Q.
+  R @s |= P ->
+  R @s |= Q ->
+  R @s |= P && Q.
 Proof using. 
   intros.
   split; assumption.
@@ -34,7 +34,7 @@ Proof using. reflexivity. Qed.
 
 Theorem tentails_tdisj_l : forall P Q,
   R @s ⊨ P ->
-  R @s ⊨ P ∨ Q.
+  R @s ⊨ P || Q.
 Proof using.
   intros.
   left.

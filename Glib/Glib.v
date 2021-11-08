@@ -1,5 +1,6 @@
 Require Export Axioms.
 Require Export Cardinality.
+Require Export Wf.
 Require Export Gen.
 Require Export GeneralTactics.
 Require Export Induct.

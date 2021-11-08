@@ -19,15 +19,20 @@ Definition tprop state :=
     Prop.
 
 Declare Scope tprop_scope.
-(* Delimit Scope tprop_scope with tprop. *)
 Bind Scope tprop_scope with tprop.
 Open Scope tprop_scope.
 
 Definition tentails {state} (R: relation state) {t: transition R}
   (s: state) (P: tprop state) :=
   P R t s.
-Notation "R @ s ⊨ P" := (tentails R s P)   (at level 69, format "R  @ s  ⊨  P") : tprop_scope.
-Notation "R @ s ⊭ P" := (~ tentails R s P) (at level 69, format "R  @ s  ⊭  P") : tprop_scope.
+
+Notation "R @ s ⊨ P" := (tentails R s P) 
+  (at level 69, format "R  @ s  ⊨  P") : tprop_scope.
+Notation "R @ s ⊭ P" := (~ tentails R s P)
+  (at level 69, format "R  @ s  ⊭  P") : tprop_scope.
+
+Notation "R @ s |= P" := (tentails R s P) 
+  (at level 69, only parsing) : tprop_scope.
 
 
 Section StateProps.
@@ -62,13 +67,36 @@ End StateProps.
 
 Notation "⊤"      := (ttop) : tprop_scope.
 Notation "⊥"      := (tbot) : tprop_scope.
-Notation "P ∧ Q"  := (tconj P Q)   (at level 45, right associativity) : tprop_scope.
-Notation "P ∨ Q"  := (tdisj P Q)   (at level 55, right associativity) : tprop_scope.
-Notation "P ⟶ Q" := (timpl P Q)   (at level 68,  right associativity) : tprop_scope.
-Notation "P ⟷ Q" := (tbiimpl P Q) (at level 65,  right associativity) : tprop_scope.
-Notation "¬ P"    := (tnot P)      (at level 40, format "¬ P") : tprop_scope.
-Notation "⟨ P ⟩"   := (tlift P)     (format "⟨ P ⟩"): tprop_scope.
 
+Notation "P ∧ Q"  := (tconj P Q)
+  (at level 40, left associativity, only parsing) : tprop_scope.
+Notation "P && Q" := (tconj P Q)
+  (at level 40, left associativity) : tprop_scope.
+
+Notation "P ∨ Q" := (tdisj P Q)
+  (at level 50, left associativity, only parsing) : tprop_scope.
+Notation "P || Q" := (tdisj P Q)
+  (at level 50, left associativity) : tprop_scope.
+
+Notation "P ⟶ Q" := (timpl P Q)
+  (at level 68,  right associativity, only parsing) : tprop_scope.
+Notation "P --> Q" := (timpl P Q)
+  (at level 68,  right associativity) : tprop_scope.
+
+Notation "P ⟷ Q" := (tbiimpl P Q)
+  (at level 65, no associativity, only parsing) : tprop_scope.
+Notation "P <--> Q" := (tbiimpl P Q)
+  (at level 65, no associativity) : tprop_scope.
+
+Notation "¬ P" := (tnot P)
+  (at level 40, only parsing) : tprop_scope.
+Notation "! P" := (tnot P) 
+  (at level 40, format "! P") : tprop_scope.
+
+Notation "⟨ P ⟩" := (tlift P) 
+  (only parsing) : tprop_scope.
+Notation "<[ P ]>" := (tlift P) 
+  (format "<[ P ]>") : tprop_scope.
 
 Section PathProps.
 

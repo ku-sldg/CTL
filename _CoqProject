@@ -4,6 +4,7 @@
 Glib/Notation.v
 Glib/TacticCombinators.v
 Glib/GeneralTactics.v
+Glib/Wf.v
 Glib/Axioms/UipFacts.v
 Glib/Axioms/Classical.v
 Glib/Axioms/Extensionality.v

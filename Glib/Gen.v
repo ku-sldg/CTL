@@ -66,27 +66,27 @@ Tactic Notation "gen" "?" ":=" constr(l) "to" uconstr(P)
     ].
 
 Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
-  "by" tactic(tac) :=
+  "by" tactic3(tac) :=
   gen I := l to P; [solve [tac]|].
 
 Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
-  "in" hyp(H) "by" tactic(tac) :=
+  "in" hyp(H) "by" tactic3(tac) :=
   gen I := l to P in H; [solve [tac]|].
 
 Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
-  "in" "*" "by" tactic(tac) :=
+  "in" "*" "by" tactic3(tac) :=
   gen I := l to P in *; [solve [tac]|].
 
 Tactic Notation "gen" "?" ":=" constr(l) "to" uconstr(P)
-  "by" tactic(tac) :=
+  "by" tactic3(tac) :=
   gen ? := l to P; [solve [tac]|].
 
 Tactic Notation "gen" "?" ":=" constr(l) "to" uconstr(P)
-  "in" hyp(H) "by" tactic(tac) :=
+  "in" hyp(H) "by" tactic3(tac) :=
   gen ? := l to P in H; [solve [tac]|].
 
 Tactic Notation "gen" "?" ":=" constr(l) "to" uconstr(P)
-  "in" "*" "by" tactic(tac) :=
+  "in" "*" "by" tactic3(tac) :=
   gen ? := l to P in *; [solve [tac]|].
 
 

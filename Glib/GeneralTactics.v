@@ -350,6 +350,31 @@ Ltac goal :=
   end.
  
 
+(* `guard_negation tac` fails if `tac` solves the goal's negations.
+
+   This is especially useful for deep proof search. Before attempting 
+   a rigorous search for a proof, we may attempt a cursory search for 
+   its negation. If we think the environment is non-contradictory, then 
+   we can backtrack early.
+*)
+
+Tactic Notation "guard_negation" tactic3(tac) :=
+  let g := goal in
+  if (assert (~ g) by tac) then 
+    fail "Found proof of negation"
+  else 
+    idtac.
+
+
+(* `negative_search` first tries to close the goal by proving False.
+   If it can't, it assumes the assumptions to be consistents and 
+   guards against the goal's negation
+*)
+Tactic Notation "negative_search" tactic3(tac) :=
+  try (exfalso; solve[tac]);
+  guard_negation tac.
+
+
 (* `tedious`/`follows` are more powerful alternatives to `easy`/`now`. *)
 
 (* Induction failure occasionally produces odd warnings:
@@ -366,6 +391,7 @@ Ltac _etedious n :=
       (constructor; _etedious n') +
       (econstructor; _etedious n') +
       ((find (fun H => injection H + induction H + destruct H)); _etedious n') +
+      (* ((find (fun H => inversion H)); _etedious n') + *)
       (fail 1 "Cannot solve goal")
     )
   end.
@@ -378,6 +404,7 @@ Ltac _tedious n :=
       (constructor; _tedious n') +
       (econstructor; _etedious n') +
       ((find (fun H => injection H + induction H + destruct H)); _tedious n') +
+      (* ((find (fun H => inversion H)); _tedious n') + *)
       (fail 1 "Cannot solve goal")
     )
   end.
@@ -407,8 +434,8 @@ Ltac _force n :=
   match n with 
   | 0 => fail 1 "Ran out of gas"
   | S ?n' => intros; (
-      solve[intuition (auto with *; easy)] +
-      solve[intuition (eauto with *; easy)] +
+      solve[eauto] +
+      intuition ((auto with * + eauto with *); easy) +
       (constructor; _force n') +
       (econstructor; _force n') +
       ((find (fun H => injection H + induction H + destruct H)); _force n') +
@@ -423,15 +450,50 @@ Tactic Notation "force" :=
   force 5.
 
 
+(* `squash` is intended to be a smarter version of force which may heurisitcally
+   abandon a path early if the goal is obviously false and the assumptions appear
+   non-contradictory.
+
+   In fact, in testing, it appears to generally be slower than `force` in pratical 
+   usage. It seems that automatically generated subgoals are very rarely "obviously 
+   false", and so we in fact end up wasting time looking for such cases.
+*)
+
+Ltac _squash n := 
+  match n with 
+  | 0 => fail 1 "Ran out of gas"
+  | S ?n' =>
+      (* intros; negative_search (tedious n'); ( *)
+      intros; negative_search (auto n'); (
+        solve[intuition (auto with *; easy)] +
+        solve[intuition (eauto with *; easy)] +
+        (constructor; _force n') +
+        (econstructor; _force n') +
+        ((find (fun H => injection H + induction H + destruct H)); _force n') +
+        (fail 1 "Cannot solve goal")
+      )
+  end.
+
+Tactic Notation "squash" constr(n) :=
+  _squash n.
+
+Tactic Notation "squash" :=
+  squash 5.
+
+
+(* Check that a tactic succeeds, but don't perform its effects *)
+Ltac possible tac :=
+  (assert_fails tac; gfail 1 "tactic doesn't succeed") || idtac.
+
+
 (* Improved substitution *)
 
-Definition get_instance {A} (class: A -> Prop) (a: A) {instance: class a}
+Definition get_instance {A} (class: A -> Type) (a: A) {instance: class a}
   : class a := instance.
 
 (* Note, this fails if it cannot resolve *all* implicits. *)
 Tactic Notation "has_instance" uconstr(class) uconstr(a) :=
-  let _ := constr:(get_instance class a) in
-  true.
+  let _ := constr:(get_instance  class a) in true.
 
 Tactic Notation "setoid_subst" hyp(H) :=
   match type of H with 
@@ -478,8 +540,11 @@ Ltac clear_redundant :=
       end
   end.
 
+(* For some reason setoid_subst does not handle some equalities which
+   subst does, so we use both here
+ *)
 Tactic Notation "subst!" :=
-  setoid_subst;
+  repeat progress subst + setoid_subst;
   clear_reflexives;
   clear_redundant.
 
