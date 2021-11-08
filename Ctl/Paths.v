@@ -28,6 +28,28 @@ Definition in_path_before {s} x i (p: path s) : Prop :=
 
 (* Properties *)
 
+Lemma in_path_before_grow : forall s (p: path s) x i j,
+  i < j ->
+  in_path_before x i p ->
+  in_path_before x j p.
+Proof using.
+  intros * ilt (k & klt & <-).
+  exists k.
+  after split.
+  lia.
+Qed.
+
+Corollary in_path_before_grow' : forall s (p: path s) x i j,
+  i <= j ->
+  in_path_before x i p ->
+  in_path_before x j p.
+Proof using.
+  intros * ile.
+  after invc ile.
+  apply in_path_before_grow.
+  lia.
+Qed.
+
 Lemma state_at_0 : forall s (p: path s),
   p 0 = s.
 Proof using.

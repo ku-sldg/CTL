@@ -115,16 +115,18 @@ Tactic Notation "transform" hyp(H) uconstr(c) "by" tactic(tac) :=
 Ltac unset x := unfold x in *; clear x.
 
 
-(* Synonymous with `admit` (although the unification variable will be named 
-   TODOx)
- *)
-Ltac todo :=
+(* `todo`: synonymous with `admit` *)
+Ltac todo := admit.
+(* The follows version would use a specially named unification variable.
+   However, it doesn't have the `admit` highlighting, and the unification
+   variable is rarely ever seen. *)
+(* Ltac todo :=
   match goal with 
   | |- ?goal =>
       let i := fresh "TODO" in
       evar (i : goal);
       exact i
-  end.
+  end. *)
 
 
 (* `forward` conducts forward reasoning by eliminating the assumption 

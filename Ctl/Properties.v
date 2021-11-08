@@ -254,13 +254,13 @@ Definition AW_seq s P Q :=
       R s' s'' ->
       R @s'' ⊨ P || Q.
 
+(* Should likely use `AW_in_before_nQ` instead *)
 Theorem AW_seq_nQ : forall s P Q s' (seq: R#* s s'),
   AW_seq s P Q ->
   (forall x, in_seq x seq -> R @x ⊭ Q) ->
   forall x, in_seq x seq -> R @x ⊨ P.
 Proof using.
-  intros *.
-  intros [Hs HAW] HnQ x Hin.
+  intros * [Hs HAW] HnQ x Hin.
   transform Hs (R @s ⊨ P).
   { after destruct or Hs.
     contradict Hs.
@@ -293,7 +293,7 @@ Proof using.
         follows eapply in_seq_at__in_seq.
       }
       constructor; [|follows tsimpl].
-      after apply H with (y := j).
+      after apply wfIH with (y := j).
       apply in_seq_at_length in Hin_prefix.
       lia.
     }
@@ -305,198 +305,100 @@ Proof using.
 Qed.
 (* Print Assumptions AW_seq_nQ. *)
 
-(* Theorem seq__AW : forall s P Q,
-  (R @s ⊨ P || Q /\
-  forall s' (seq: R#* s s'),
-    (forall x, in_seq x seq -> R @x ⊨ P && !Q) ->
-    forall s'', 
-      R s' s'' ->
-      R @s'' ⊨ P || Q) ->
-  R @s ⊨ A[P W Q]. *)
+Theorem AW_in_before_nQ : forall s P Q (p: path R s) i,
+  AW_seq s P Q ->
+  (forall x, in_path_before x i p -> R @x ⊭ Q) ->
+  forall x, in_path_before x i p -> R @x ⊨ P.
+Proof using.
+  intros * [Hs HAW] HnQ x Hin.
+  transform Hs (R @s ⊨ P).
+  { after destruct or Hs.
+    contradict Hs.
+    apply HnQ.
+    exists 0.
+    split.
+    - destruct i.
+      + exfalso. inv Hin; lia.
+      + lia.
+    - apply state_at_0.
+  }
+  revert x Hin;
+    wf_induction i lt;
+    intros x Hin.
+  destruct i.
+  - exfalso. inv Hin; lia.
+  - destruct Hin as (j & jlt & <-).
+    destruct j; [follows rewrite state_at_0|].
+    specialize (HAW (p j) (prefix R p j)).
+    forward HAW.
+    + intros * Hin.
+      apply inv_in_prefix in Hin.
+      constructor.
+      * after apply (wfIH (S j)).
+        intros.
+        apply HnQ.
+        follows eapply in_path_before_grow.
+      * tsimpl.
+        apply HnQ.
+        follows eapply in_path_before_grow.
+    + specialize (HAW (p (S j))).
+      forward HAW by follows destruct p as (? & ? & ?).
+      after destruct or HAW.
+      contradict HAW.
+      follows apply HnQ.
+Qed.
 
-Theorem seq__AW : forall s P Q,
-  R @s ⊨ P || Q ->
-  (forall s' (seq: R#* s s'),
-    (forall x, in_seq x seq -> R @x ⊨ P && !Q) ->
-    forall s'', 
-      R s' s'' ->
-      R @s'' ⊨ P || Q) ->
+Theorem AW_intro : forall s P Q,
+  AW_seq s P Q ->
   R @s ⊨ A[P W Q].
 Proof using.
+  unfold AW_seq.
   tsimpl.
-  intros * H IH *.
+  intros * [H IH] *.
   destruct classic (exists i, R @(p i) ⊨ Q) as case.
   - right.
     destruct case as [i Hi].
-    apply ex_first_sat_index in Hi as (j & Hj & Hj_before).
-    exists j.
-    split.
-    + intros x x_in_before.
-      destruct j as [|j']; [tedious|].
-      destruct x_in_before as (k & klt & <-).
-      wf_induction k lt.
-      destruct k.
-      * rewrite <- (state_at_0 _ _ p) in H.
-        destruct H.
-       -- assumption.
-       -- contradict H.
-          follows tapply Hj_before.
-      * specialize (IH (p k) (prefix R p k)).
-        forward IH.
-       -- intros * Hin.
-          apply inv_in_prefix in Hin as (xi & xilt & <-).
-          constructor.
-         ++ apply H0; lia.
-         ++ apply Hj_before.
-            exists xi.
-            after split.
-            lia.
-       -- specialize (IH (p (S k))).
-          forward IH by follows destruct p as (? & ? & ?).
-          destruct IH.
-         ++ assumption.
-         ++ contradict H1.
-            tapply Hj_before.
-            tedious.
-    + assumption.
+    apply ex_first_sat_index in Hi;
+      clear i;
+      destruct Hi as (i & Hi & Hi_before).
+    exists i.
+    after split.
+    after eapply AW_in_before_nQ.
+    intros.
+    follows tapply Hi_before.
   - left.
     positivity in case.
     intros ? [i <-].
-    constructor.
-    + destruct i.
-      * rewrite state_at_0.
-        after destruct H.
-        follows contradict H.
-      * specialize (IH (p i) (prefix R p i)).
-        transform H (R @s ⊨ P). (* necessary? *)
-        { destruct H. 
-          - assumption.
-          - contradict H.
-            rewrite <- (state_at_0 _ _ p).
-            apply case.
-        }
-        forward IH.
-       -- intros * Hin.
-          apply inv_in_prefix in Hin as (j & jlt & <-).
-          induction i.
-         ++ destruct j; [|lia]; clear jlt.
-            constructor.
-           ** follows rewrite state_at_0.
-           ** follows tsimpl.
-         ++ invc jlt.
-           ** constructor; [|follows tsimpl].
-              forward IH.
-            --- intros * Hin.
-                apply inv_in_prefix in Hin as (j & jlt & <-).
-                constructor.
-              +++ forward IH.
-              +++ follows tsimpl.
-            --- 
-           ** 
+    constructor; [|follows tsimpl].
+    gen x := (p i) to (λ x, in_path_before x (S i) p)
+      by tedious;
+      cbn beta;
+      revert x.
+    follows eapply AW_in_before_nQ.
+Qed.
  
-
-          induction j.
-         ++ clear jlt.
-            subst.
-            constructor.
-           ** follows rewrite state_at_0.
-           ** follows tsimpl.
-         ++ 
-       -- specialize (IH (p (S i))).
-          forward IH by follows destruct p as (? & ? & ?).
-          destruct or IH.
-         ++ assumption.
-         ++ follows contradict IH.
-    + follows tsimpl.
-Admitted.
-
-
-
-Theorem seq__AW : forall s P Q,
-  R @s ⊨ P || Q ->
-  (forall s' (seq: R#* s s'),
-    (forall x, in_seq x seq -> R @x ⊨ P && !Q) ->
-    forall s'', 
-      R s' s'' ->
-      R @s'' ⊨ P || Q) ->
-  R @s ⊨ A[P W Q].
+Theorem AW_elim : forall s P Q,
+  R @s ⊨ A[P W Q] ->
+  forall (p: path R s) i,
+    (forall x, in_path_before x i p -> R @x ⊭ Q) ->
+    forall x, in_path_before x i p -> R @x ⊨ P.
 Proof using.
-  tsimpl.
-  intros * H IH *.
-  destruct classic (exists i, R @(p i) ⊨ Q) as case.
-  - right.
-    destruct case as [i Hi].
-    apply ex_first_sat_index in Hi as (j & Hj & Hj_before).
-    exists j.
-    split.
-    + (*  *)
-      intros * x_in_before.
-      admit.
-    + assumption.
-  - left.
-    positivity in case.
-    intros ? [i <-].
-    constructor.
-    + destruct i.
-      * rewrite state_at_0.
-        after destruct H.
-        follows contradict H.
-      * specialize (IH (p i) (nseq__seq R (prefix R p i))).
-        forward IH.
-       -- intros * Hin.
-          transform H (R @s ⊨ P).
-          { destruct H. 
-            - assumption.
-            - contradict H.
-              rewrite <- (state_at_0 _ _ p).
-              apply case.
-          }
-          transform Hin (in_nseq x (prefix R p i)) by admit.
-          apply inv_in_prefix in Hin as [j <-].
-          constructor.
-         ++ 
-            admit.
-         ++ follows tsimpl.
-       -- specialize (IH (p (S i))).
-          forward IH by follows destruct p as (? & ? & ?).
-          destruct or IH.
-         ++ assumption.
-         ++ follows contradict IH.
-    + follows tsimpl.
-Admitted.
-
-(* Theorem seq__AW : forall s P Q,
-  (R @s ⊨ P ∨ Q ->
-  forall s' (seq: R#* s s'),
-    (forall x, in_seq x seq -> R @x ⊨ P ∧ ¬Q) ->
-    forall s'', 
-      R s' s'' ->
-      R @s'' ⊨ P ∨ Q) ->
-  R @s ⊨ A[P W Q].
-Proof using.
-  tsimpl.
-  intros * H *.
-  (* Proceed by classical destruction on whether there exists some 
-     state sQ in p entailing Q.
-   *)
-  destruct classic (
-    exists sQ, in_path sQ p /\ R @sQ ⊨ Q
-  ) as case.
-  - right.
-    (* Need to strengthen case to the *first* such sQ *)
-    apply first_state in case.
-    destruct case as (sQ & i & Hin & Hbefore_entails & HsQ).
-    exists sQ i.
-    max split; try assumption.
-    intros * Hbefore.
-
-    (* Strategy: 
-         get prefix sequence including state before sQ.
-         reflect in_path_before to in_seq
-         Induct over in_seq. apply to H to get P ∨ Q. 
-         Show Q contradicts that sQ is first. Therefore, P
-     *)
-Admitted. *)
+  intros * HAW * H * Hin.
+  tsimpl in HAW.
+  specialize (HAW p).
+  destruct or HAW.
+  - specialize (HAW x).
+    forward HAW by tedious.
+    follows destruct HAW.
+  - destruct HAW as (j & Hbefore & HQ).
+    assert (i <= j).
+    + contradict goal.
+      transform contra (j < i) by lia.
+      contradict HQ.
+      follows apply H.
+    + apply Hbefore.
+      follows eapply in_path_before_grow'.
+Qed.
 
 
 (* TODO: demorgans tactic which uses an extensible hint database for rewriting? *)

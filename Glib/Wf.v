@@ -17,6 +17,32 @@ Instance wf_has_wf {A} {R: relation A} {wf_inst: wf R} : has_wf A.
   exact get_wf.
 Defined.
 
+(* Tactic Notation "wf_induction" constr(x) uconstr(R) :=
+  first [ has_instance wf R
+        | fail 1 R "does not have an instance of wf"];
+  induction x using (well_founded_induction_type
+    (@get_wf _ R (get_instance wf R))).
+
+Tactic Notation "wf_induction" constr(x) uconstr(R)
+  "as" simple_intropattern(pat) :=
+  first [ has_instance wf R
+        | fail 1 R "does not have an instance of wf"];
+  induction x as pat using (well_founded_induction_type
+    (@get_wf _ R (get_instance wf R))). *)
+
+Tactic Notation "wf_induction" constr(x) uconstr(R) "as" ident(H) :=
+  first [ has_instance wf R
+        | fail 1 R "does not have an instance of wf"];
+  induction x as [x H] using (well_founded_induction_type
+    (@get_wf _ R (get_instance wf R))).
+
+Tactic Notation "wf_induction" constr(x) uconstr(R) :=
+  let H := fresh "wfIH" in
+  wf_induction x R as H.
+
+(* If no relation is given, we try to assume one. This should probably not 
+   be relied on, since adding further wf instances could change behavior.
+ *)
 Tactic Notation "wf_induction" constr(x) :=
   let t := type of x in
   first [ has_instance has_wf t
@@ -24,12 +50,6 @@ Tactic Notation "wf_induction" constr(x) :=
   induction x using (well_founded_induction_type
     (@has_wf_wf _ (get_instance has_wf t)));
   simpl has_wf_R in *.
-
-Tactic Notation "wf_induction" constr(x) uconstr(R) :=
-  first [ has_instance wf R
-        | fail 1 R "does not have an instance of wf"];
-  induction x using (well_founded_induction_type
-    (@get_wf _ R (get_instance wf R))).
 
 
 Instance wf_lt : wf lt.
