@@ -680,5 +680,27 @@ Proof.
   - tapply unexpand_AG.
 Qed.
 
+Theorem AG_AU_AW (s: state)(P Q: tprop state):
+  tentails R s
+            (timpl (tdisj (AG (tconj P (tnot Q))) (AU P Q)) (AW P Q)).
+Proof.
+  unfold_timpl.
+  intros Hdisj.
+  unfold_tdisj in Hdisj.
+  inversion_clear Hdisj.
+  { unfold_AW.
+    intros p.
+    left.
+    unfold_AG in H.
+    specialize (H p).
+    trivial. }
+  { unfold_AW.
+    intros p.
+    right.
+    unfold_AU in H.
+    specialize (H p).
+    trivial. }
+Qed.
+
 Close Scope tprop_scope.
 End Properties.
