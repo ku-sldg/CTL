@@ -1,5 +1,6 @@
 Require Import Notation.
 Require Import GeneralTactics.
+Require Import TacticCombinators.
 
 Import EqNotations.
 
@@ -87,7 +88,28 @@ Tactic Notation "dependent" "invc" hyp(H) "as" simple_intropattern(pat) :=
   invc H as pat;
   destr_sigma_eq;
   subst!.
-  
+
+
+Tactic Notation "inv!" hyp(H) :=
+  env_delta (dependent inv H) (fun ls =>
+  foreach ls (fun H => hide_proof_terms in H)
+  ).
+
+Tactic Notation "inv!" hyp(H) "as" simple_intropattern(pat) :=
+  env_delta (dependent inv H as pat) (fun ls =>
+  foreach ls (fun H => hide_proof_terms in H)
+  ).
+
+Tactic Notation "invc!" hyp(H) :=
+  env_delta (dependent invc H) (fun ls =>
+  foreach ls (fun H => hide_proof_terms in H)
+  ).
+
+Tactic Notation "invc!" hyp(H) "as" simple_intropattern(pat) :=
+  env_delta (dependent invc H as pat) (fun ls =>
+  foreach ls (fun H => hide_proof_terms in H)
+  ).
+
 
 (* Here we give a redefinition of the JMeq construct. Unfortunately, the 
    existing JMeq definition is irrevocably tied to the JMeq_eq axiom,
@@ -301,36 +323,72 @@ Proof using.
 Qed.
 
 
-(* `simpl_eq` is based on `cbn`, but which breaks down equality terms based on UIP *)
+(* `crush_eqs` aggressively factors out and destruct equalities by UIP *)
 
-Ltac _simpl_eq :=
-  cbn; try (
-    repeat+ match goal with 
-    | |- context[?p] =>
-        progress match type of p with 
-        | ?x = ?x => rewrite (uip_refl _ x p)
-        | _ = _ => destruct p
-        end
-    end;
-    _simpl_eq
-  ).
-Tactic Notation "simpl_eq" := _simpl_eq.
+(* Ltac _crush_eqs bin :=
+  subst!;
+  repeat match goal with 
+  | |- context[?p] =>
+      match type of p with 
+      | _ = _ => 
+          not is_var p;
+          not (unify p eq_refl);
+          let Heq := fresh "Heq" in
+          set (Heq := p) in *;
+          clearbody Heq;
+          _crush_eqs (Heq, bin)
+      end
+  | _ : context[?p] |- _ =>
+      match type of p with 
+      | _ = _ => 
+          not is_var p;
+          not (unify p eq_refl);
+          let Heq := fresh "Heq" in
+          set (Heq := p) in *;
+          clearbody Heq
+      end
+  end;
+  repeat match goal with 
+  | Heq : ?x = ?y |- _ => 
+      (rewrite (uip_refl _ x Heq) in *; try clear Heq) +
+      destruct Heq +
+      rewrite Heq in *
+  end. *)
 
-Ltac _simpl_eq_in H :=
-  cbn in H; try (
-    repeat+ match type of H with 
-    | context[?p] =>
-        match type of p with 
-        | ?x = ?x => rewrite (uip_refl _ x p) in H
-        | _ = _ => destruct p
-        end
-    end;
-    _simpl_eq_in H
-  ).
-Tactic Notation "simpl_eq" "in" hyp(H) := _simpl_eq_in H.
+Ltac _crush_eqs cleanup :=
+  match goal with 
+  | |- context[?p] =>
+      match type of p with 
+      | _ = _ => 
+          not is_var p;
+          not (unify p eq_refl);
+          let Heq := fresh "Heq" in
+          set (Heq := p) in *;
+          clearbody Heq;
+          _crush_eqs (Heq, cleanup)
+      end
+  | _ : context[?p] |- _ =>
+      match type of p with 
+      | _ = _ => 
+          not is_var p;
+          not (unify p eq_refl);
+          let Heq := fresh "Heq" in
+          set (Heq := p) in *;
+          clearbody Heq;
+          _crush_eqs (Heq, cleanup)
+      end
+  | _ =>
+      repeat match goal with 
+      | Heq : ?x = ?y |- _ => 
+          (rewrite (uip_refl _ x Heq) in *; try clear Heq) +
+          destruct Heq +
+          rewrite Heq in *
+      end;
+      foreach cleanup (fun H => try clear H)
+  end.
 
-Tactic Notation "simpl_eq" "in" "*" := 
-  _simpl_eq;
-  repeat find (fun H => _simpl_eq_in H).
+Ltac crush_eqs := 
+  subst!;
+  _crush_eqs False.
 
 End UipTheory.

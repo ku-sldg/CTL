@@ -77,37 +77,6 @@ Ltac iso_coerc_notation :=
   end.
 
 
-Ltac is_not_var x := assert_fails (is_var x).
-
-Ltac is_proof_term p :=
-  is_not_var p;
-  match type of p with
-  | ?P => match type of P with 
-          | Prop => idtac
-          end
-  end.
-
-(* This tactic is only able to hide closed proof terms. To build a more robust tactic 
-   which abstracts open terms into closed/hideable predicates, one would likely need to 
-   implement it in Ocaml
- *)
-Ltac hide_proof_terms := 
-  repeat match goal with 
-  | |- context[?p] =>
-      is_proof_term p;
-      let ident := fresh "p" in
-      set (ident := p);
-      clearbody ident
-  end.
-
-Ltac hide_exist_proof_terms := 
-  repeat match goal with 
-  | |- context[exist _ _ ?p] =>
-      is_not_var p;
-      let ident := fresh "pexist" in 
-      set (ident := p);
-      clearbody ident
-  end.
 
 (* Theorem same_fin_card : forall A B n,
   fin_card A n ->
@@ -460,7 +429,7 @@ Proof using.
     (* (λ a a' p, forall b, f a' = b -> same_seq_aa f g a' a -> same_seq_ab f g a b)
     (λ a b q, forall a', g b = a' -> same_seq_aa f g a' a) *)
   ) as Hind.
-  max forward Hind; clear Hind.
+  max forward Hind.
   - intros * Heq H'.
     follows econstructor.
   - intros * Heq.

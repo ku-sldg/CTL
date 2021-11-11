@@ -304,6 +304,42 @@ Proof using.
   intros * Hin Hin'.
 Admitted.
 
+(* Print seq.
+(* proper seq prefixes *)
+Inductive seq_pprefix {x y z} : R#* x y -> R#* x z -> Prop :=
+  | seq_pprefix_intro : forall r,
+      seq_pprefix r (seq_step x y z)
+ *)
+Definition seq_prefix {x y z} (pre: R#* x y) (seq: R#* x z) :=
+  forall s i, in_seq_at s i pre -> in_seq_at s i seq.
+
+(* Definition seq_prefix_sig {x} : relation (Σ y, R#* x y) := λ pre seq,
+  seq_length (projT2 pre) < seq_length (projT2 seq) /\
+  forall s i, in_seq_at s i (projT2 pre) -> in_seq_at s i (projT2 seq).
+
+Theorem wf_seq_prefix_sig {x}: well_founded (@seq_prefix_sig x).
+Proof using.
+  intros r.
+  gen s := r to (λ j, j <= r \/) by tedious;
+    cbn; revert j. *)
+
+(* Print in_seq_at.
+Check in_seq_at_ind.
+
+
+Theorem in_seq_at_strong_nondep_ind : forall a,
+  forall P: A -> nat -> Prop,
+  (forall x (seq: R#* a x), P x (seq_length seq)) ->
+  (forall x (seq: R#* a x) n i,
+    n < i ->
+    P x n -> 
+    P (seq_step) 
+  ) *)
+ 
+
+(* Inductive AccFamily (R: forall {a b}, X a -> X b -> Prop) {a} (x: X a) :=
+  | AccFamily_intro : (forall ) *)
+
 Lemma ex_seq_prefix {x y z} : forall (r: R#* x z),
   in_seq y r ->
   exists prefix: R#* x y, 
@@ -369,10 +405,10 @@ Theorem seq_concat_assoc : forall w x y z,
     seq_concat a (seq_concat b c).
 Proof using.
   intros *.
-  revert w x a b; induct c.
+  max induct c.
   - reflexivity.
   - simpl.
-    now find rewrite.
+    follows find rewrite.
 Qed.
 
 Theorem in_seq__concat {x y z}: forall (a: R#* x y) (b: R#* y z) n,
@@ -524,17 +560,18 @@ Theorem seq_rev_concat_assoc : forall w x y z,
     seq_rev_concat a (seq_rev_concat b c).
 Proof using.
   intros *.
-  revert y z b c; induct a.
+  (* revert y z b c; induct a. *)
+  max induct a.
   - reflexivity.
   - simpl.
-    now find rewrite.
+    follows find rewrite.
 Qed.
   
 Theorem seq__seq_rev__concat {x y z}: forall (a: R#* x y) (b: R#* y z),
   seq__seq_rev (seq_concat a b) = seq_rev_concat (seq__seq_rev a) (seq__seq_rev b).
 Proof using.
   intros *.
-  revert x a; induct b.
+  revert x a; induct b; intros.
   - simpl.
     now rewrite seq_rev_concat_refl.
   - simpl seq_concat; simpl seq__seq_rev at 1.
@@ -547,7 +584,7 @@ Theorem seq_rev__seq__concat {x y z}: forall (a: seq_rev x y) (b: seq_rev y z),
   seq_rev__seq (seq_rev_concat a b) = seq_concat (seq_rev__seq a) (seq_rev__seq b).
 Proof using.
   intros *.
-  revert z b; induct a.
+  revert z b; induct a; intros.
   - simpl.
     now rewrite seq_concat_refl.
   - simpl seq_rev_concat; simpl seq_rev__seq at 1.
@@ -602,7 +639,25 @@ Inductive in_seq_rev_at {a}
   | in_seq_rev_at_tail : forall n x x' y r seqr,
       in_seq_rev_at y n seqr ->
       in_seq_rev_at y (S n) (seq_rev_step a x x' r seqr).
- 
+
+
+Theorem in_seq_at__in_seq_rev_at {x y z i} {seq: R#* x z} :
+  in_seq_at y i seq ->
+  in_seq_rev_at y i (seq__seq_rev seq).
+Proof using.
+  revert y i.
+  induction seq; intros * Hin.
+  - follows dependent inv Hin.
+  - dependent inv Hin.
+    + simpl.
+      assert (forall x n a b c(s1: seq_rev a b) (s2: seq_rev b c),
+        in_seq_rev_at x (seq_length (seq_rev__seq s1) + n) (seq_rev_concat s1 s2) ->
+        in_seq_rev_at x n s2
+      ) by admit.
+      todo.
+    + simpl.
+Admitted.
+
 
 (* Definition get_seq_rev_at ()
 

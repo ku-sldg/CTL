@@ -136,7 +136,8 @@ Qed.
 
 (* Warning: this is known to conflict with impredicative set. *)
 Theorem double_neg_classic_set :
-  ((Π P, {P} + {~P}) -> False) -> False.
+  (* ((Π P, {P} + {~P}) -> False) -> False. *)
+  notT (notT (Π P, {P} + {~P})).
 Proof using.
   rewrite <- truncated_eq_double_neg.
   exact exists_universal_decision_procedure.

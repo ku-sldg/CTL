@@ -21,11 +21,15 @@ Ltac gen_eq_something H :=
   repeat match type of H with
   | context[_ ?x] => 
       not (is_var x);
-      (* Should this be `in H`?
-         Perhaps in any situation where it would matter, we would 
-         want it this general.
-       *)
-      gen eq ? := x in *
+      gen eq ? := x in H
+      (* gen eq ? := x in * *)
+  end.
+
+Ltac gen_JMeq_something H :=
+  repeat match type of H with
+  | context[_ ?x] => 
+      not (is_var x);
+      gen refl ? := x to JMeq in H
   end.
 
 Ltac intro_try_rew :=
@@ -34,10 +38,12 @@ Ltac intro_try_rew :=
   intros [=] +
   intro.
 
+
 Ltac _induct_by H inductStep :=
-  repeat progress gen_eq_something H;
-  inductStep H;
-  repeat intro_try_rew.
+  repeat_count (progress gen_eq_something H) (fun n =>
+    inductStep H;
+    do_g n intro_try_rew
+  ).
   
 Tactic Notation "induct" hyp(H) :=
   _induct_by H ltac:(fun hyp => induction hyp).
@@ -52,12 +58,22 @@ Tactic Notation "induct" hyp(H) "as" simple_intropattern(pat) "using" uconstr(c)
   _induct_by H ltac:(fun hyp => induction hyp as pat using c).
 
 
+Ltac _jinduct_by H inductStep :=
+  repeat_count (progress gen_JMeq_something H) (fun n =>
+    inductStep H;
+    do_g n intro
+  ).
+
+Tactic Notation "jinduct" hyp(H) :=
+  _jinduct_by H ltac:(fun hyp => induction hyp).
+
+
 (* induct! variant does more work to clean up the context.
    
    In particular, regular induct can leaves behind silly hypotheses
    of the form
      H : forall x' ... z', x ... z = x' ... z' -> foo
-   induct* will automatically instantiate and cut such hypotheses to
+   induct! will automatically instantiate and cut such hypotheses to
    reach the form
      H : foo
  *)
@@ -71,21 +87,37 @@ Ltac ecut_eq_aux IH :=
     | especialize IH;
       ecut_eq_aux IH].
     
-Ltac ecut_eq IH :=
+(* Ltac ecut_eq IH :=
   ecut_eq_aux IH;
   let t := type of IH in 
   not (`has_evar t).
 
+(* TODO: limit to tnew hypotheses *)
 Ltac find_ecut_eqs :=
   repeat match goal with 
   | IH: context[_ = _ -> _] |- _ =>
       ecut_eq IH
-  end.
+  end. *)
 
-Ltac _induct_excl_by H inductStep :=
+Ltac ecut_eq IH :=
+  match type of IH with 
+  | context[_ = _ -> _] => idtac
+  end;
+  ecut_eq_aux IH;
+  let t := type of IH in 
+  not (`has_evar t).
+
+(* Ltac _induct_excl_by H inductStep :=
   _induct_by H inductStep;
   find_ecut_eqs;
+  subst!. *)
+
+Ltac _induct_excl_by H inductStep :=
+  env_delta (_induct_by H inductStep) (fun ls =>
+    foreach ls (fun H => ecut_eq H)
+  );
   subst!.
+
 
 Tactic Notation "induct!" hyp(H) :=
   _induct_excl_by H ltac:(fun hyp => induction hyp).
@@ -100,22 +132,33 @@ Tactic Notation "induct!" hyp(H) "as" simple_intropattern(pat) "using" uconstr(c
   _induct_excl_by H ltac:(fun hyp => induction hyp as pat using c).
 
 
-Ltac hyp_eq H H' :=
-  match H with 
-  | H' => true
-  end.
-
-Ltac revert_all_but H :=
+(* Ltac revert_all_but H :=
   repeat find (fun H' =>
-    not (`hyp_eq H H');
+    not (`syn_eq H H');
     revert H'
-  ).
+  ). *)
 
-Ltac _max_induction_by H inductStep :=
+(* Tactic Notation "do_generalized" hyp(H) tactic3(tac) :=
+  repeat_count (
+    find (fun H' =>
+      not (`syn_eq H H');
+      revert H'
+  )) (fun n => 
+    tac;
+    do_g n intro
+  ). *)
+
+
+(* Ltac _max_induction_by H inductStep :=
   move H at top;
   revert_all_but H;
   inductStep H;
-  intros.
+  intros. *)
+
+Ltac _max_induction_by H inductStep :=
+  do_generalized (H, False) (inductStep H).
+  (* do_generalized H (inductStep H). *)
+
 
 Tactic Notation "max" "induction" hyp(H) :=
   _max_induction_by H ltac:(fun hyp => induction hyp).

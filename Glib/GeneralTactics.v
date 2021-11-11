@@ -35,6 +35,9 @@ Tactic Notation "destruct" "exists" hyp(H) ident(id1) ident(id2) ident(id3) iden
 
 Tactic Notation "destruct" "or" hyp(H) := destruct H as [H|H].
 
+Ltac destructl H := destruct H as [H ?].
+Ltac destructr H := destruct H as [? H].
+
 
 (* Clear variants. Tactics postfixed with "c" clear a hypothesis
    after using it.
@@ -42,10 +45,32 @@ Tactic Notation "destruct" "or" hyp(H) := destruct H as [H|H].
 
 Tactic Notation "applyc" hyp(H) := apply H; clear H.
 Tactic Notation "applyc" hyp(H) "in" hyp(H2) := apply H in H2; clear H.
+
 Tactic Notation "eapplyc" hyp(H) := eapply H; clear H.
 Tactic Notation "eapplyc" hyp(H) "in" hyp(H2) := eapply H in H2; clear H.
 
 Ltac specializec H x := specialize (H x); clear x.
+
+Tactic Notation "rewritec" hyp(H) :=
+  rewrite H; clear H.
+Tactic Notation "rewritec" hyp(H) "in" hyp(H2) :=
+  rewrite H in H2; clear H.
+Tactic Notation "rewritec" hyp(H) "in" "*" :=
+  rewrite H in *; clear H.
+
+Tactic Notation "rewritec" "->" hyp(H) :=
+  rewrite -> H; clear H.
+Tactic Notation "rewritec" "->" hyp(H) "in" hyp(H2) :=
+  rewrite -> H in H2; clear H.
+Tactic Notation "rewritec" "->" hyp(H) "in" "*" :=
+  rewrite -> H in *; clear H.
+
+Tactic Notation "rewritec" "<-" hyp(H) :=
+  rewrite <- H; clear H.
+Tactic Notation "rewritec" "<-" hyp(H) "in" hyp(H2) :=
+  rewrite <- H in H2; clear H.
+Tactic Notation "rewritec" "<-" hyp(H) "in" "*" :=
+  rewrite <- H in *; clear H.
 
 
 (* Unfold one layer *)
@@ -129,33 +154,6 @@ Ltac todo := admit.
   end. *)
 
 
-(* `forward` conducts forward reasoning by eliminating the assumption 
-   in an implication. Optionally, you can supply a tactic with the `by` clause.
-   E.g.:
-   with hypothesis `H: x = x -> foo`, one can invoke `forward H by reflexivity`. 
-   The hypothesis is then replaced with `H: foo`.
- *)
-
-Tactic Notation "forward" hyp(H):=
-  match type of H with
-  | ?x -> _ =>
-      let H' := fresh in 
-      assert (H': x); 
-        [| specialize (H H'); clear H']
-  end.
-
-Tactic Notation "forward" hyp(H) "by" tactic(tac) :=
-  forward H; [solve [tac]|].
-
-
-(* "max" variant of `forward`. Invokes forward on each assumption of a chained implication *)
-
-Ltac _max_forward H := try (forward H; [|_max_forward H]).
-Tactic Notation "max" "forward" hyp(H) := _max_forward H.
-
-Ltac _max_forward_by H tac := try (forward H by tac; [|_max_forward_by H tac]).
-Tactic Notation "max" "forward" hyp(H) "by" tactic(tac) := _max_forward_by H tac.
-
 (* Solve a (registered) reflexive relation by proving the arguments equal *)
 Ltac reflexive := 
   match goal with 
@@ -218,38 +216,56 @@ Tactic Notation "define" uconstr(c) :=
 Tactic Notation "define" uconstr(c) "by" tactic(tac) :=
   define c; [solve[tac]|].
 
-(* Ltac _define_exists_aux :=
-  let def_ex_with := fun A => 
-        let _temp := fresh in 
-        define A as _temp; 
-        [|exists _temp;
-          unfold _temp;
-          clear _temp]
-  in match goal with 
-  | |- @ex   ?A _ => def_ex_with A
-  | |- @sig  ?A _ => def_ex_with A
-  | |- @sigT ?A _ => def_ex_with A
-  end.
-Ltac _define_exists :=
-  _define_exists_aux + (
-    match goal with 
-    | |- ?x _ _ _ _ _  => unfold x
-    | |- ?x _ _ _ _    => unfold x
-    | |- ?x _ _ _      => unfold x
-    | |- ?x _ _        => unfold x
-    | |- ?x _          => unfold x
-    | |- context[?x _] => unfold x
-    end;
-    _define_exists
-  ).
-Tactic Notation "define" "exists" :=
-  _define_exists. *)
-
 Tactic Notation "define" "exists" :=
   unshelve eexists.
 
 Tactic Notation "define" "exists" "by" tactic(tac) :=
   define exists; [solve[tac]|].
+
+
+(* `forward` conducts forward reasoning on a hypothesis. It provides a subgoal whose 
+   definition will be used to specialize the hypothesis.
+ *)
+
+Tactic Notation "forward" hyp(H):=
+  match type of H with 
+  | forall i: ?x, _ =>
+      let var := fresh i in 
+      define x as var;
+      [|specialize (H var); 
+        unfold var in H;
+        clear var
+      ]
+  end.
+
+(* `oforward` (short for "opaque forward") is will obscure the new term's definition *)
+Tactic Notation "oforward" hyp(H):=
+  match type of H with 
+  | forall i: ?x, _ =>
+      let var := fresh i in 
+      assert x as var;
+      [|specialize (H var); 
+        try clear var]
+  end.
+
+
+Tactic Notation "forward" hyp(H) "by" tactic(tac) :=
+  forward H; [solve [tac]|].
+
+Tactic Notation "oforward" hyp(H) "by" tactic(tac) :=
+  oforward H; [solve [tac]|].
+
+
+(* "max" variant of `forward`. Invokes forward on each assumption of a chained implication *)
+
+Ltac _max_forward H := try (forward H; [|_max_forward H]).
+Tactic Notation "max" "forward" hyp(H) := _max_forward H.
+
+Ltac _max_forward_by H tac := try (forward H by tac; [|_max_forward_by H tac]).
+Tactic Notation "max" "forward" hyp(H) "by" tactic(tac) := _max_forward_by H tac.
+
+
+(* Tactic variants which preserved transparent definitions *)
   
 Ltac specialize_term H x :=
   let _temp := fresh in 
@@ -601,3 +617,54 @@ Tactic Notation "eta_expand" uconstr(f) "in" hyp(H) :=
 
 Tactic Notation "eta_expand" uconstr(f) "in" "*" :=
   change f with (λ x, f x) in *.
+
+
+Ltac is_proof_term p :=
+  not is_var p;
+  match type of p with
+  | ?P => match type of P with 
+          | Prop => true
+          end
+  end.
+
+Tactic Notation "hide_proof_terms" := 
+  repeat match goal with 
+  | |- context[?p] =>
+      is_proof_term p;
+      let ident := fresh "p" in
+      set (ident := p);
+      clearbody ident
+  end.
+
+Tactic Notation "hide_proof_terms" "in" hyp(H) := 
+  repeat match type of H with 
+  | context[?p] =>
+      is_proof_term p;
+      let ident := fresh "p" in
+      set (ident := p) in H;
+      clearbody ident
+  end.
+
+Tactic Notation "hide_proof_terms" "in" "*" := 
+  hide_proof_terms;
+  find (fun H => hide_proof_terms in H).
+
+
+Ltac revert_all_except ls :=
+  repeat find (fun H =>
+    not (`in_list H ls);
+    revert H
+  ).
+
+Ltac revert_all :=
+  revert_all_except False.
+
+Tactic Notation "do_generalized" constr(ls) tactic3(tac) :=
+  repeat_count (
+    find (fun H =>
+      not (`in_list H ls);
+      revert H
+  )) (fun n => 
+    tac;
+    do_g n intro
+  ).

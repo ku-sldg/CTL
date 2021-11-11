@@ -160,8 +160,10 @@ Proof using.
 Qed.
 
 Theorem truncated_eq_double_neg : forall A: Type,
-  ‖A‖ = ((A -> False) -> False).
+  (* ‖A‖ = ((A -> False) -> False). *)
+  ‖A‖ = notT (notT A).
 Proof using.
+  unfold notT.
   intros *.
   extensionality H.
   - intros ?.

@@ -28,28 +28,6 @@ Definition in_path_before {s} x i (p: path s) : Prop :=
 
 (* Properties *)
 
-Lemma in_path_before_grow : forall s (p: path s) x i j,
-  i < j ->
-  in_path_before x i p ->
-  in_path_before x j p.
-Proof using.
-  intros * ilt (k & klt & <-).
-  exists k.
-  after split.
-  lia.
-Qed.
-
-Corollary in_path_before_grow' : forall s (p: path s) x i j,
-  i <= j ->
-  in_path_before x i p ->
-  in_path_before x j p.
-Proof using.
-  intros * ile.
-  after invc ile.
-  apply in_path_before_grow.
-  lia.
-Qed.
-
 Lemma state_at_0 : forall s (p: path s),
   p 0 = s.
 Proof using.
@@ -74,6 +52,28 @@ Proof using.
   now destruct p.
 Qed.
 
+Lemma in_path_before_grow_strict : forall s (p: path s) x i j,
+  i < j ->
+  in_path_before x i p ->
+  in_path_before x j p.
+Proof using.
+  intros * ilt (k & klt & <-).
+  exists k.
+  after split.
+  lia.
+Qed.
+
+Corollary in_path_before_grow : forall s (p: path s) x i j,
+  i <= j ->
+  in_path_before x i p ->
+  in_path_before x j p.
+Proof using.
+  intros * ile.
+  after invc ile.
+  apply in_path_before_grow_strict.
+  lia.
+Qed.
+
 Definition path_drop {s} (p: path s) (n: nat) : path (p n).
   exists (λ i, p (i + n)).
   after split.
@@ -81,6 +81,9 @@ Definition path_drop {s} (p: path s) (n: nat) : path (p n).
   simpl!.
   follows destruct p.
 Defined.
+
+Definition path_tail {s} (p: path s) : path (p 1) :=
+  path_drop p 1.
 
 Definition serial_witness__path (witness: serial_witness R) s : path s.
   exists (nat_rect _ s (λ _ x, proj1_sig (witness x))).
@@ -107,7 +110,8 @@ Defined.
 
 Theorem destruct_path : forall x (p: path x),
   exists! (r: R x (p 1)),
-    p = path_cons x r (path_drop p 1).
+    p = path_cons x r (path_tail p).
+    (* p = path_cons x r (path_drop p 1). *)
 Proof using.
   intros *.
   assert (r : R x (p 1)) by tedious; exists r.
@@ -125,7 +129,8 @@ Qed.
 
 Theorem ex_destruct_path : forall x (p: path x),
   exists (r: R x (p 1)),
-    p = path_cons x r (path_drop p 1).
+    p = path_cons x r (path_tail p).
+    (* p = path_cons x r (path_drop p 1). *)
 Proof using.
   intros *.
   follows destruct (destruct_path x p).
@@ -133,7 +138,8 @@ Qed.
 
 Theorem all_destruct_path : forall x (p: path x),
   forall (r: R x (p 1)),
-    p = path_cons x r (path_drop p 1).
+    p = path_cons x r (path_tail p).
+    (* p = path_cons x r (path_drop p 1). *)
 Proof using.
   intros *.
   destruct (ex_destruct_path x p) as [r' ?].
@@ -150,20 +156,50 @@ Definition prepend {x y} (seq: R#* x y) (p: path y) : path x.
 Defined.
 
 Definition prefix {s} (p: path s) n : R#* s (p n).
-  induction n.
+  destruct p as (π & <- & HπS); cbn.
+  follows revert π HπS; induction n.
+  (* induction n.
   - rewrite state_at_0.
     constructor.
   - destruct p as (π & Hπ0 & HπS); cbn in *.
     econstructor.
     + apply HπS.
-    + assumption.
+    + assumption. *)
 Defined.
+
+Definition rev_prefix {s} (p: path s) n : seq_rev R s (p n).
+  destruct p as (π & <- & HπS); cbn.
+  revert π HπS;
+    induction n;
+    intros.
+  - constructor.
+  - after econstructor.
+    follows specialize (IHn (λ i, π (S i))).
+Defined.
+
+Theorem rev_prefix_cons : forall x (p: path x) (r: R x (p 1)) n,
+  rev_prefix (path_cons x r (path_tail p)) (S n) = 
+  seq_rev_step R x (p 1) _ r (rev_prefix (path_tail p) n).
+Admitted.
+
+Lemma prefix_eq_rev_prefix: forall s (p: path s) n,
+  seq__seq_rev R (prefix p n) = rev_prefix p n.
+Proof using.
+  intros *.
+  revert s p.
+  induction n; intros.
+  - follows destruct p as (? & ? & ?).
+  - specialize (IHn _ (path_tail p)).
+    pose proof (ex_destruct_path _ p) as [r ->].
+    rewrite rev_prefix_cons.
+    rewrite <- IHn.
+Admitted.
 
 Theorem prefix_nil : forall s (p: path s),
   prefix p 0 ~= seq_refl R s.
 Proof using.
   intros *.
-  follows simpl!.
+  follows repeat destructr p.
 Qed.
 
 Theorem in_path_star : forall s (p: path s) x,
@@ -184,8 +220,9 @@ Proof using.
   induction n.
   - intros.
     apply JMeq_eq.
-    follows simpl! with state_at_0.
-  - intros.
+    repeat destructr p.
+    follows simpl!.
+  - 
 Admitted.
 
 Theorem in_seq_at_prefix : forall x y z (p: path y) n i (r: R x y),
@@ -194,12 +231,32 @@ Theorem in_seq_at_prefix : forall x y z (p: path y) n i (r: R x y),
 Proof using.
 Admitted.
 
-Theorem in_prefix_at : forall s (p: path s) n x i,
+Theorem in_prefix_at : forall s (p: path s) x i n,
   in_seq_at x i (prefix p n) ->
   p i = x.
 Proof using. 
   intros * H.
-  after induction H.
+  apply in_seq_at__in_seq_rev_at in H.
+  rewrite prefix_eq_rev_prefix in H.
+  revert x i H;
+    induction n;
+    intros.
+  - todo.
+  - pose proof (ex_destruct_path _ p) as [r peq].
+    rewritec peq in H.
+    rewrite rev_prefix_cons in H.
+    destruct i.
+    + dependent inv H.
+      apply state_at_0.
+    + inv! H.
+      match type of H4 with 
+      | in_seq_rev_at _ _ _ ?x =>
+          set (seq := x) in H4;
+          clearbody seq
+      end; cbn in seq.
+      apply IHn.
+      rewrite <- rev_prefix_cons in H.
+      rewrite <- all_destruct_path in H.
 Admitted.
 
 Theorem inv_in_prefix : forall s (p: path s) n x,

@@ -342,7 +342,7 @@ Proof using.
         apply HnQ.
         follows eapply in_path_before_grow.
     + specialize (HAW (p (S j))).
-      forward HAW by follows destruct p as (? & ? & ?).
+      forward HAW by follows repeat destructr p.
       after destruct or HAW.
       contradict HAW.
       follows apply HnQ.
@@ -397,7 +397,7 @@ Proof using.
       contradict HQ.
       follows apply H.
     + apply Hbefore.
-      follows eapply in_path_before_grow'.
+      follows eapply in_path_before_grow.
 Qed.
 
 

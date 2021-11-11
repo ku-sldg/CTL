@@ -6,6 +6,11 @@ Require Import Gen.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Lia.
 
+(* A well-founded relation is a strict (i.e. irreflexive) order where each
+   non-empty subset of elements has a minimal element, in the sense that 
+   no element of the same subset precedes it.
+ *)
+
 
 (* Class to register well_founded relations *)
 Class wf {A} (R: relation A) := {get_wf : well_founded R}.
@@ -17,18 +22,6 @@ Instance wf_has_wf {A} {R: relation A} {wf_inst: wf R} : has_wf A.
   exact get_wf.
 Defined.
 
-(* Tactic Notation "wf_induction" constr(x) uconstr(R) :=
-  first [ has_instance wf R
-        | fail 1 R "does not have an instance of wf"];
-  induction x using (well_founded_induction_type
-    (@get_wf _ R (get_instance wf R))).
-
-Tactic Notation "wf_induction" constr(x) uconstr(R)
-  "as" simple_intropattern(pat) :=
-  first [ has_instance wf R
-        | fail 1 R "does not have an instance of wf"];
-  induction x as pat using (well_founded_induction_type
-    (@get_wf _ R (get_instance wf R))). *)
 
 Tactic Notation "wf_induction" constr(x) uconstr(R) "as" ident(H) :=
   first [ has_instance wf R
@@ -192,3 +185,45 @@ Qed.
 
 (* length ordering *)
 (* Check lel. *)
+
+Require Import Coq.Relations.Relation_Definitions.
+
+Definition irreflexive A (R: relation A) : Prop :=
+  forall x, ~ R x x.
+
+Definition asymmetric A (R: relation A) : Prop :=
+  forall x y, R x y -> ~ R y x.
+
+Lemma wf_irrefl {A}: forall R: relation A,
+  well_founded R ->
+  irreflexive A R.
+Proof using.
+  intros * wf x ?.
+  follows specialize (wf x).
+Qed.
+
+(* Lemma least_elem {A}: forall R: relation A,
+  well_founded R ->
+  forall subset: A -> Prop,
+    exists min, subset min /\ 
+      forall x, subset x -> R min x.
+Proof using.
+  intros * wf *.
+
+Lemma wf_asym {A}: forall R: relation A,
+  well_founded R ->
+  asymmetric A R.
+Proof using.
+  intros * wf x y ? ?. *)
+ 
+Definition wf_classical {A} (R: relation A) : Prop :=
+  forall P: A -> Prop, 
+    (exists x, P x) ->
+    exists min, P min /\ 
+      forall x, P x -> ~ R x min.
+
+Theorem wf_classical_is_wf {A} : forall R: relation A,
+  wf_classical R ->
+  well_founded R.
+Proof using.
+Admitted. 

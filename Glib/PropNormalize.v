@@ -148,16 +148,19 @@ Hint Rewrite rew_not_imply : prop_simpl.
 (* Agressive rewriting with UIP and propositional extensionality *)
 
 Tactic Notation "simpl!" :=
-  simpl_eq;
+  cbn;
+  repeat (progress crush_eqs; cbn);
   autorewrite with prop_simpl.
 
 Tactic Notation "simpl!" "in" hyp(H) :=
-  simpl_eq in H;
+  cbn in H;
+  repeat (progress crush_eqs; cbn in H);
   autorewrite with prop_simpl in H.
   
 Tactic Notation "simpl!" "in" "*" :=
-  simpl!;
-  repeat find (fun H => simpl! in H).
+  cbn in *;
+  repeat (progress crush_eqs; cbn in *);
+  autorewrite with prop_simpl in *.
 
 
 (* `with` adds rewriting rule *)
