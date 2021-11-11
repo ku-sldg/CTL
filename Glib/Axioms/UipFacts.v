@@ -325,36 +325,6 @@ Qed.
 
 (* `crush_eqs` aggressively factors out and destruct equalities by UIP *)
 
-(* Ltac _crush_eqs bin :=
-  subst!;
-  repeat match goal with 
-  | |- context[?p] =>
-      match type of p with 
-      | _ = _ => 
-          not is_var p;
-          not (unify p eq_refl);
-          let Heq := fresh "Heq" in
-          set (Heq := p) in *;
-          clearbody Heq;
-          _crush_eqs (Heq, bin)
-      end
-  | _ : context[?p] |- _ =>
-      match type of p with 
-      | _ = _ => 
-          not is_var p;
-          not (unify p eq_refl);
-          let Heq := fresh "Heq" in
-          set (Heq := p) in *;
-          clearbody Heq
-      end
-  end;
-  repeat match goal with 
-  | Heq : ?x = ?y |- _ => 
-      (rewrite (uip_refl _ x Heq) in *; try clear Heq) +
-      destruct Heq +
-      rewrite Heq in *
-  end. *)
-
 Ltac _crush_eqs cleanup :=
   match goal with 
   | |- context[?p] =>
@@ -389,6 +359,6 @@ Ltac _crush_eqs cleanup :=
 
 Ltac crush_eqs := 
   subst!;
-  _crush_eqs False.
+  _crush_eqs ?[].
 
 End UipTheory.
