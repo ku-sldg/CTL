@@ -79,6 +79,13 @@ Tactic Notation "do_upto" constr(n) tactic3(tac) :=
    provided to represent the empty list.
  *)
 
+Notation "?[ ]" := False
+  (format "?[ ]").
+Notation "?[ x ]" := (pair x False)
+  (format "?[ x ]").
+Notation "?[ x ; y ; .. ; z ]" := (pair x (pair y .. (pair z False) ..))
+  (format "?[ x ;  y ;  .. ;  z ]").
+
 Ltac _foreach ls ftac :=
   match ls with 
   | (?H, ?ls') =>

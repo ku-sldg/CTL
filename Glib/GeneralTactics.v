@@ -657,7 +657,7 @@ Ltac revert_all_except ls :=
   ).
 
 Ltac revert_all :=
-  revert_all_except False.
+  revert_all_except ?[].
 
 Tactic Notation "do_generalized" constr(ls) tactic3(tac) :=
   repeat_count (

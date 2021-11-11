@@ -87,18 +87,6 @@ Ltac ecut_eq_aux IH :=
     | especialize IH;
       ecut_eq_aux IH].
     
-(* Ltac ecut_eq IH :=
-  ecut_eq_aux IH;
-  let t := type of IH in 
-  not (`has_evar t).
-
-(* TODO: limit to tnew hypotheses *)
-Ltac find_ecut_eqs :=
-  repeat match goal with 
-  | IH: context[_ = _ -> _] |- _ =>
-      ecut_eq IH
-  end. *)
-
 Ltac ecut_eq IH :=
   match type of IH with 
   | context[_ = _ -> _] => idtac
@@ -107,14 +95,10 @@ Ltac ecut_eq IH :=
   let t := type of IH in 
   not (`has_evar t).
 
-(* Ltac _induct_excl_by H inductStep :=
-  _induct_by H inductStep;
-  find_ecut_eqs;
-  subst!. *)
 
 Ltac _induct_excl_by H inductStep :=
   env_delta (_induct_by H inductStep) (fun ls =>
-    foreach ls (fun H => ecut_eq H)
+    foreach ls (fun H => try ecut_eq H)
   );
   subst!.
 
@@ -132,32 +116,8 @@ Tactic Notation "induct!" hyp(H) "as" simple_intropattern(pat) "using" uconstr(c
   _induct_excl_by H ltac:(fun hyp => induction hyp as pat using c).
 
 
-(* Ltac revert_all_but H :=
-  repeat find (fun H' =>
-    not (`syn_eq H H');
-    revert H'
-  ). *)
-
-(* Tactic Notation "do_generalized" hyp(H) tactic3(tac) :=
-  repeat_count (
-    find (fun H' =>
-      not (`syn_eq H H');
-      revert H'
-  )) (fun n => 
-    tac;
-    do_g n intro
-  ). *)
-
-
-(* Ltac _max_induction_by H inductStep :=
-  move H at top;
-  revert_all_but H;
-  inductStep H;
-  intros. *)
-
 Ltac _max_induction_by H inductStep :=
-  do_generalized (H, False) (inductStep H).
-  (* do_generalized H (inductStep H). *)
+  do_generalized ?[H] (inductStep H).
 
 
 Tactic Notation "max" "induction" hyp(H) :=
