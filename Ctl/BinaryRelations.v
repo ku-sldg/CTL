@@ -515,6 +515,12 @@ Inductive seq_rev : A -> A -> Type :=
       seq_rev y z ->
       seq_rev x z.
 
+Fixpoint seq_rev_length {a a'} (seqr: seq_rev a a') :=
+  match seqr with 
+  | seq_rev_refl x => 0
+  | seq_rev_step x y z r seq' => S (seq_rev_length seq')
+  end.
+
 Definition seq_rev_concat {x y z} (Rxy: seq_rev x y) (Ryz: seq_rev y z)
   : seq_rev x z.
 Proof using.
@@ -641,22 +647,58 @@ Inductive in_seq_rev_at {a}
       in_seq_rev_at y (S n) (seq_rev_step a x x' r seqr).
 
 
-Theorem in_seq_at__in_seq_rev_at {x y z i} {seq: R#* x z} :
-  in_seq_at y i seq ->
-  in_seq_rev_at y i (seq__seq_rev seq).
+Theorem in_seq_rev_at__concat_l {x y z}: forall (a: seq_rev x y) (b: seq_rev y z) n i,
+  in_seq_rev_at n i a -> in_seq_rev_at n i (seq_rev_concat a b).
 Proof using.
-  revert y i.
-  induction seq; intros * Hin.
-  - follows dependent inv Hin.
-  - dependent inv Hin.
+  intros * H.
+  max induction a.
+  - follows inv H.
+  - simpl.
+    follows dependent invc H.
+Qed.
+
+Theorem in_seq_rev_at__in_seq_at {x y z i} {seqr: seq_rev x z}:
+  in_seq_rev_at y i seqr ->
+  in_seq_at y i (seq_rev__seq seqr).
+Proof using.
+  intros Hin.
+  max induction Hin.
+  - induction seqr.
     + simpl.
-      assert (forall x n a b c(s1: seq_rev a b) (s2: seq_rev b c),
-        in_seq_rev_at x (seq_length (seq_rev__seq s1) + n) (seq_rev_concat s1 s2) ->
-        in_seq_rev_at x n s2
-      ) by admit.
-      todo.
+      apply in_seq_at_0.
     + simpl.
-Admitted.
+      apply in_seq_at__concat_l.
+      constructor.
+      apply in_seq_at_0.
+  - simpl.
+    change (S n) with (seq_length (seq_step R a a x r (seq_refl R a)) + n).
+    follows apply in_seq_at__concat_r.
+Qed.
+
+Theorem in_seq_at__in_seq_rev_at__iso {x y z i} {seqr: seq_rev x z}:
+  in_seq_at y i ((ϕ_seq__seq_rev x z)⁻¹ seqr) ->
+  in_seq_rev_at y i seqr.
+Proof using.
+  intros Hin.
+  max induct Hin.
+  - after induction seqr.
+    simpl.
+    follows rewrite seq_length_concat.
+  - change (seq_rev__seq ?x) with ((ϕ_seq__seq_rev _ _)⁻¹ x) in H0.
+    apply eq_cancel_right in H0.
+    especialize IHHin; forward IHHin by apply inv_cancel_iso.
+    simpl in H0;
+    change (seq__seq_rev ?x) with (ϕ_seq__seq_rev _ _ x) in H0.
+    subst.
+    follows apply in_seq_rev_at__concat_l.
+Qed. 
+
+Theorem in_seq_at__in_seq_rev_at {x y z i} {seqr: seq_rev x z}:
+  in_seq_at y i (seq_rev__seq seqr) ->
+  in_seq_rev_at y i seqr.
+Proof using.
+  apply in_seq_at__in_seq_rev_at__iso.
+Qed.
 
 
 (* Definition get_seq_rev_at ()
@@ -695,23 +737,22 @@ Proof using.
   apply in_seq_iso_in_seq_rev_flip.
 Qed.
 
+Theorem seq_length_iso_seq_rev_length : forall x y,
+  iso_equiv (ϕ_seq__seq_rev x y) seq_length seq_rev_length.
+Proof using.
+  intros *.
+  rewrite iso_equiv_flip.
+  intros seqr.
+  after max induction seqr.
+  simpl.
+  rewrite seq_length_concat.
+  simpl.
+  follows f_equal.
+Qed.
 
 Lemma in_seq_rev_at_last : forall x y (seqr: seq_rev x y),
   in_seq_rev_at y (seq_length (seq_rev__seq seqr)) seqr.
 Proof using.
-Admitted.
-
-Theorem in_seq_rev_at__concat_l {x y z}: forall (a: seq_rev x y) (b: seq_rev y z) n i,
-  in_seq_rev_at n i a -> in_seq_rev_at n i (seq_rev_concat a b).
-Proof using.
-  (* intros * H.
-  induction b.
-  (* max induction b. *)
-  - assumption.
-  - simpl.
-    constructor.
-    now find applyc.
-Qed. *)
 Admitted.
 
 Theorem in_seq_at_iso_in_seq_rev_at_flip : forall x y z n,

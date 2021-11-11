@@ -351,7 +351,8 @@ Ltac _crush_eqs cleanup :=
       repeat match goal with 
       | Heq : ?x = ?y |- _ => 
           (rewrite (uip_refl _ x Heq) in *; try clear Heq) +
-          destruct Heq +
+          (* destruct Heq + *)
+          (let _tmp := fresh in copy Heq _tmp; destruct _tmp) +
           rewrite Heq in *
       end;
       foreach cleanup (fun H => try clear H)
