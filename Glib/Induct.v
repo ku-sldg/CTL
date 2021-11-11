@@ -18,7 +18,7 @@ Import ListNotations.
  *) 
 
 Ltac gen_eq_something H :=
-  repeat match type of H with
+  match type of H with
   | context[_ ?x] => 
       not (is_var x);
       gen eq ? := x in H
@@ -26,7 +26,7 @@ Ltac gen_eq_something H :=
   end.
 
 Ltac gen_JMeq_something H :=
-  repeat match type of H with
+  match type of H with
   | context[_ ?x] => 
       not (is_var x);
       gen refl ? := x to JMeq in H
@@ -98,7 +98,7 @@ Ltac ecut_eq IH :=
 
 Ltac _induct_excl_by H inductStep :=
   env_delta (_induct_by H inductStep) (fun ls =>
-    foreach ls (fun H => try ecut_eq H)
+    foreach ls (fun H => repeat ecut_eq H)
   );
   subst!.
 
