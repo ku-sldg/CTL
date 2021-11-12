@@ -700,6 +700,14 @@ Proof using.
   apply in_seq_at__in_seq_rev_at__iso.
 Qed.
 
+Theorem in_seq_at__in_seq_rev_at__iso' {x y z i} {seq: R#* x z}:
+  in_seq_at y i seq ->
+  in_seq_rev_at y i (ϕ_seq__seq_rev x z seq).
+Proof using.
+  iso ϕ_seq__seq_rev seq seqr.
+  rewrite iso_cancel_inv.
+  apply in_seq_at__in_seq_rev_at__iso.
+Qed.
 
 (* Definition get_seq_rev_at ()
 

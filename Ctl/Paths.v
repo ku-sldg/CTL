@@ -26,7 +26,7 @@ Definition in_path_before {s} x i (p: path s) : Prop :=
   exists j, j < i /\ p j = x.
 
 
-(* Properties *)
+(* Basic properties *)
 
 Lemma state_at_0 : forall s (p: path s),
   p 0 = s.
@@ -73,6 +73,9 @@ Proof using.
   apply in_path_before_grow_strict.
   lia.
 Qed.
+
+
+(* Introduction and elimination *)
 
 Definition path_drop {s} (p: path s) (n: nat) : path (p n).
   exists (λ i, p (i + n)).
@@ -144,16 +147,80 @@ Proof using.
   assumption.
 Qed.
 
-Definition prepend {x y} (seq: R#* x y) (p: path y) : path x.
-  apply seq__seq_rev in seq.
-  induction seq.
-  - assumption.
-  - specializec IHseq p.
-    follows eapply path_cons.
+
+(* Prepending *)
+
+Definition rev_prepend_sig {x y} (seqr: seq_rev R x y) (p: path y) : 
+  {prep: path x
+  | (forall s i, in_seq_rev_at R s i seqr -> prep i = s) /\
+    forall i, seq_rev_length R seqr <= i -> prep i = p (i - seq_rev_length R seqr)}.
+Proof using.
+  induction seqr.
+  - exists p.
+    after split.
+    intros * H.
+    inv! H.
+    apply state_at_0.
+  - specialize (IHseqr p).
+    destruct IHseqr as (prep' & ? & ?).
+    exists (path_cons x r prep').
+    split.
+    + intros * Hin.
+      after invc! Hin.
+      follows simpl!.
+    + intros * Hlt.
+      simpl! in *.
+      after destruct i.
+      follows apply le_S_n in Hlt.
 Defined.
+
+Definition prepend {x y} (seq: R#* x y) (p: path y) : path x :=
+  proj1_sig (rev_prepend_sig (ϕ_seq__seq_rev seq) p).
+ 
+Theorem in_prepend_at_seq {x y} (seq: R#* x y) (p: path y): forall s i,
+  in_seq_at s i seq -> 
+  prepend seq p i = s.
+Proof using.
+  intros * Hin.
+  apply (proj1 (proj2_sig (rev_prepend_sig (ϕ_seq__seq_rev seq) p))).
+  follows apply in_seq_at__in_seq_rev_at__iso'.
+Qed.
+
+Theorem in_prepend_at_path {x y} (seq: R#* x y) (p: path y): forall i,
+  seq_length seq <= i ->
+  prepend seq p i = p (i - seq_length seq).
+Proof using.
+  intros * Hle.
+  rewrite seq_length_iso_seq_rev_length in *.
+  follows apply (proj2 (proj2_sig (rev_prepend_sig (ϕ_seq__seq_rev seq) p))).
+Qed.
+
+Theorem in_prepend_seq : forall x y z (seq: R#* x z) (p: path z),
+  in_seq y seq ->
+  in_path y (prepend seq p).
+Proof using.
+  intros * Hin.
+  apply in_seq__in_seq_at in Hin as [? Hin].
+  follows eapply in_prepend_at_seq in Hin.
+Qed.
+
+Theorem in_prepend_path : forall x y z (seq: R#* x y) (p: path y),
+  in_path z p ->
+  in_path z (prepend seq p).
+Proof using.
+  intros * [i <-].
+  exists (i + seq_length seq).
+  replace i with ((i + seq_length seq) - seq_length seq) at 2 by lia.
+  apply in_prepend_at_path.
+  lia.
+Qed.
+
+
+(* Finite prefixes *)
 
 Definition rev_prefix_sig {s} (p: path s) n :
   {prefix: seq_rev R s (p n) |
+    seq_rev_length R prefix = n /\
     forall x i, in_seq_rev_at R x i prefix -> p i = x
   }.
 Proof using.
@@ -162,14 +229,18 @@ Proof using.
     induction n;
     intros.
   - define exists by constructor.
+    after split.
     intros * H.
     follows inv H.
   - specialize (IHn (λ i, π (S i))).
     forward IHn by tedious.
-    destruct IHn as [pre_tail Hpre_tail].
+    destruct IHn as (pre_tail & Hlength & Hpre_tail).
     define exists by tedious.
-    intros x i H.
-    follows inv! H.
+    split.
+    + simpl.
+      follows rewrite Hlength.
+    + intros x i H.
+      follows inv! H.
 Defined.
 
 Definition rev_prefix {s} (p: path s) n : seq_rev R s (p n) :=
@@ -182,13 +253,14 @@ Lemma prefix_length {s}: forall (p: path s) n,
   seq_length (prefix p n) = n.
 Proof using.
   intros *.
-  max induction n.
-  - 
-  
-    
-Admitted.
+  rewrite seq_length_iso_seq_rev_length.
+  unfold prefix.
+  change (seq_rev__seq _ ?x) with (ϕ_seq__seq_rev⁻¹ x).
+  rewrite iso_cancel_inv.
+  apply (proj1 (proj2_sig (rev_prefix_sig p n))).
+Qed.
 
-Theorem prefix_spec {s}: forall (p: path s) x i n,
+Theorem in_prefix_at {s}: forall (p: path s) x i n,
   in_seq_at x i (prefix p n) ->
   p i = x.
 Proof using.
@@ -198,16 +270,26 @@ Proof using.
   follows apply in_seq_at__in_seq_rev_at.
 Qed.
 
-Theorem prefix_spec' {s}: forall (p: path s) i n,
+Theorem in_prefix_at' {s}: forall (p: path s) i n,
   i < n ->
   in_seq_at (p i) i (prefix p n).
 Proof using.
   intros * H.
   rewrite <- (prefix_length p n) in H.
   apply ex_in_seq_at_lt_length in H as [? H].
-  follows rewrite (prefix_spec _ _ _ _ H).
+  follows rewrite (in_prefix_at _ _ _ _ H).
 Qed.
 
+Theorem inv_in_prefix : forall s (p: path s) n x,
+  in_seq x (prefix p n) ->
+  in_path_before x (S n) p.
+Proof using.
+  intros * Hin.
+  apply in_seq__in_seq_at in Hin as [i Hin].
+  pose proof (in_seq_at_length _ _ _ _ Hin).
+  apply in_prefix_at in Hin as <-.
+  follows rewrite prefix_length in H.
+Qed.
 
 Theorem prefix_nil : forall s (p: path s),
   prefix p 0 ~= seq_refl R s.
@@ -215,6 +297,9 @@ Proof using.
   intros *.
   follows repeat destructr p.
 Qed.
+
+
+(* More general properties *)
 
 Theorem in_path_star : forall s (p: path s) x,
   in_path x p ->
@@ -226,80 +311,6 @@ Proof using.
   - destruct p as (π & Hπ0 & HπS); simpl! in *.
     now econstructor.
 Qed.
-
-(* Theorem prefix_cons : forall n x y (p: path y) (r: R x y),
-  prefix (path_cons x r p) (S n) = seq_prepend R x y (p n) r (prefix p n).
-Proof using.
-  intro n.
-  induction n.
-  - intros.
-    apply JMeq_eq.
-    repeat destructr p.
-    follows simpl!.
-  - 
-Admitted. *)
-
-(* Theorem in_seq_at_prefix : forall x y z (p: path y) n i (r: R x y),
-  in_seq_at z (S i) (prefix (path_cons x r p) (S n)) ->
-  in_seq_at z i (prefix p n).
-Proof using.
-  intros * H.
-  apply prefix_spec in H.
-  simpl in H.
-  subst.
-  apply in_seq_at_unique.
-Admitted. *)
-
-(* Theorem in_prefix_at : forall s (p: path s) x i n,
-  in_seq_at x i (prefix p n) ->
-  p i = x.
-Proof using. 
-  intros * H.
-  apply in_seq_at__in_seq_rev_at in H.
-  rewrite prefix_eq_rev_prefix in H.
-  revert x i H;
-    induction n;
-    intros.
-  - todo.
-  - pose proof (ex_destruct_path _ p) as [r peq].
-    rewritec peq in H.
-    rewrite rev_prefix_cons in H.
-    destruct i.
-    + dependent inv H.
-      apply state_at_0.
-    + inv! H.
-      match type of H4 with 
-      | in_seq_rev_at _ _ _ ?x =>
-          set (seq := x) in H4;
-          clearbody seq
-      end; cbn in seq.
-      apply IHn.
-      rewrite <- rev_prefix_cons in H.
-      rewrite <- all_destruct_path in H.
-Admitted. *)
-
-Theorem inv_in_prefix : forall s (p: path s) n x,
-  in_seq x (prefix p n) ->
-  in_path_before x (S n) p.
-Admitted.
-
-(* Theorem inv_in_prefix : forall s (p: path s) n x,
-  in_nseq x (prefix p n) ->
-  in_path x p.
-Admitted.  *)
-
-Theorem in_prepend_seq : forall x y z (seq: R#* x z) (p: path z),
-  in_seq y seq ->
-  in_path y (prepend seq p).
-Proof using.
-  intros * Hin.
-Admitted.
-
-Theorem in_prepend_path : forall x y z (seq: R#* x y) (p: path y),
-  in_path z p ->
-  in_path z (prepend seq p).
-Proof using.
-Admitted.
 
 Theorem ex_in_path_composition : forall x (px: path x) y (py: path y) z,
   in_path y px ->
