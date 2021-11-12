@@ -71,6 +71,20 @@ Proof using.
   apply exist_neq.
 Qed.
 
+Lemma exists_prop_unique : forall (A: Prop) (P: A -> Prop),
+  (exists a, P a) <-> exists! a, P a.
+Proof using.
+  tedious using proof_irrelevance.
+Qed.
+
+Lemma exists_prop_forall : forall (A: Prop) (P: A -> Prop),
+  (exists a, P a) -> forall a, P a.
+Proof using.
+  intros * [a ?].
+  intro a'.
+  follows replace a' with a by apply proof_irrelevance.
+Qed.
+
 
 (* UIP *)
 

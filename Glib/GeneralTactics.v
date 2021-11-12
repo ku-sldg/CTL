@@ -442,6 +442,9 @@ Tactic Notation "follows" tactic3(tac) :=
 
 Tactic Notation "after" tactic3(tac) :=
   tac; try tedious.
+
+Tactic Notation "tedious" "using" constr(lemmas) :=
+  follows (foreach lemmas (fun H => epose proof H)).
   
 
 (* `force` (short for "brute force") is similar to `tedious`, but sacrifices 
@@ -657,7 +660,7 @@ Ltac revert_all_except ls :=
   ).
 
 Ltac revert_all :=
-  revert_all_except ?[].
+  revert_all_except hnil.
 
 Tactic Notation "do_generalized" constr(ls) tactic3(tac) :=
   repeat_count (

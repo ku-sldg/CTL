@@ -511,7 +511,6 @@ Theorem seq_rev_concat_assoc : forall w x y z,
     seq_rev_concat a (seq_rev_concat b c).
 Proof using.
   intros *.
-  (* revert y z b c; induct a. *)
   max induct a.
   - reflexivity.
   - simpl.
@@ -599,7 +598,7 @@ Proof using.
   max induction a.
   - follows inv H.
   - simpl.
-    follows dependent invc H.
+    follows invc! H.
 Qed.
 
 Theorem in_seq_rev_at__in_seq_at {x y z i} {seqr: seq_rev x z}:

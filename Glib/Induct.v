@@ -117,7 +117,7 @@ Tactic Notation "induct!" hyp(H) "as" simple_intropattern(pat) "using" uconstr(c
 
 
 Ltac _max_induction_by H inductStep :=
-  do_generalized ?[H] (inductStep H).
+  do_generalized H (inductStep H).
 
 
 Tactic Notation "max" "induction" hyp(H) :=

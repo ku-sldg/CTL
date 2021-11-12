@@ -335,7 +335,7 @@ Ltac _crush_eqs cleanup :=
           let Heq := fresh "Heq" in
           set (Heq := p) in *;
           clearbody Heq;
-          _crush_eqs (Heq, cleanup)
+          _crush_eqs (cleanup, Heq)
       end
   | _ : context[?p] |- _ =>
       match type of p with 
@@ -345,7 +345,7 @@ Ltac _crush_eqs cleanup :=
           let Heq := fresh "Heq" in
           set (Heq := p) in *;
           clearbody Heq;
-          _crush_eqs (Heq, cleanup)
+          _crush_eqs (cleanup, Heq)
       end
   | _ =>
       repeat match goal with 
@@ -360,6 +360,6 @@ Ltac _crush_eqs cleanup :=
 
 Ltac crush_eqs := 
   subst!;
-  _crush_eqs ?[].
+  _crush_eqs hnil.
 
 End UipTheory.

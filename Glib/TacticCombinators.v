@@ -72,35 +72,32 @@ Tactic Notation "do_upto" constr(n) tactic3(tac) :=
   _do_upto n tac.
 
 
-(* Because of the dynamicness of Ltac, it is more convenient to use list-like
-   tuples as opposed to proper Gallina lists. The convention for tactics over 
-   lists is to treat the pair (x, y) as a head element x and a tail list y.
-   Anything else is treated as the empty list. Typically, the Prop False is 
-   provided to represent the empty list.
+(* We use arbitrary-length tuples as a sort of heterogeneous list for our 
+   tactics. Due to the way pairs associate, `(t, h)` is the "cons" of `h` to `t`.
+   The special value `hnil` is introduced to represent an empty heterogeneous list.
+   Note that one should not form heterogeneous lists of tuples, as this representation
+   would yield ambiguity.
  *)
 
-Notation "?[ ]" := False
-  (format "?[ ]").
-Notation "?[ x ]" := (pair x False)
-  (format "?[ x ]").
-Notation "?[ x ; y ; .. ; z ]" := (pair x (pair y .. (pair z False) ..))
-  (format "?[ x ;  y ;  .. ;  z ]").
+Inductive Hnil : Set := hnil.
 
 Ltac _foreach ls ftac :=
-  match ls with 
-  | (?H, ?ls') =>
-      first [ftac H| fail 1 ftac "failed on" H]; 
+  lazymatch ls with 
+  | hnil => idtac
+  | (?ls', ?H) =>
+      first [ftac H| fail 0 ftac "failed on" H]; 
       _foreach ls' ftac
-  | _ => idtac
+  | ?H => first [ftac H| fail 0 ftac "failed on" H]
   end.
 Tactic Notation "foreach" constr(ls) tactic3(ftac) :=
   _foreach ls ftac.
 
 Ltac _forsome ls ftac :=
-  match ls with 
-  | (?H, ?ls') =>
+  lazymatch ls with 
+  | hnil => fail 0 ftac "failed on every hypothesis"
+  | (?ls', ?H) =>
       ftac H + _forsome ls' ftac
-  | _ => fail 1 ftac "failed on every hypothesis"
+  | ?H => ftac H + fail 0 ftac "failed on every hypothesis"
   end.
 Tactic Notation "forsome" constr(ls) tactic3(ftac) :=
   _forsome ls ftac.
@@ -111,29 +108,34 @@ Ltac syn_eq H H' :=
   | H' => true
   end.
 
-Ltac in_list H ls := forsome ls (syn_eq H).
+Ltac in_list H ls := (forsome ls (syn_eq H)) + fail 0 H "not in list".
 
 Ltac _list_minus ls1 ls2 keep cont :=
-  match ls1 with
-  | (?h, ?t) => 
+  lazymatch ls1 with
+  | hnil => cont keep
+  | (?t, ?h) => 
       tryif in_list h ls2 then 
         _list_minus t ls2 keep cont
       else 
-        _list_minus t ls2 (h, keep) cont
-  | _ => cont keep
+        _list_minus t ls2 (keep, h) cont
+  | ?h => 
+      tryif in_list h ls2 then 
+        cont keep
+      else 
+        cont (keep, h)
   end.
 Tactic Notation "list_minus" constr(ls1) constr(ls2) tactic3(cont) :=
-  _list_minus ls1 ls2 False cont.
+  _list_minus ls1 ls2 hnil cont.
 
 (* passes a list of the current hypotheses to the continuation *)
 Ltac _env ls cont :=
   match goal with
   | H : _ |- _ =>
       not (in_list H ls);
-      _env (H, ls) cont
+      _env (ls, H) cont
   end + (cont ls).
 Tactic Notation "env" tactic3(cont) :=
-  _env False cont.
+  _env hnil cont.
 
 (* passes a list of the new hypotheses to the continuation after running `tac` *)
 Tactic Notation "env_delta" tactic3(tac) tactic3(cont) :=

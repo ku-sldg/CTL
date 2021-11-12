@@ -25,6 +25,15 @@ Proof using.
   - follows eapply inj_pair2_heq.
 Qed.
 
+
+Lemma exists_unique_exists : forall A (P: A -> Prop),
+  (exists! a, P a) ->
+  exists a, P a.
+Proof using.
+  tedious.
+Qed.
+
+
 Lemma forall_eq_intro : forall A (B C: A -> Type),
   B = C ->
   (forall a, B a) = (forall a, C a).
