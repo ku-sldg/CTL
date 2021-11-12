@@ -41,18 +41,7 @@ Inductive nseq {A} (R: relation A) : nat -> A -> A -> Type :=
 Notation "R # n" := (nseq R n) (at level 5, format "R # n").
 
 
-(* Inductive in_seq {A} {R: relation A} {a}
-  : forall {a'}, A -> R#* a a' -> Prop :=
-  | in_seq_head_refl :
-      in_seq a (seq_refl R a)
-  (* | in_seq_head_step : forall x x' r p,
-      in_seq x' (seq_step R a x x' r p) *)
-  | in_seq_head_step : forall x x' r p,
-      in_seq a (seq_step R a x x' r p)
-  | in_seq_tail : forall x x' y r p,
-      in_seq y p ->
-      in_seq y (seq_step R a x x' r p). *)
-
+(* Length of a sequence in number of steps (not states) *)
 Fixpoint seq_length {A} {R: relation A} {a a'} (seq: R#* a a') :=
   match seq with 
   | seq_refl _ x => 0
@@ -202,10 +191,6 @@ Definition seq_singleton {x y} (r: R x y)
   : R#* x y :=
   seq_step R x x y r (seq_refl R x).
 
-(* Require Import Coq.Init.Nat.
-Check PeanoNat.Nat.ltb_lt. *)
-(* Definition refl_lt_ltb {n m} (n < m) : {} *)
-
 Definition seq_tail {x z} (r: R#* x z) (p: seq_length r > 0) : Σ y, R#* y z.
   induction r.
   - follows exfalso.
@@ -214,15 +199,8 @@ Definition seq_tail {x z} (r: R#* x z) (p: seq_length r > 0) : Σ y, R#* y z.
       follows apply seq_singleton.
     + forward IHr by (cbn; lia).
       destruct exists IHr s.
-      exists s.
-      tedious.
+      follows exists s.
 Defined.
-
-(* Fixpoint get_seq_at {x y} (r: R#* x y) (n: nat) (p: n < seq_length r): A :=
-  match n with 
-  | 0 => x
-  | S n' => get_seq_at
-  end. *)
 
 Theorem in_seq_first : forall x y (r: R#* x y),
   in_seq x r.
@@ -252,16 +230,36 @@ Proof using.
   follows destruct r.
 Qed.
 
+Lemma in_seq_at_length {x z}: forall (r: R#* x z) y i,
+  in_seq_at y i r ->
+  i <= seq_length r.
+Proof using.
+  tedious.
+Qed.
+
+Lemma inv_in_seq_at_length {x z}: forall (r: R#* x z) y,
+  in_seq_at y (seq_length r) r ->
+  y = z.
+Proof using.
+  intros * Hin.
+  after invc! Hin.
+  simpl in *.
+  find (fun H => apply in_seq_at_length in H).
+  exfalso; lia.
+Qed.
+
 Theorem in_seq_at_unique : forall x y (r: R#* x y) s s' i,
   in_seq_at s i r ->
   in_seq_at s' i r ->
   s = s'.
 Proof using.
   intros * H H'.
-  induction i.
-  - follows apply inv_in_seq_at_0 in H, H'.
-  -
-Admitted.
+  max induction H.
+  - follows erewrite inv_in_seq_at_length.
+  - after invc! H'.
+    apply in_seq_at_length in H.
+    contradict H; simpl; lia.
+Qed.
 
 Lemma in_seq_at__in_seq {x y z}: forall (r: R#* x z) i,
   in_seq_at y i r ->
@@ -278,23 +276,19 @@ Proof using.
   follows induction H.
 Qed.
 
-Lemma ex_in_seq_at_lt_length {x z}: forall (r: R#* x z) i,
-  i < seq_length r ->
+Lemma ex_in_seq_at_le_length {x z}: forall (r: R#* x z) i,
+  i <= seq_length r ->
   exists y, in_seq_at y i r.
 Proof using.
-  intros * ilt.
+  intros * ile.
   induction r.
-  - inv ilt.
-  - simpl! in ilt.
-    follows inv ilt.
+  - follows inv ile.
+  - simpl! in ile.
+    after invc ile.
+    exists z.
+    change (S (seq_length r0)) with (seq_length (seq_step R x y z r r0)).
+    constructor.
 Qed.
-
-Lemma in_seq_at_length {x z}: forall (r: R#* x z) y i,
-  in_seq_at y i r ->
-  i < seq_length r.
-Proof using.
-  intros *.
-Admitted.
 
 Lemma in_seq_at_succ_related {w z}: forall (r: R#* w z) x y i,
   in_seq_at x i r ->
@@ -302,67 +296,22 @@ Lemma in_seq_at_succ_related {w z}: forall (r: R#* w z) x y i,
   R x y.
 Proof using.
   intros * Hin Hin'.
-Admitted.
-
-(* Print seq.
-(* proper seq prefixes *)
-Inductive seq_pprefix {x y z} : R#* x y -> R#* x z -> Prop :=
-  | seq_pprefix_intro : forall r,
-      seq_pprefix r (seq_step x y z)
- *)
-Definition seq_prefix {x y z} (pre: R#* x y) (seq: R#* x z) :=
-  forall s i, in_seq_at s i pre -> in_seq_at s i seq.
-
-(* Definition seq_prefix_sig {x} : relation (Σ y, R#* x y) := λ pre seq,
-  seq_length (projT2 pre) < seq_length (projT2 seq) /\
-  forall s i, in_seq_at s i (projT2 pre) -> in_seq_at s i (projT2 seq).
-
-Theorem wf_seq_prefix_sig {x}: well_founded (@seq_prefix_sig x).
-Proof using.
-  intros r.
-  gen s := r to (λ j, j <= r \/) by tedious;
-    cbn; revert j. *)
-
-(* Print in_seq_at.
-Check in_seq_at_ind.
-
-
-Theorem in_seq_at_strong_nondep_ind : forall a,
-  forall P: A -> nat -> Prop,
-  (forall x (seq: R#* a x), P x (seq_length seq)) ->
-  (forall x (seq: R#* a x) n i,
-    n < i ->
-    P x n -> 
-    P (seq_step) 
-  ) *)
- 
-
-(* Inductive AccFamily (R: forall {a b}, X a -> X b -> Prop) {a} (x: X a) :=
-  | AccFamily_intro : (forall ) *)
+  max induction Hin.
+  - apply in_seq_at_length in Hin'.
+    contradict Hin'; lia.
+  - after invc! Hin'.
+    simpl in H2.
+    inv H2.
+    apply inv_in_seq_at_length in Hin as <-.
+    assumption.
+Qed.
 
 Lemma ex_seq_prefix {x y z} : forall (r: R#* x z),
   in_seq y r ->
   exists prefix: R#* x y, 
     forall s i, in_seq_at s i prefix -> in_seq_at s i r.
 Proof using.
-  (* Wow, `tedious` is impressive! *)
-  (* time tedious. *)
   tedious.
-
-  (* intros * Hin.
-  induction Hin.
-  - exists seq0.
-    easy.
-  - destruct exists IHHin prefix.
-    exists prefix.
-    intros.
-    constructor.
-    auto. *)
-
- (* intros * Hin.
-  induction Hin.
-  - follows define exists by assumption.
-  - follows destruct exists IHHin prefix. *)
 Qed.
 
 Lemma ex_seq_at_prefix {x y z} : forall (r: R#* x z) n,
@@ -420,9 +369,6 @@ Proof using.
     + simpl in H.
       now left.
     + simpl in *.
-      (* inv H. *)
-      (* inversion_sigma. *)
-      (* rewrite <- Eqdep.Eq_rect_eq.eq_rect_eq in H1. *)
       dependent invc H.
       * right. constructor.
       * specialize (IHb a H2); clear H2.
@@ -451,7 +397,6 @@ Theorem in_seq_at__concat_l {x y z}: forall (a: R#* x y) (b: R#* y z) n i,
 Proof using.
   intros * H.
   induction b.
-  (* max induction b. *)
   - assumption.
   - simpl.
     constructor.
@@ -709,10 +654,6 @@ Proof using.
   apply in_seq_at__in_seq_rev_at__iso.
 Qed.
 
-(* Definition get_seq_rev_at ()
-
-Definition get_seq_at *)
-      
 Theorem in_seq_iso_in_seq_rev_flip : forall x y z,
   forall b: seq_rev x y, in_seq_rev z b = in_seq z ((ϕ_seq__seq_rev x y)⁻¹ b).
 Proof using.
@@ -759,55 +700,9 @@ Proof using.
 Qed.
 
 Lemma in_seq_rev_at_last : forall x y (seqr: seq_rev x y),
-  in_seq_rev_at y (seq_length (seq_rev__seq seqr)) seqr.
+  in_seq_rev_at y (seq_rev_length seqr) seqr.
 Proof using.
-Admitted.
-
-Theorem in_seq_at_iso_in_seq_rev_at_flip : forall x y z n,
-  forall b: seq_rev x y, in_seq_rev_at z n b = in_seq_at z n ((ϕ_seq__seq_rev x y)⁻¹ b).
-Proof using.
-  intros *.
-  max induct b; extensionality.
-  - simpl.
-    split; intro H.
-    + invc H.
-      apply in_seq_at_0.
-    + dependent invc H.
-      constructor.
-  - split; intro H; simpl in *.
-    + dependent inv H.
-      * apply in_seq_at_0.
-      * replace (S n0) with 
-          (seq_length (seq_step R x x y r (seq_refl R x)) + n0)
-          by reflexivity.
-        apply in_seq_at__concat_r.
-        now find rewrite.
-    + dependent inv H.
-      * replace (seq_length (seq_concat (seq_step R x x y r (seq_refl R x)) (seq_rev__seq b))) with 
-          (S (seq_length (seq_rev__seq b))).
-          constructor.
-        apply in_seq_rev_at_last.
-        rewrite seq_length_concat.
-        reflexivity.
-      * apply (f_equal seq__seq_rev) in H0.
-        rewrite seq__seq_rev__concat in H0.
-        pose proof (rew := fun x y => iso_cancel_inv (ϕ_seq__seq_rev x y));
-          simpl in rew.
-        rewrite rew in H0; clear rew.
-
-        simpl seq_rev_concat in H0.
-        rewrite <- H0.
-
-        simpl.
-        apply in_seq_rev_at__concat_l.
-Admitted.
-
-Theorem in_seq_at_iso_in_seq_rev_at : forall x y z i,
-  iso_equiv (ϕ_seq__seq_rev x y) (@in_seq_at A R x y z i) (@in_seq_rev_at x y z i).
-Proof using.
-  intros *.
-  rewrite iso_equiv_flip.
-  apply in_seq_at_iso_in_seq_rev_at_flip.
+  tedious.
 Qed.
 
 
@@ -877,160 +772,6 @@ Proof using.
   intros ? Ryz.
   follows induction Ryz.
 Defined.
-
-
-(*
-Theorem in_seq__in_nseq : forall x a b (r: R#* a b),
-  in_seq x r ->
-  in_nseq x (projT2 (seq__nseq r)).
-Proof using.
-  intros x a b r H.
-  induction H.
-  - constructor.
-  - simpl. break_let. simpl.
-    constructor.
-  - simpl. break_let. simpl in *.
-    constructor.
-    assumption.
-Qed.
-
-Theorem in_nseq__in_seq : forall x n a b (r: R#n a b),
-  in_nseq x r ->
-  in_seq x (nseq__seq r).
-Proof using.
-  intros * H.
-  induction H. 
-  - constructor.
-  - constructor.
-  - simpl.
-    constructor.
-    assumption.
-Qed.
-
-Theorem in_nseq_at_first : forall n s s' (r: R# n s s'),
-  in_nseq_at s 0 r.
-Proof using.
-  intros.
-  induction r; constructor.
-  assumption. 
-Qed.
-
-Theorem in_nseq_first : forall n s s' (r: R#n s s'),
-  in_nseq s r.
-Proof using.
-  intros.
-  induction r; constructor.
-  assumption. 
-Qed.
-
-Theorem in_nseq_last : forall n s s' (r: R#n s s'),
-  in_nseq s' r.
-Proof using.
-  intros.
-  destruct r; constructor.
-Qed.
-
-Definition in_nseq_before {n s s'}
-  x i (r: R#n s s') := 
-  exists j, j < i /\ in_nseq_at x j r.
-
-Inductive nseq_prefix {a}
-  : forall {n m b c}, R#n a b -> R#m a c -> Prop :=
-  | nseq_prefix_refl :
-      forall n b (Rab: R#n a b),
-        nseq_prefix Rab Rab
-  | nseq_prefix_step :
-      forall n b (Rab: R#n a b) m c (Rac: R#m a c) d (Rcd: R c d),
-        nseq_prefix Rab Rac ->
-        nseq_prefix Rab (nseq_step R m a c d Rcd Rac).
-
-Theorem nseq_prefix_trans : forall {nx ny nz a x y z},
-  forall (rx: R#nx a x) (ry: R#ny a y) (rz: R#nz a z),
-    nseq_prefix rx ry ->
-    nseq_prefix ry rz ->
-    nseq_prefix rx rz.
-Proof using. 
-  intros * Hxy Hyz.
-  revert nx x rx Hxy.
-  induction Hyz; intros.
-  - assumption.
-  - constructor.
-    apply IHHyz.
-    assumption.
-Qed.
-
-Theorem in_nseq_at_prefix :
-  forall a nb b (Rab: R#nb a b) nc c (Rac: R#nc a c) x i,
-    nseq_prefix Rab Rac ->
-    in_nseq_at x i Rab ->
-    in_nseq_at x i Rac.
-Proof using.
-  intros * Hprefix Hin.
-  induction Hprefix.
-  - assumption.
-  - constructor.
-    applyc IHHprefix.
-    assumption.
-Qed.
-
-Lemma nseq_prefix_before :
-  forall a nb b (Rab: R#nb a b) nc c (Rac: R#nc a c) x,
-    nseq_prefix Rab Rac ->
-    in_nseq x Rab ->
-    in_nseq_before x (S nb) Rac.
-Proof using.
-  intros * Hprefix Hin.
-  apply in_nseq__in_nseq_at in Hin.
-  destruct Hin as [m [Hlt Hin]].
-  exists m.
-  split.
-  - lia. 
-  - eapply in_nseq_at_prefix; eassumption.
-Qed.
-
-Theorem in_nseq_at__get_prefix:
-  forall x i n a b (r: R#n a b),
-    in_nseq_at x i r ->
-    exists r': R#i a x, nseq_prefix r' r.
-Proof using.
-  intros.
-  induction H.
-  - repeat eexists. constructor.
-  - repeat eexists. constructor.
-  - destruct exists IHin_nseq_at r'.
-    exists r'.
-    constructor.
-    assumption.
-Qed.
-
-Theorem in_nseq__get_prefix : 
-  forall x n a b (r: R#n a b),
-    in_nseq x r ->
-    exists m (r': R#m a x), nseq_prefix r' r.
-Proof using.
-  intros.
-  apply in_nseq__in_nseq_at in H as [i [_ H]].
-  exists i.
-  eapply in_nseq_at__get_prefix.
-  eassumption.
-Qed.
-
-Theorem in_nseq__get_prefix' : 
-  forall x y z n (Rxz: R#n x z),
-    in_nseq y Rxz ~>
-    R#* x y.
-Proof using.
-  intros * H.
-  induct H.
-  - construct. constructor. 
-  - construct.
-    econstructor.
-    + eassumption.
-    + eapply nseq__seq.
-      eassumption.
-  - assumption.
-Qed.
-*)
 
 End BinaryRelationsProperties.
 

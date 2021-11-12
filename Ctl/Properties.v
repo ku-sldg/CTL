@@ -273,7 +273,7 @@ Proof using.
     intros x Hin.
   destruct i.
   - follows apply inv_in_seq_at_0 in Hin as ->.
-  - pose proof (ex_in_seq_at_lt_length R seq i) as Hin'.
+  - pose proof (ex_in_seq_at_le_length R seq i) as Hin'.
     forward Hin'.
     { after transitivity (S i).
       follows eapply in_seq_at_length.

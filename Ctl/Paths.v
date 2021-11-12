@@ -271,12 +271,12 @@ Proof using.
 Qed.
 
 Theorem in_prefix_at' {s}: forall (p: path s) i n,
-  i < n ->
+  i <= n ->
   in_seq_at (p i) i (prefix p n).
 Proof using.
   intros * H.
   rewrite <- (prefix_length p n) in H.
-  apply ex_in_seq_at_lt_length in H as [? H].
+  apply ex_in_seq_at_le_length in H as [? H].
   follows rewrite (in_prefix_at _ _ _ _ H).
 Qed.
 
