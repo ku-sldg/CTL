@@ -16,7 +16,6 @@ Glib/Gen.v
 Glib/Induct.v
 Glib/Quotient.v
 Glib/Isomorphisms.v
-Glib/Cardinality.v
 Glib/Misc.v
 Glib/Glib.v
 
