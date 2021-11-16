@@ -376,6 +376,25 @@ Proof using.
       revert x.
     follows eapply AW_in_before_nQ.
 Qed.
+
+Theorem AW_intro_weak : forall s P Q,
+  R @s ⊨ P || Q ->
+  (forall s',
+    R^* s s' ->
+    (R @s' ⊨ P && !Q) ->
+    forall s'', 
+      R s' s'' ->
+      R @s'' ⊨ P || Q) ->
+  R @s ⊨ A[P W Q].
+Proof using.
+  intros * H0 HS.
+  apply AW_intro.
+  split; [assumption|].
+  intros * H.
+  apply HS.
+  - follows apply seq__star.
+  - follows apply H.
+Qed.
  
 Theorem AW_elim : forall s P Q,
   R @s ⊨ A[P W Q] ->
@@ -412,6 +431,17 @@ Proof using.
   intros * Hin * Hin'.
   pose proof (ex_in_path_composition _ _ _ _ _ _ Hin Hin') as [? ?].
   follows etapply H.
+Qed.
+
+Theorem AG_weaken : forall s P Q,
+  (forall x, R @x ⊨ P --> Q) ->
+  R @s ⊨ AG P --> AG Q.
+Proof using.
+  intros * HWeakenAt.
+  tintro HAGP.
+  rewrite rew_AG_star in *.
+  intros * Hstep.
+  follows tapply HWeakenAt.
 Qed.
 
 (* De Morgan's Laws *)

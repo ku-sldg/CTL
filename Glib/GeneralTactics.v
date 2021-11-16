@@ -128,7 +128,7 @@ Tactic Notation "transform" hyp(H) uconstr(c) :=
   assert (_temp : c);
   [|overwrite H _temp; clear _temp].
 
-Tactic Notation "transform" hyp(H) uconstr(c) "by" tactic(tac) :=
+Tactic Notation "transform" hyp(H) uconstr(c) "by" tactic3(tac) :=
   let _temp := fresh in
   assert (_temp : c);
   [tac|overwrite H _temp; clear _temp].
@@ -206,20 +206,20 @@ Ltac especialize_term H :=
 Tactic Notation "define" uconstr(c) "as" ident(H) :=
   unshelve evar (H : c).
 
-Tactic Notation "define" uconstr(c) "as" ident(H) "by" tactic(tac) :=
+Tactic Notation "define" uconstr(c) "as" ident(H) "by" tactic3(tac) :=
   define c as H; [solve[tac]|].
 
 Tactic Notation "define" uconstr(c) :=
   let H := fresh in
   define c as H.
 
-Tactic Notation "define" uconstr(c) "by" tactic(tac) :=
+Tactic Notation "define" uconstr(c) "by" tactic3(tac) :=
   define c; [solve[tac]|].
 
 Tactic Notation "define" "exists" :=
   unshelve eexists.
 
-Tactic Notation "define" "exists" "by" tactic(tac) :=
+Tactic Notation "define" "exists" "by" tactic3(tac) :=
   define exists; [solve[tac]|].
 
 
@@ -249,10 +249,10 @@ Tactic Notation "oforward" hyp(H):=
   end.
 
 
-Tactic Notation "forward" hyp(H) "by" tactic(tac) :=
+Tactic Notation "forward" hyp(H) "by" tactic3(tac) :=
   forward H; [solve [tac]|].
 
-Tactic Notation "oforward" hyp(H) "by" tactic(tac) :=
+Tactic Notation "oforward" hyp(H) "by" tactic3(tac) :=
   oforward H; [solve [tac]|].
 
 
@@ -262,7 +262,7 @@ Ltac _max_forward H := try (forward H; [|_max_forward H]).
 Tactic Notation "max" "forward" hyp(H) := _max_forward H.
 
 Ltac _max_forward_by H tac := try (forward H by tac; [|_max_forward_by H tac]).
-Tactic Notation "max" "forward" hyp(H) "by" tactic(tac) := _max_forward_by H tac.
+Tactic Notation "max" "forward" hyp(H) "by" tactic3(tac) := _max_forward_by H tac.
 
 
 (* Tactic variants which preserved transparent definitions *)
@@ -312,7 +312,7 @@ Tactic Notation "repeat+" tactic(tac) :=
 
 
 (* Find a hypothesis to apply the tactic to. Fails on non-progress. *)
-Tactic Notation "find" tactic(tac) :=
+Tactic Notation "find" tactic3(tac) :=
   match goal with 
   | H : _ |- _ => progress tac H
   end.

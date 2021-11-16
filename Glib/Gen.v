@@ -14,56 +14,41 @@ Ltac cut_flip p :=
     [|revert H].
 
 Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P):=
-  let I' := fresh I in 
-  set (I' := l);
-  cut_flip (P I');
-    [ unset I'
-    | clearbody I'
+  set (I := l);
+  cut_flip (P I);
+    [ unfold I; clear I
+    | clearbody I
     ].
 
 Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
   "in" hyp(H) :=
-  let I' := fresh I in 
-  set (I' := l) in H;
-  cut_flip (P I'); 
-    [ unset I'
-    | clearbody I'
+  set (I := l) in H;
+  cut_flip (P I); 
+    [ unfold I in H |- *; clear I
+    | clearbody I
     ].
 
 Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
   "in" "*" :=
-  let I' := fresh I in 
-  set (I' := l) in *;
-  cut_flip (P I'); 
-    [ unset I'
-    | clearbody I'
+  set (I := l) in *;
+  cut_flip (P I); 
+    [ unfold I in *; clear I
+    | clearbody I
     ].
 
 Tactic Notation "gen" "?" ":=" constr(l) "to" uconstr(P):=
-  let I' := fresh "genv" in 
-  set (I' := l);
-  cut_flip (P I');
-    [ unset I'
-    | clearbody I'
-    ].
+  let I := fresh "genv" in 
+  gen I := l to P.
 
 Tactic Notation "gen" "?" ":=" constr(l) "to" uconstr(P)
   "in" hyp(H) :=
-  let I' := fresh "genv" in 
-  set (I' := l) in H;
-  cut_flip (P I'); 
-    [ unset I'
-    | clearbody I'
-    ].
+  let I := fresh "genv" in 
+  gen I := l to P in H.
 
 Tactic Notation "gen" "?" ":=" constr(l) "to" uconstr(P)
   "in" "*" :=
-  let I' := fresh "genv" in 
-  set (I' := l) in *;
-  cut_flip (P I'); 
-    [ unset I'
-    | clearbody I'
-    ].
+  let I := fresh "genv" in 
+  gen I := l to P in *.
 
 Tactic Notation "gen" ident(I) ":=" constr(l) "to" uconstr(P)
   "by" tactic3(tac) :=

@@ -145,7 +145,10 @@ Hint Rewrite rew_not_ex    : prop_simpl.
 Hint Rewrite rew_not_imply : prop_simpl.
 
 
-(* Agressive rewriting with UIP and propositional extensionality *)
+(* Agressive rewriting with UIP and propositional extensionality
+   Note, this is *very* experimental. In particular, `crush_eqs` 
+   currently erases too much information at times
+*)
 
 Tactic Notation "simpl!" :=
   cbn;

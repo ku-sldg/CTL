@@ -342,4 +342,10 @@ Tactic Notation "etapplyc" hyp(H) :=
 Tactic Notation "etapplyc" hyp(H) "in" hyp(H2) :=
   etapply H in H2; clear H.
 
+Tactic Notation "tcut" uconstr(P) :=
+  match goal with 
+  | |- ?R @?s ⊨ ?Q =>
+      cut (R @s ⊨ P); [change (R @s ⊨ P --> Q)|]
+  end.
+
 Close Scope tprop_scope.

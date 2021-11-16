@@ -110,6 +110,22 @@ Tactic Notation "invc!" hyp(H) "as" simple_intropattern(pat) :=
   foreach ls (fun H => hide_proof_terms in H)
   ).
 
+(* This is a modification of injection, which behaves like `invc` in the sense
+   that it clears the original, does `subst!`, and destructs sigma equalities
+   with UIP *)
+Ltac inject H :=
+  match goal with 
+  | |- ?g =>
+      injection H;
+      try clear H;
+      repeat lazymatch goal with 
+      | |- g => fail
+      | _ => intro
+      end;
+      subst!;
+      destr_sigma_eq;
+      subst!
+  end.
 
 (* Here we give a redefinition of the JMeq construct. Unfortunately, the 
    existing JMeq definition is irrevocably tied to the JMeq_eq axiom,
