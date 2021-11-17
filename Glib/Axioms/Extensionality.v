@@ -32,6 +32,14 @@ Tactic Notation "extensionality" ident(x) :=
      apply forall_extensionality) ; intro x
   end.
 
+Tactic Notation "extensionality" ident(x0) ident(x1) :=
+  extensionality x0; extensionality x1.
+Tactic Notation "extensionality" ident(x0) ident(x1) ident(x2) :=
+  extensionality x0 x1; extensionality x2.
+Tactic Notation "extensionality" ident(x0) ident(x1) ident(x2) ident(x3) :=
+  extensionality x0 x1 x2; extensionality x3.
+
+
 (* Note, LEM and prop extensionality would also follow from assuming 
    degeneracy. Doing so would lessen our number of axioms. However, 
    having both LEM and prop extensionality axiomitzed individually is 

@@ -377,6 +377,7 @@ Proof using.
     follows eapply AW_in_before_nQ.
 Qed.
 
+(* Prove AW by info of just the previous step *)
 Theorem AW_intro_weak : forall s P Q,
   R @s ⊨ P || Q ->
   (forall s',
@@ -417,6 +418,48 @@ Proof using.
       follows apply H.
     + apply Hbefore.
       follows eapply in_path_before_grow.
+Qed.
+
+Theorem AU_is_AW_and_AF : forall s P Q,
+  (R @s ⊨ A[P U Q]) = (R @s ⊨ A[P W Q] && AF Q).
+Proof using.
+  intros *.
+  extensionality H.
+  - split.
+    + follows tsimpl in *.
+    + tsimpl in *.
+      intro p.
+      follows specialize (H p).
+  - destruct H as [H H'].
+    tsimpl in *.
+    intro p.
+    specialize (H p);
+      specialize (H' p).
+    destruct H; [|assumption].
+    exfalso.
+    destruct H' as (s' & s'_in & H').
+    specialize (H s' s'_in).
+    tedious.
+Qed.
+
+Theorem tprop_extensionality : forall P Q,
+  (forall (R: relation state) (t: transition R) s, R @s ⊨ P = R @s ⊨ Q) ->
+  (P = Q).
+Proof using.
+  intros * ext_eq.
+  extensionality R' t' s.
+  change (?tp R' t' s) with (R' @s ⊨ tp).
+  tedious.
+Qed.
+
+Theorem tentails_eq_is_eq : forall P Q,
+  (forall (R: relation state) (t: transition R) s, R @s ⊨ P = R @s ⊨ Q) =
+  (P = Q).
+Proof using.
+  intros *.
+  extensionality; split.
+  - apply tprop_extensionality.
+  - follows intros ->.
 Qed.
 
 
