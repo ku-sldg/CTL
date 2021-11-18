@@ -22,24 +22,30 @@ Tactic Notation "tentails!" :=
 
 Tactic Notation "tentails" "in" hyp(H) :=
   change (?R @?s ⊨ ⟨?P⟩)   with (P s) in H +
-  change (?R @?s ⊭ ⟨?P⟩)   with (¬ P s) in H +
-  change (?R @?s ⊨ ¬ ⟨?P⟩) with (¬ P s) in H.
+  change (?R @?s ⊭ ⟨?P⟩)   with (~ P s) in H +
+  change (?R @?s ⊨ ¬ ⟨?P⟩) with (~ P s) in H.
 
 Tactic Notation "tentails!" "in" hyp(H) :=
   cbn in H;
   repeat match type of H with 
   | ?R @?s ⊨ ?P => unfold P in H
+  | ?R @?s ⊭ ?P => unfold P in H
+  | ?R @?s ⊨ ! ?P => unfold P in H
   end;
   progress tentails in H;
   cbn in H.
 
 Tactic Notation "tentails" "in" "*" :=
-  tentails;
-  repeat find (fun H => tentails in H).
+  progress (
+    try tentails;
+    repeat find (fun H => tentails in H)
+  ).
 
 Tactic Notation "tentails!" "in" "*" :=
-  tentails!;
-  repeat find (fun H => tentails! in H).
+  progress (
+    try tentails!;
+    repeat find (fun H => tentails! in H)
+  ).
 
 Tactic Notation "unfold_timpl" :=
   progress change_no_check (?R @?s ⊨ ?p ⟶ ?q) with (R @s ⊨ p -> R @s ⊨ q) +

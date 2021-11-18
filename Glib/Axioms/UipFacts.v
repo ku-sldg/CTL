@@ -141,6 +141,7 @@ Arguments JMeq {A} x {B} y.
 Arguments JMeq_refl {A} x.
 
 Notation "x ~= y" := (JMeq x y) (at level 70, no associativity).
+Notation "x ~<> y" := (~ JMeq x y) (at level 70, no associativity).
 
 Register JMeq as core.JMeq.type.
 Register JMeq_refl as core.JMeq.refl.
@@ -249,6 +250,12 @@ Proof using.
   follows intros [].
 Defined.
 
+Theorem mistyped_nJMeq {A B} {a: A} {b: B}:
+  A <> B ->
+  a ~<> b.
+Proof using.
+  follows do 2 intro.
+Qed. 
 
 Lemma rew_JMeq {A B} : forall (H: A = B) (a: A),
   rew H in a ~= a.

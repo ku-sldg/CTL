@@ -408,8 +408,8 @@ Ltac _etedious n :=
       (eauto; easy) +
       (constructor; _etedious n') +
       (econstructor; _etedious n') +
-      ((find (fun H => injection H + induction H + destruct H)); _etedious n') +
-      (* ((find (fun H => inversion H)); _etedious n') + *)
+      (* ((find (fun H => injection H + induction H + destruct H)); _etedious n') + *)
+      (find (fun H => first[injection H| induction H| destruct H]); _etedious n') +
       (fail 1 "Cannot solve goal")
     )
   end.
@@ -421,8 +421,8 @@ Ltac _tedious n :=
       (auto; easy) +
       (constructor; _tedious n') +
       (econstructor; _etedious n') +
-      ((find (fun H => injection H + induction H + destruct H)); _tedious n') +
-      (* ((find (fun H => inversion H)); _tedious n') + *)
+      (* ((find (fun H => injection H + induction H + destruct H)); _tedious n') + *)
+      (find (fun H => first[injection H| induction H| destruct H]); _tedious n') +
       (fail 1 "Cannot solve goal")
     )
   end.
@@ -671,3 +671,18 @@ Tactic Notation "do_generalized" constr(ls) tactic3(tac) :=
     tac;
     do_g n intro
   ).
+
+
+(* An inverse of `f_equal`. Transforms a hypothesis of type `?f ?a <> ?f ?b`
+   to `a <> b`, and recurses.*)
+Ltac f_nequal H := 
+  match type of H with 
+  | ?f ?a <> ?f ?b =>
+      simple apply (λ H: f a <> f b,
+        (λ Heq: a = b, H (f_equal f Heq)): a <> b)
+      in H;
+      try f_nequal H
+  | ?f ?a <> ?g ?b =>
+      unify f g;
+      f_nequal H
+  end.
