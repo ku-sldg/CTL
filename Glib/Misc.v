@@ -88,3 +88,8 @@ Proof using.
   intros * H.
   follows inject H.
 Qed.
+
+Ltac unbox x := 
+  let t := fresh "t" in
+  destruct x as [t x];
+  change ⟨_, x⟩ with (box x) in *.

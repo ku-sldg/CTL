@@ -682,7 +682,17 @@ Ltac f_nequal H :=
         (λ Heq: a = b, H (f_equal f Heq)): a <> b)
       in H;
       try f_nequal H
+  end.
+
+(* Like `f_nequal`, but potentially unifies functions *)
+Ltac ef_nequal H := 
+  match type of H with 
+  | ?f ?a <> ?f ?b =>
+      simple apply (λ H: f a <> f b,
+        (λ Heq: a = b, H (f_equal f Heq)): a <> b)
+      in H;
+      try ef_nequal H
   | ?f ?a <> ?g ?b =>
       unify f g;
-      f_nequal H
+      ef_nequal H
   end.

@@ -420,6 +420,12 @@ Proof using.
       follows eapply in_path_before_grow.
 Qed.
 
+Theorem AW_weaken_left : forall s P P' Q,
+  (forall x, R @x ⊨ P --> P') ->
+  R @s ⊨ A[P W Q] ->
+  R @s ⊨ A[P' W Q].
+Admitted.
+
 Theorem AU_is_AW_and_AF : forall s P Q,
   (R @s ⊨ A[P U Q]) = (R @s ⊨ A[P W Q] && AF Q).
 Proof using.
