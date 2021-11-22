@@ -424,7 +424,27 @@ Theorem AW_weaken_left : forall s P P' Q,
   (forall x, R @x ⊨ P --> P') ->
   R @s ⊨ A[P W Q] ->
   R @s ⊨ A[P' W Q].
-Admitted.
+Proof using.
+  intros * Hweaken HAW.
+  tsimpl in *.
+  intros p.
+  specialize (HAW p).
+  destruct or HAW; [left|right].
+  - intros ? [i <-].
+    specialize (HAW (p i)).
+    forward HAW by tedious.
+    split.
+    + tapplyc Hweaken.
+      tapply HAW.
+    + tapply HAW.
+  - destruct HAW as (i & H & H').
+    exists i.
+    after split.
+    intros ? (j & jlt & <-).
+    tapply Hweaken.
+    follows apply H.
+Qed.
+
 
 Theorem AU_is_AW_and_AF : forall s P Q,
   (R @s ⊨ A[P U Q]) = (R @s ⊨ A[P W Q] && AF Q).
@@ -447,6 +467,30 @@ Proof using.
     specialize (H s' s'_in).
     tedious.
 Qed.
+
+Theorem AG_intro_strong : forall s P,
+  R @s ⊨ P ->
+  (forall s' (seq: R#* s s'), 
+    (forall x, in_seq x seq -> R @x ⊨ P) -> 
+    forall s'', 
+      R s' s'' ->
+      R @s'' ⊨ P) ->
+  R @s ⊨ AG P.
+Proof using.
+  intros * H0 HS.
+  tsimpl.
+  intros p ? [i <-].
+  wf_induction i lt.
+  destruct i.
+  - follows rewrite state_at_0.
+  - specialize (HS (p i) (prefix R p i)).
+    apply HS.
+    + intros x Hin.
+      apply inv_in_prefix in Hin as (j & ? & <-).
+      follows apply wfIH.
+    + follows do 2 destructr p.
+Qed.
+
 
 Theorem tprop_extensionality : forall P Q,
   (forall (R: relation state) (t: transition R) s, R @s ⊨ P = R @s ⊨ Q) ->

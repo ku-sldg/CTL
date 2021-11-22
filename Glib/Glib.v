@@ -10,3 +10,4 @@ Require Export PropNormalize.
 Require Export Quotient.
 Require Export TacticCombinators.
 Require Export Truncations.
+Require Export AdvancedTactics.

@@ -17,6 +17,7 @@ Glib/Induct.v
 Glib/Quotient.v
 Glib/Isomorphisms.v
 Glib/Misc.v
+Glib/AdvancedTactics.v
 Glib/Glib.v
 
 Ctl/BinaryRelations.v

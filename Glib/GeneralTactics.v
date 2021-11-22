@@ -561,12 +561,16 @@ Ltac clear_redundant :=
       end
   end.
 
-(* For some reason setoid_subst does not handle some equalities which
-   subst does, so we use both here
- *)
-Tactic Notation "subst!" :=
-  repeat progress subst + setoid_subst;
+Tactic Notation "setoid_subst!" :=
+  repeat progress (subst || setoid_subst);
   clear_reflexives;
+  clear_redundant.
+
+Tactic Notation "subst!" :=
+  try subst;
+  repeat match goal with 
+  | H : ?x = ?x |- _ => clear H
+  end;
   clear_redundant.
 
 

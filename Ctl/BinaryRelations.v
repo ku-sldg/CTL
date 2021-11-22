@@ -15,6 +15,10 @@ Require Export Coq.Relations.Relation_Operators.
 Definition star {A} (R: relation A) : relation A := clos_refl_trans_n1 A R.
 Notation "R ^*" := (star R) (at level 5, format "R ^*").
 
+Ltac star_notation := 
+  repeat change (clos_refl_trans_n1 _ ?R) with (R^*) in *.
+
+
 (* seq - a transparent sequence of relation steps.
    It is equivalent to the reflexive transitive closure, but is a `Type` rather than a `Prop`.
  *)
