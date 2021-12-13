@@ -8,14 +8,15 @@ Require Import Glib.Glib.
 Ltac tentails :=
   match goal with 
   | |- ?R @?s ⊨ ⟨?P⟩   => change (P s)
-  | |- ?R @?s ⊭ ⟨?P⟩   => change (¬ P s)
-  | |- ?R @?s ⊨ ¬ ⟨?P⟩ => change (¬ P s)
+  | |- ?R @?s ⊭ ⟨?P⟩   => change (~ P s)
+  | |- ?R @?s ⊨ ¬ ⟨?P⟩ => change (~ P s)
   end.
 
 Tactic Notation "tentails!" :=
   cbn;
   repeat match goal with 
   | |- ?R @?s ⊨ ?P => unfold P
+  | |- ?R @?s ⊨ ! ?P => unfold P
   end;
   tentails;
   cbn.
@@ -36,16 +37,12 @@ Tactic Notation "tentails!" "in" hyp(H) :=
   cbn in H.
 
 Tactic Notation "tentails" "in" "*" :=
-  progress (
-    try tentails;
-    repeat find (fun H => tentails in H)
-  ).
+  try tentails;
+  repeat find (fun H => tentails in H).
 
 Tactic Notation "tentails!" "in" "*" :=
-  progress (
-    try tentails!;
-    repeat find (fun H => tentails! in H)
-  ).
+  try tentails!;
+  repeat find (fun H => tentails! in H).
 
 Tactic Notation "unfold_timpl" :=
   progress change_no_check (?R @?s ⊨ ?p ⟶ ?q) with (R @s ⊨ p -> R @s ⊨ q) +
@@ -353,5 +350,19 @@ Tactic Notation "tcut" uconstr(P) :=
   | |- ?R @?s ⊨ ?Q =>
       cut (R @s ⊨ P); [change (R @s ⊨ P --> Q)|]
   end.
+
+Tactic Notation "tforward" hyp(H):=
+  match type of H with 
+  | ?R @?s ⊨ ?P --> ?Q =>
+      let _temp := fresh in
+      define (R @s ⊨ P) as _temp;
+      [|specialize (H _temp); 
+        unfold _temp in H;
+        clear _temp
+      ]
+ end.
+
+Tactic Notation "tforward" hyp(H) "by" tactic3(tac) :=
+  tforward H; [solve [tac]|].
 
 Close Scope tprop_scope.

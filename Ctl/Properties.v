@@ -118,12 +118,8 @@ Theorem AG__star : forall s P,
   forall s', R^* s s' -> R @s' ⊨ P.
 Proof using.
   intros * H * Hstar.
-  inhabit star__seq in Hstar.
-  pose (p := prepend R Hstar (serial_witness__path R trans_serial s')).
-  unshelve etapply H.
-  - exact p.
-  - apply in_prepend_seq.
-    constructor.
+  apply star_in_path in Hstar as [p Hin].
+  follows etapply H.
 Qed.
     
 Theorem rew_AG_star : forall s P,
@@ -144,12 +140,8 @@ Proof using.
   intros * H.
   tsimpl.
   destruct H as (s' & Hstar & H).
-  inhabit star__seq in Hstar.
-  pose (p := prepend R Hstar (serial_witness__path R trans_serial s')).
-  exists p s'.
-  split.
-  - follows apply in_prepend_seq.
-  - assumption. 
+  apply star_in_path in Hstar as [p Hin].
+  tedious.
 Qed.
 
 Theorem EF__star : forall s P,

@@ -62,3 +62,30 @@ Tactic Notation "tedious!" constr(n) :=
 
 Tactic Notation "tedious!" :=
   tedious! 5.
+
+
+
+Ltac _ebrute := 
+  intros; (
+    (eauto; easy) +
+    (constructor; _ebrute) +
+    (econstructor; _ebrute) +
+    (find (fun H => inject H || induction H || destruct H); _ebrute) +
+    (fail 1 "Cannot solve goal")
+  ).
+
+Ltac _brute := 
+  intros; (
+    (auto; easy) +
+    (constructor; _brute) +
+    (econstructor; _brute) +
+    (find (fun H => inject H || induction H || destruct H); _brute) +
+    (fail 1 "Cannot solve goal")
+  ).
+
+Tactic Notation "brute" int_or_var(n) :=
+  tryif has_evar goal then 
+    (timeout n _ebrute)
+  else 
+    (timeout n _brute).
+

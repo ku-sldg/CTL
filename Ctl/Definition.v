@@ -1,9 +1,6 @@
 Require Import Ctl.BinaryRelations.
 Require Import Ctl.Paths.
 
-Class transition {A} (R: relation A) := 
-  {trans_serial: serial_witness R}.
-
 (* Note: none of the CTL formulas explicitly use the transition instance, but they do 
    make recursive entailment assertions which implicitly pass the transition instance
    forward.

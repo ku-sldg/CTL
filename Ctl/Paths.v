@@ -8,7 +8,10 @@ Require Import Lia.
 
 Section Paths.
 
-Context {state : Type} (R: relation state).
+Class transition {A} (R: relation A) := 
+  {trans_serial: serial_witness R}.
+
+Context {state : Type} (R: relation state) {t: transition R}.
 
 Definition path (s: state) : Type :=
   {p: nat -> state |
@@ -88,13 +91,14 @@ Defined.
 Definition path_tail {s} (p: path s) : path (p 1) :=
   path_drop p 1.
 
-Definition serial_witness__path (witness: serial_witness R) s : path s.
-  exists (nat_rect _ s (λ _ x, proj1_sig (witness x))).
+(* Definition serial_witness__path (witness: serial_witness R) s : path s. *)
+Definition serial_witness__path s : path s.
+  exists (nat_rect _ s (λ _ x, proj1_sig (trans_serial x))).
   split.
   - reflexivity.
   - intros ?.
     cbn.
-    now destruct (witness _).
+    follows destruct (trans_serial _).
 Defined.   
 
 Definition path_cons {y} x (r: R x y) (p: path y) : path x.
@@ -312,6 +316,16 @@ Proof using.
     now econstructor.
 Qed.
 
+Theorem star_in_path : forall s x,
+  R^* s x ->
+  exists p: path s, in_path x p.
+Proof using t.
+  intros * Hstar.
+  apply star__seq in Hstar as [seq].
+  exists (prepend seq (serial_witness__path x)).
+  follows apply in_prepend_seq.
+Qed.
+
 Theorem ex_in_path_composition : forall x (px: path x) y (py: path y) z,
   in_path y px ->
   in_path z py ->
@@ -328,3 +342,4 @@ End Paths.
 
 Arguments in_path        {state R s}.
 Arguments in_path_before {state R s}.
+Arguments star_in_path   {state R t}.
