@@ -5,10 +5,7 @@ Open Scope tprop_scope.
 
 Section Basic.
 
-Variable state : Type.
-Variable R: relation state.
-Context {T: transition R}.
-Variable s: state.
+Context (state: Type) (R: relation state) {T: transition R} (s: state).
 
 Theorem tentails_ttop :
   R @s ⊨ ⊤.
