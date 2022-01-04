@@ -140,8 +140,8 @@ Set Elimination Schemes.
 Arguments JMeq {A} x {B} y.
 Arguments JMeq_refl {A} x.
 
-Notation "x ~= y" := (JMeq x y) (at level 70, no associativity).
-Notation "x ~<> y" := (~ JMeq x y) (at level 70, no associativity).
+Notation "x ~=~ y" := (JMeq x y) (at level 70, no associativity).
+Notation "x ~<>~ y" := (~ JMeq x y) (at level 70, no associativity).
 
 Register JMeq as core.JMeq.type.
 Register JMeq_refl as core.JMeq.refl.
@@ -149,12 +149,12 @@ Register JMeq_refl as core.JMeq.refl.
 #[global]
 Hint Resolve JMeq_refl : core.
 
-Definition JMeq_hom {A} (x y: A) := x ~= y.
+Definition JMeq_hom {A} (x y: A) := x ~=~ y.
 Register JMeq_hom as core.JMeq.hom.
 
 (* Note: this is in fact equivalent to UIP. *)
 Lemma JMeq_eq : forall A (x y: A), 
-  x ~= y ->
+  x ~=~ y ->
   x = y.
 Proof using.
   intros * Heq.
@@ -163,13 +163,13 @@ Qed.
 
 Lemma eq_JMeq : forall A (x y: A), 
   x = y ->
-  x ~= y.
+  x ~=~ y.
 Proof using.
   now intros * ->.
 Qed.
 
 Lemma JMeq_is_eq : forall A (x y: A),
-  x ~= y <-> x = y.
+  x ~=~ y <-> x = y.
 Proof using.
   intros *.
   split; intros ?.
@@ -179,7 +179,7 @@ Qed.
 
 Theorem JMeq_rect : forall (A: Type) (x: A) (P : A -> Type),
   P x ->
-  forall y : A, x ~= y -> P y.
+  forall y : A, x ~=~ y -> P y.
 Proof using.
   intros * ? * Heq.
   apply JMeq_eq in Heq.
@@ -188,14 +188,14 @@ Qed.
 
 Lemma JMeq_rec : forall (A: Type) (x: A) (P : A -> Set),
   P x ->
-  forall y : A, x ~= y -> P y.
+  forall y : A, x ~=~ y -> P y.
 Proof using. 
   exact JMeq_rect.
 Qed.
 
 Lemma JMeq_ind : forall (A: Type) (x: A) (P : A -> Prop),
   P x ->
-  forall y : A, x ~= y -> P y.
+  forall y : A, x ~=~ y -> P y.
 Proof using.
   exact JMeq_rect.
 Qed.
@@ -203,8 +203,8 @@ Qed.
 Register JMeq_ind as core.JMeq.ind.
 
 Theorem JMeq_sym : forall A B (a: A) (b: B),
-  a ~= b ->
-  b ~= a.
+  a ~=~ b ->
+  b ~=~ a.
 Proof using.
   intros.
   follows destruct H.
@@ -215,9 +215,9 @@ Hint Immediate JMeq_sym : core.
 Register JMeq_sym as core.JMeq.sym.
 
 Theorem JMeq_trans : forall A B C (a: A) (b: B) (c: C),
-  a ~= b ->
-  b ~= c ->
-  a ~= c.
+  a ~=~ b ->
+  b ~=~ c ->
+  a ~=~ c.
 Proof using.
   intros * [] [].
   constructor.
@@ -226,7 +226,7 @@ Qed.
 Register JMeq_trans as core.JMeq.trans.
 
 Theorem JMeq_congr : forall A (x: A) B (f: A -> B) (y: A), 
-  x ~= y ->
+  x ~=~ y ->
   f x = f y.
 Proof using.
   intros * H.
@@ -238,13 +238,13 @@ Register JMeq_congr as core.JMeq.congr.
 
 Theorem f_JMequal : forall A (B: A -> Type) (f: forall a, B a) (x y: A),
   x = y -> 
-  f x ~= f y.
+  f x ~=~ f y.
 Proof using.
   follows intros * <-.
 Qed.
 
 Theorem JMeq_type_eq {A B} {a: A} {b: B}: 
-  a ~= b ->
+  a ~=~ b ->
   A = B.
 Proof using.
   follows intros [].
@@ -252,31 +252,31 @@ Defined.
 
 Theorem mistyped_nJMeq {A B} {a: A} {b: B}:
   A <> B ->
-  a ~<> b.
+  a ~<>~ b.
 Proof using.
   follows do 2 intro.
 Qed. 
 
 Lemma rew_JMeq {A B} : forall (H: A = B) (a: A),
-  rew H in a ~= a.
+  rew H in a ~=~ a.
 Proof using.
   intros *.
   now destruct H.
 Qed.
 
 Corollary rew_JMeq_sym {A B} : forall (H: A = B) (a: A),
-  a ~= rew H in a.
+  a ~=~ rew H in a.
 Proof using.
   symmetry.
   apply rew_JMeq.
 Qed.
 
-Definition JMcast {A B} (H: A = B) (a: A) : {b: B | a ~= b} :=
+Definition JMcast {A B} (H: A = B) (a: A) : {b: B | a ~=~ b} :=
   exist _ (rew H in a) (rew_JMeq_sym H a).
 
 Theorem JMeq_by_rew_eq {A B}: forall (H: A = B) (x: A) (y: B),
   rew H in x = y ->
-  x ~= y.
+  x ~=~ y.
 Proof using.
   intros * Heq.
   apply JMeq_trans with (b := rew H in x).
@@ -285,7 +285,7 @@ Proof using.
 Qed.
 
 Theorem rew_eq_by_JMeq {A B}: forall (x: A) (y: B),
-  forall h: x ~= y,
+  forall h: x ~=~ y,
   rew JMeq_type_eq h in x = y.
 Proof using.
   intros *.
@@ -294,7 +294,7 @@ Qed.
 
 Theorem JMeq_by_rew_eqr {A B}: forall (H: B = A) (x: A) (y: B),
   x = rew H in y ->
-  x ~= y.
+  x ~=~ y.
 Proof using.
   intros * Heq.
   apply JMeq_trans with (b := rew H in y).
@@ -303,7 +303,7 @@ Proof using.
 Qed.
 
 Theorem rew_eqr_by_JMeq {A B}: forall (x: A) (y: B),
-  forall h: x ~= y,
+  forall h: x ~=~ y,
   x = rew eq_sym (JMeq_type_eq h) in y.
 Proof using.
   intros *.
@@ -328,7 +328,7 @@ Qed.
 Theorem existT_eq_intro :
   forall (A: Type) (B: A -> Type) (a a': A) (b: B a) (b': B a'),
     a = a' ->
-    b ~= b' ->
+    b ~=~ b' ->
     ⟨a, b⟩ = ⟨a', b'⟩.
 Proof using.
   intros * <- Heq'.
@@ -338,9 +338,9 @@ Qed.
 
 Lemma pair_JMeq_intro : 
   forall A B C D (a: A) (b: B) (c: C) (d: D),
-    a ~= b ->
-    c ~= d ->
-    (a, c) ~= (b, d).
+    a ~=~ b ->
+    c ~=~ d ->
+    (a, c) ~=~ (b, d).
 Proof using.
   follows intros * [] [].
 Qed.

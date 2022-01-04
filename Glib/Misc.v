@@ -10,14 +10,14 @@ Proof using.
 Qed.
 
 Theorem inj_pair2_heq : forall A (B: A -> Type) (a a': A) (b: B a) (b': B a'),
-  ⟨a, b⟩ = ⟨a', b'⟩ -> b ~= b'.
+  ⟨a, b⟩ = ⟨a', b'⟩ -> b ~=~ b'.
 Proof using.
   intros * H.
   now inv H.
 Qed.
 
 Theorem inj_pair : forall A (B: A -> Type) (a a': A) (b: B a) (b': B a'),
-  ⟨a, b⟩ = ⟨a', b'⟩ -> a = a' /\ b ~= b'.
+  ⟨a, b⟩ = ⟨a', b'⟩ -> a = a' /\ b ~=~ b'.
 Proof using.
   intros * H.
   split.
@@ -83,7 +83,7 @@ Qed.
 
 Lemma box_eq_hetero : forall t (v: t) t' (v': t'),
   box v = box v' ->
-  v ~= v'.
+  v ~=~ v'.
 Proof using.
   intros * H.
   follows inject H.
