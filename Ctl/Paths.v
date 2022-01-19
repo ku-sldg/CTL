@@ -296,7 +296,7 @@ Proof using.
 Qed.
 
 Theorem prefix_nil : forall s (p: path s),
-  prefix p 0 ~= seq_refl R s.
+  prefix p 0 ~=~ seq_refl R s.
 Proof using.
   intros *.
   follows repeat destructr p.

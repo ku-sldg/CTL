@@ -104,7 +104,7 @@ Hint Resolve inj_pair2 inj_pairT2: eqdep.
 
 Lemma JMproof_irrelevance : forall (P Q: Prop) (p: P) (q: Q),
   P = Q ->
-  p ~= q.
+  p ~=~ q.
 Proof using.
   intros * <-.
   apply eq_JMeq.
