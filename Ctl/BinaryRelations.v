@@ -206,6 +206,39 @@ Definition seq_tail {x z} (r: R#* x z) (p: seq_length r > 0) : Σ y, R#* y z.
       follows exists s.
 Defined.
 
+Definition seq_step_front x y z (step: R x y) (tail: R#* y z) : R#* x z.
+  induction tail.
+  - follows apply seq_singleton.
+  - eapply seq_step.
+    + exact r.
+    + tedious.
+Defined.
+
+Theorem destruct_seq_front : forall x z (s: R#* x z),
+  ⟨z, s⟩ = ⟨x, seq_refl R x⟩ \/
+  exists y (r: R x y) (s': R#* y z), s = seq_step_front x y z r s'.
+Proof using.
+  intros *.
+  induction s.
+  - follows left.
+  - right.
+    destruct or IHs.
+    + inject IHs.
+      follows exists z r (seq_refl R z).
+    + destruct IHs as (y' & r' & s' & ->).
+      follows exists y' r' (seq_step R y' y z r s').
+Qed.
+
+(* Definition seq_rect_front : forall (P: forall x y, R#* x y -> Type),
+  (forall x, P x x (seq_refl R x)) ->
+  (forall x y z (r: R x y) (s: R#* y z), P y z s -> P x z (seq_step_front x y z r s)) ->
+  forall x y (s: R#* x y), P x y s.
+intros * H IH.
+induction s.
+- assumption!.
+- todo.
+Admitted. *)
+
 Theorem in_seq_first : forall x y (r: R#* x y),
   in_seq x r.
 Proof using.

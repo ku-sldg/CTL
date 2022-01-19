@@ -175,31 +175,6 @@ Ltac break_let :=
   end.
 
 
-(* Specialize hypothesis with a unification variable *)
-Ltac especialize H := 
-  match type of H with 
-  | forall x : ?T, _ => 
-      let x' := fresh x in
-      evar (x': T);
-      specialize (H x');
-      unfold x' in H;
-      clear x'
-  end.
-
-(* Like especialize, but doesn't lose term definitions *)
-Ltac especialize_term H :=
-  match type of H with 
-  | forall x : ?T, _ => 
-      let x' := fresh x in
-      evar (x': T);
-      let _temp := fresh in 
-      epose (_temp := H x');
-      unfold x' in _temp; clear x';
-      unfold H in _temp; clear H;
-      rename _temp into H
-  end.
-
-
 (* More tactic-equivalents which don't lose term definitions *)
 
 (* Like `assert`, but doesn't hide underlying term *)
@@ -263,6 +238,32 @@ Tactic Notation "max" "forward" hyp(H) := _max_forward H.
 
 Ltac _max_forward_by H tac := try (forward H by tac; [|_max_forward_by H tac]).
 Tactic Notation "max" "forward" hyp(H) "by" tactic3(tac) := _max_forward_by H tac.
+
+
+(* Specialize hypothesis with a unification variable *)
+(* Ltac especialize H := 
+  match type of H with 
+  | forall x : ?T, _ => 
+      let x' := fresh x in
+      evar (x': T);
+      specialize (H x');
+      unfold x' in H;
+      clear x'
+  end. *)
+Ltac especialize H := forward H by shelve.
+
+(* Like especialize, but doesn't lose term definitions *)
+Ltac especialize_term H :=
+  match type of H with 
+  | forall x : ?T, _ => 
+      let x' := fresh x in
+      evar (x': T);
+      let _temp := fresh in 
+      epose (_temp := H x');
+      unfold x' in _temp; clear x';
+      unfold H in _temp; clear H;
+      rename _temp into H
+  end.
 
 
 (* Tactic variants which preserved transparent definitions *)
@@ -511,6 +512,8 @@ Ltac possible tac :=
 
 Definition get_instance {A} (class: A -> Type) (a: A) {instance: class a}
   : class a := instance.
+
+Ltac infer_instance := refine (get_instance _ _).
 
 (* Note, this fails if it cannot resolve *all* implicits. *)
 Tactic Notation "has_instance" uconstr(class) uconstr(a) :=

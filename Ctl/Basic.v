@@ -16,16 +16,16 @@ Theorem ntentails_tbot :
 Proof using. auto. Qed.
 
 Theorem tentails_tconj : forall P Q,
-  R @s |= P ->
-  R @s |= Q ->
-  R @s |= P && Q.
+  R @s ⊨ P ->
+  R @s ⊨ Q ->
+  R @s ⊨ P && Q.
 Proof using. 
   intros.
   split; assumption.
 Qed.
 
 Theorem rew_tconj : forall P Q,
-  R @s ⊨ P ∧ Q =
+  R @s ⊨ P && Q =
   (R @s ⊨ P /\ R @s ⊨ Q).
 Proof using. reflexivity. Qed.
 
@@ -40,7 +40,7 @@ Qed.
 
 Theorem tentails_tdisj_r : forall P Q,
   R @s ⊨ Q ->
-  R @s ⊨ P ∨ Q.
+  R @s ⊨ P || Q.
 Proof using.
   intros.
   right.
@@ -48,27 +48,27 @@ Proof using.
 Qed.
 
 Theorem rew_tdisj : forall P Q,
-  R @s ⊨ P ∨ Q = 
+  R @s ⊨ P || Q = 
   (R @s ⊨ P \/ R @s ⊨ Q).
 Proof using. reflexivity. Qed.
 
 Theorem rew_timpl : forall P Q,
-  R @s ⊨ P ⟶ Q =
+  R @s ⊨ P ⇾ Q =
   (R @s ⊨ P -> R @s ⊨ Q).
 Proof using. reflexivity. Qed.
 
 Theorem rew_tbiimpl : forall P Q,
-  R @s ⊨ P ⟷ Q =
+  R @s ⊨ P ⇿ Q =
   (R @s ⊨ P <-> R @s ⊨ Q).
 Proof using. reflexivity. Qed.
 
 Theorem rew_tnot : forall P,
-  R @s ⊨ ¬ P =
+  R @s ⊨ !P =
   (R @s ⊭ P).
 Proof using. reflexivity. Qed.
 
 Theorem rew_tlift : forall P,
-  R @s ⊨ ⟨P⟩ =
+  R @s ⊨ ⟦P⟧ =
   P s.
 Proof using. reflexivity. Qed.
 
@@ -119,7 +119,7 @@ Proof using. reflexivity. Qed.
 Theorem rew_AW : forall P Q,
   R @s ⊨ A[P W Q] =
   forall p: path R s,
-    (forall x, in_path x p -> R @x ⊨ P ∧ ¬Q) \/
+    (forall x, in_path x p -> R @x ⊨ P && !Q) \/
     (exists i,
       (forall x, in_path_before x i p -> R @x ⊨ P) /\ 
       R @(p i) ⊨ Q).

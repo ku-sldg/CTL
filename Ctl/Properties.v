@@ -17,7 +17,7 @@ Context {t: transition R}.
 (* Properties of implication *)
 
 Theorem timpl_refl : forall (s: state) a,
-  R @s ⊨ a ⟶ a.
+  R @s ⊨ a ⇾ a.
 Proof using.
   intros.
   tintro.
@@ -25,7 +25,7 @@ Proof using.
 Qed.
 
 Theorem timpl_trans : forall (s: state) a b c,
-  R @s ⊨ (a ⟶ b) ⟶ (b ⟶ c) ⟶ a ⟶ c.
+  R @s ⊨ (a ⇾ b) ⇾ (b ⇾ c) ⇾ a ⇾ c.
 Proof using.
   intros s a b c.
   tintros Hab Hbc Ha.
@@ -35,9 +35,9 @@ Proof using.
 Qed.
 
 Theorem timpl_trans' : forall (s: state) a b c,
-  R @s ⊨ a ⟶ b ->
-  R @s ⊨ b ⟶ c -> 
-  R @s ⊨ a ⟶ c.
+  R @s ⊨ a ⇾ b ->
+  R @s ⊨ b ⇾ c -> 
+  R @s ⊨ a ⇾ c.
 Proof using.
   intros s a b c Hab Hbc.
   tintros Ha.
@@ -49,8 +49,8 @@ Qed.
 Ltac treflexivity := simple apply timpl_refl.
 Ltac treflexive := 
   match goal with 
-  | |- _ @_ ⊨ ?a ⟶ ?a => treflexivity
-  | |- _ @_ ⊨ ?a ⟶ ?b =>
+  | |- _ @_ ⊨ ?a ⇾ ?a => treflexivity
+  | |- _ @_ ⊨ ?a ⇾ ?b =>
       replace a with b;
         [ treflexivity
         | try easy; symmetry
@@ -59,18 +59,18 @@ Ltac treflexive :=
 
 Ltac ttransitivity x :=
   match goal with
-  | |- ?R @?s ⊨ ?a ⟶ ?b =>
+  | |- ?R @?s ⊨ ?a ⇾ ?b =>
       simple apply (timpl_trans' R s a x b)
   end.
 
 Ltac ettransitivity :=
   match goal with
-  | |- ?R @?s ⊨ ?a ⟶ ?b =>
+  | |- ?R @?s ⊨ ?a ⇾ ?b =>
       simple eapply (timpl_trans' R s a _ b)
   end.
 
 Theorem textensionality : forall s P Q,
-  R @s ⊨ P ⟷ Q ->
+  R @s ⊨ P ⇿ Q ->
   (R @s ⊨ P) = (R @s ⊨ Q).
 Proof using.
   intros.
@@ -80,7 +80,7 @@ Qed.
 
 Lemma tNNPP : forall s P, 
 (* TODO: fix precedence so parantheses not necessary *)
-  R @s ⊨ (¬¬P) ⟶ P.
+  R @s ⊨ (!!P) ⇾ P.
 Proof using.
   intros *.
   tintro H.
@@ -88,7 +88,7 @@ Proof using.
 Qed.
 
 Lemma rew_tNNPP : forall s P, 
-  (R @s ⊨ ¬¬P) = (R @s ⊨ P).
+  (R @s ⊨ !!P) = (R @s ⊨ P).
 Proof using.
   intros *.
   extensionality.
@@ -169,7 +169,7 @@ Proof using.
 Qed.
 
 Theorem AU_trivial : forall s P Q,
-  R @s ⊨ Q ⟶ A[P U Q].
+  R @s ⊨ Q ⇾ A[P U Q].
 Proof using.
   intros *.
   tintro H.
@@ -284,7 +284,7 @@ Proof using.
       { apply HnQ.
         follows eapply in_seq_at__in_seq.
       }
-      constructor; [|follows tsimpl].
+      constructor; [ |follows tsimpl].
       after apply wfIH with (y := j).
       apply in_seq_at_length in Hin_prefix.
       lia.
@@ -320,7 +320,7 @@ Proof using.
   destruct i.
   - exfalso. inv Hin; lia.
   - destruct Hin as (j & jlt & <-).
-    destruct j; [follows rewrite state_at_0|].
+    destruct j; [follows rewrite state_at_0| ].
     specialize (HAW (p j) (prefix R p j)).
     forward HAW.
     + intros * Hin.
@@ -361,7 +361,7 @@ Proof using.
   - left.
     positivity in case.
     intros ? [i <-].
-    constructor; [|follows tsimpl].
+    constructor; [ |follows tsimpl].
     gen x := (p i) to (λ x, in_path_before x (S i) p)
       by tedious;
       cbn beta;
@@ -382,7 +382,7 @@ Theorem AW_intro_weak : forall s P Q,
 Proof using.
   intros * H0 HS.
   apply AW_intro.
-  split; [assumption|].
+  split; [assumption| ].
   intros * H.
   apply HS.
   - follows apply seq__star.
@@ -412,6 +412,18 @@ Proof using.
       follows eapply in_path_before_grow.
 Qed.
 
+Theorem AW_elim_seq : forall s P Q,
+  R @s ⊨ A[P W Q] ->
+  forall s' (r: R#* s s'),
+    (forall x, in_seq x r -> R @x ⊭ Q) ->
+    R @s' ⊨ P.
+Proof using.
+  intros * HAW * Hin.
+  overwrite HAW (AW_elim _ _ _ HAW).
+  todo.
+Admitted.
+
+
 Theorem AW_weaken_left : forall s P P' Q,
   (forall x, R @x ⊨ P --> P') ->
   R @s ⊨ A[P W Q] ->
@@ -437,6 +449,16 @@ Proof using.
     follows apply H.
 Qed.
 
+Theorem AW_intro_right : forall s P Q,
+  R @s ⊨ Q --> A[P W Q].
+Proof using.
+  intros *.
+  tintro HnQ.
+  tsimpl.
+  intro p.
+  right.
+  follows exists 0.
+Qed.
 
 Theorem AU_is_AW_and_AF : forall s P Q,
   (R @s ⊨ A[P U Q]) = (R @s ⊨ A[P W Q] && AF Q).
@@ -453,7 +475,7 @@ Proof using.
     intro p.
     specialize (H p);
       specialize (H' p).
-    destruct H; [|assumption].
+    destruct H; [ |assumption].
     exfalso.
     destruct H' as (s' & s'_in & H').
     specialize (H s' s'_in).
@@ -483,6 +505,12 @@ Proof using.
     + follows do 2 destructr p.
 Qed.
 
+(* Lemma still_AW: forall P Q s s' (seq: R#* s s'),
+  (forall x, in_seq x seq -> R @x ⊭ Q) -> 
+  R @s ⊨ A[P W Q] ->
+  R @s' ⊨ A[P W Q]. *)
+ 
+
 
 Theorem tprop_extensionality : forall P Q,
   (forall (R: relation state) (t: transition R) s, R @s ⊨ P = R @s ⊨ Q) ->
@@ -508,7 +536,7 @@ Qed.
 (* TODO: demorgans tactic which uses an extensible hint database for rewriting? *)
 
 Theorem AG_idempotent : forall s P,
-  R @s ⊨ AG P ⟶ AG (AG P).
+  R @s ⊨ AG P ⇾ AG (AG P).
 Proof using.
   intros *.
   tintro H.
@@ -532,7 +560,7 @@ Qed.
 (* De Morgan's Laws *)
 
 Theorem AF_EG : forall s P,
-  R @s ⊨ AF (¬P) ⟶ ¬EG P.
+  R @s ⊨ AF (!P) ⇾ !EG P.
 Proof using.
   intros *.
   tintros H Hcontra.
@@ -544,7 +572,7 @@ Proof using.
 Qed.
 
 Theorem AF_EG' : forall s P,
-  R @s ⊨ ¬AF P ⟶ EG (¬P).
+  R @s ⊨ !AF P ⇾ EG (!P).
 Proof using.
   intros *.
   tintro H.
@@ -558,7 +586,7 @@ Proof using.
 Qed.
 
 Theorem EG_AF : forall s P,
-  R @s ⊨ EG (¬P) ⟶ ¬AF P.
+  R @s ⊨ EG (!P) ⇾ !AF P.
 Proof using.
   intros *.
   tintros H Hcontra.
@@ -571,7 +599,7 @@ Proof using.
 Qed.
 
 Theorem EG_AF' : forall s P,
-  R @s ⊨ ¬EG P ⟶ AF (¬P).
+  R @s ⊨ !EG P ⇾ AF (!P).
 Proof using.
   intros *.
   tintro H.
@@ -585,7 +613,7 @@ Proof using.
 Qed.
 
 Theorem rew_AF_EG : forall s P,
-  (R @s ⊨ AF (¬P)) = (R @s ⊨ ¬EG P).
+  (R @s ⊨ AF (!P)) = (R @s ⊨ !EG P).
 Proof using.
   intros.
   apply textensionality.
@@ -595,7 +623,7 @@ Proof using.
 Qed.
 
 Theorem rew_EG_AF : forall s P,
-  (R @s ⊨ EG (¬P)) = (R @s ⊨ ¬AF P).
+  (R @s ⊨ EG (!P)) = (R @s ⊨ !AF P).
 Proof using.
   intros.
   apply textensionality.
@@ -606,7 +634,7 @@ Qed.
 
 
 Theorem AG_EF : forall s P,
-  R @s ⊨ AG (¬P) ⟶ ¬EF P.
+  R @s ⊨ AG (!P) ⇾ !EF P.
 Proof using.
   intros *.
   tintros H Hcontra.
@@ -617,7 +645,7 @@ Proof using.
 Qed.
 
 Theorem AG_EF' : forall s P,
-  R @s ⊨ ¬AG P ⟶ EF (¬P).
+  R @s ⊨ !AG P ⇾ EF (!P).
 Proof using.
   intros *.
   tintro H.
@@ -631,7 +659,7 @@ Proof using.
 Qed.
 
 Theorem EF_AG : forall s P,
-  R @s ⊨ EF (¬P) ⟶ ¬AG P.
+  R @s ⊨ EF (!P) ⇾ !AG P.
 Proof using.
   intros *.
   tintros H Hcontra.
@@ -643,7 +671,7 @@ Proof using.
 Qed.
 
 Theorem EF_AG' : forall s P,
-  R @s ⊨ ¬EF P ⟶ AG (¬P).
+  R @s ⊨ !EF P ⇾ AG (!P).
 Proof using.
   intros *.
   tintro H.
@@ -656,7 +684,7 @@ Proof using.
 Qed.
 
 Theorem rew_AG_EF : forall s P,
-  (R @s ⊨ AG (¬P)) = (R @s ⊨ ¬EF P).
+  (R @s ⊨ AG (!P)) = (R @s ⊨ !EF P).
 Proof using.
   intros.
   apply textensionality.
@@ -666,7 +694,7 @@ Proof using.
 Qed.
 
 Theorem rew_EF_AG : forall s P,
-  (R @s ⊨ EF (¬P)) = (R @s ⊨ ¬AG P).
+  (R @s ⊨ EF (!P)) = (R @s ⊨ !AG P).
 Proof using.
   intros.
   apply textensionality.
@@ -677,7 +705,7 @@ Qed.
 
 
 Theorem AX_EX : forall s P,
-  R @s ⊨ AX (¬P) ⟶ ¬EX P.
+  R @s ⊨ AX (!P) ⇾ !EX P.
 Proof using.
   intros *.
   tintros H Hcontra.
@@ -689,7 +717,7 @@ Proof using.
 Qed.
 
 Theorem AX_EX' : forall s P,
-  R @s ⊨ ¬AX P ⟶ EX (¬P).
+  R @s ⊨ !AX P ⇾ EX (!P).
 Proof using.
   intros *.
   tintro H.
@@ -701,7 +729,7 @@ Proof using.
 Qed.
 
 Theorem EX_AX : forall s P,
-  R @s ⊨ EX (¬P) ⟶ ¬AX P.
+  R @s ⊨ EX (!P) ⇾ !AX P.
 Proof using.
   intros *.
   tintros H Hcontra.
@@ -713,7 +741,7 @@ Proof using.
 Qed.
 
 Theorem EX_AX' : forall s P,
-  R @s ⊨ ¬EX P ⟶ AX (¬P).
+  R @s ⊨ !EX P ⇾ AX (!P).
 Proof using.
   intros *.
   tintro H.
@@ -725,7 +753,7 @@ Proof using.
 Qed.
 
 Theorem rew_AX_EX : forall s P,
-  (R @s ⊨ AX (¬P)) = (R @s ⊨ ¬EX P).
+  (R @s ⊨ AX (!P)) = (R @s ⊨ !EX P).
 Proof using.
   intros.
   apply textensionality.
@@ -735,7 +763,7 @@ Proof using.
 Qed.
 
 Theorem rew_EX_AX : forall s P,
-  (R @s ⊨ EX (¬P)) = (R @s ⊨ ¬AX P).
+  (R @s ⊨ EX (!P)) = (R @s ⊨ !AX P).
 Proof using.
   intros.
   apply textensionality.
@@ -748,7 +776,7 @@ Qed.
 (* Expansion Laws *)
 
 Theorem expand_AG : forall s P,
-  R @s ⊨ AG P ⟶ P ∧ AX (AG P).
+  R @s ⊨ AG P ⇾ P && AX (AG P).
 Proof.
   intros *.
   tintro H.
@@ -761,14 +789,14 @@ Proof.
     rewrite rew_AG_star.
     intros * Hstar.
     apply H.
-    etransitivity; [|eassumption].
+    etransitivity; [ |eassumption].
     econstructor.
     + eassumption.
     + constructor.
 Qed.
 
 Theorem unexpand_AG : forall s P,
-  R @s ⊨ P ∧ AX (AG P) ⟶ AG P.
+  R @s ⊨ P && AX (AG P) ⇾ AG P.
 Proof.
   intros *.
   tintro H.
@@ -786,7 +814,7 @@ Proof.
 Qed.
 
 Theorem rew_expand_AG : forall s P,
-  (R @s ⊨ AG P) = (R @s ⊨ P ∧ AX (AG P)).
+  (R @s ⊨ AG P) = (R @s ⊨ P && AX (AG P)).
 Proof.
   intros *.
   apply textensionality.
@@ -794,6 +822,76 @@ Proof.
   - tapply expand_AG.
   - tapply unexpand_AG.
 Qed.
+
+Theorem AW_next : forall s P Q,
+  R @s ⊨ A[P W Q] --> !Q --> AX (A[P W Q]).
+Proof using.
+  intros *.
+  tintros HAW HnQ.
+  tsimpl; tsimpl in HAW.
+  intros * Hstep *.
+  specialize (HAW (path_cons R s Hstep p)).
+  destruct or HAW.
+  - left.
+    intros ? [i <-].
+    apply HAW.
+    follows exists (S i).
+  - right.
+    destruct HAW as (i & Hbefore & HQ).
+    after destruct i.
+    exists i.
+    after split.
+    intros x (j & jlt & <-).
+    apply Hbefore.
+    exists (S j).
+    split; [lia|tedious].
+Qed.
+
+Theorem AW_prev : forall s P Q,
+  R @s ⊨ P || Q --> AX (A[P W Q]) --> A[P W Q].
+Proof using.
+  intros.
+  tintros Hor HX.
+  apply AW_intro; unfold AW_seq.
+  split; [assumption| ].
+  intros * H * r.
+  destruct Hor as [HP|HQ].
+  - unfold_AX in HX.
+    destruct (destruct_seq_front _ _ _ seq) as [Hseq|Hseq].
+    + inject Hseq.
+      specialize (HX s'' r).
+      clear - HX.
+      todo.
+    + destruct Hseq as (y & r' & seq' & ->).
+      todo.
+  - contradict HQ.
+    clear - H.
+    follows specialize (H s).
+Admitted. 
+
+
+Lemma AW_expansion: forall s P Q,
+  R @s ⊨ A[P W Q] ⇾ A[A[P W Q] W Q].
+Proof using.
+  intros.
+  tintro H.
+  apply AW_intro; unfold AW_seq.
+  split; [left; assumption| ].
+  intros * Hin_seq * Hstep.
+  destruct classic (R @s'' ⊨ Q).
+  { right; assumption. }
+  left.
+  cut (R @s' ⊨ A[P W Q]).
+  - intro H1.
+    apply (AW_next _ _ _) in H1.
+    after tapplyc H1.
+    clear - Hin_seq.
+    follows specialize (Hin_seq s').
+  - clear Hstep H0.
+    induction seq.
+    + assumption.
+    + follows apply Hin_seq.
+Qed. 
 
 Theorem AG_AU_AW (s: state)(P Q: tprop state):
   tentails R s
